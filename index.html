@@ -1,0 +1,1085 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>讲台求生 · 师范生 AI 试讲教练 | 上台前，先被 AI 拆台一次</title>
+<meta name="description" content="上传 3-5 分钟试讲视频，AI 从教学内容、互动提问、语速节奏、板书/PPT、学生反应五个维度打分，并让 AI 扮演调皮学生实时提问，输出改进版逐字稿与教学建议。">
+<meta name="keywords" content="讲台求生,师范生,AI试讲教练,课堂模拟器,微格教学,华师黑客松,AI复盘">
+<meta name="author" content="讲台求生团队">
+<meta property="og:title" content="讲台求生 · 师范生 AI 试讲教练">
+<meta property="og:description" content="上台前，先被 AI 拆台一次。">
+<meta property="og:type" content="website">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎤</text></svg>">
+<style>
+:root{
+  --brand:#4F46E5; --brand-dark:#3730A3; --brand-soft:#EEF2FF;
+  --accent:#0D9488; --accent-soft:#E6FFFB;
+  --warn:#B45309; --warn-soft:#FEF3C7;
+  --danger:#B91C1C; --danger-soft:#FEE2E2;
+  --ok:#15803D; --ok-soft:#DCFCE7;
+  --bg:#FFFFFF; --surface:#F8FAFC; --surface-2:#F1F5F9;
+  --border:#E2E8F0; --border-strong:#CBD5E1;
+  --text:#0F172A; --text-2:#475569; --text-3:#94A3B8;
+  --radius:14px; --radius-lg:20px;
+  --shadow:0 1px 2px rgba(15,23,42,.06),0 4px 12px rgba(15,23,42,.04);
+  --shadow-lg:0 4px 6px rgba(15,23,42,.05),0 12px 32px rgba(15,23,42,.08);
+  --font:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;
+}
+*,*::before,*::after{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;font-family:var(--font);color:var(--text);background:var(--bg);
+  font-size:16px;line-height:1.7;-webkit-font-smoothing:antialiased}
+img,svg{max-width:100%;display:block}
+a{color:inherit;text-decoration:none}
+h1,h2,h3,h4{margin:0;font-weight:700;line-height:1.3;letter-spacing:-.01em}
+p{margin:0}
+ul{margin:0;padding:0;list-style:none}
+button{font-family:inherit;font-size:inherit;cursor:pointer;border:none;background:none;color:inherit}
+input,textarea,select{font-family:inherit;font-size:inherit}
+:focus-visible{outline:2px solid var(--brand);outline-offset:2px;border-radius:4px}
+.container{width:100%;max-width:1120px;margin:0 auto;padding:0 20px}
+.sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+
+/* ---------- 导航 ---------- */
+.nav{position:sticky;top:0;z-index:50;background:rgba(255,255,255,.88);
+  backdrop-filter:saturate(180%) blur(12px);border-bottom:1px solid var(--border)}
+.nav-inner{display:flex;align-items:center;justify-content:space-between;height:64px}
+.logo{display:flex;align-items:center;gap:10px;font-weight:800;font-size:18px;letter-spacing:-.02em}
+.logo-mark{width:32px;height:32px;border-radius:9px;background:var(--brand);
+  display:grid;place-items:center;color:#fff;font-size:15px;font-weight:800;flex:none}
+.logo-sub{font-size:11px;font-weight:600;color:var(--text-3);letter-spacing:.06em}
+.nav-links{display:none;gap:28px;font-size:15px;font-weight:500;color:var(--text-2)}
+.nav-links a:hover{color:var(--brand)}
+.nav-cta{display:flex;align-items:center;gap:12px}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;
+  padding:10px 18px;border-radius:10px;font-weight:600;font-size:15px;
+  transition:transform .15s ease,box-shadow .15s ease,background .15s ease;white-space:nowrap}
+.btn-primary{background:var(--brand);color:#fff;box-shadow:var(--shadow)}
+.btn-primary:hover{background:var(--brand-dark);transform:translateY(-1px);box-shadow:var(--shadow-lg)}
+.btn-ghost{border:1px solid var(--border-strong);color:var(--text);background:#fff}
+.btn-ghost:hover{border-color:var(--brand);color:var(--brand)}
+.btn-sm{padding:8px 14px;font-size:14px;border-radius:9px}
+.btn:disabled{opacity:.55;cursor:not-allowed;transform:none}
+.nav-toggle{display:grid;place-items:center;width:40px;height:40px;border-radius:9px;color:var(--text-2)}
+
+/* ---------- Hero ---------- */
+.hero{padding:64px 0 56px;background:
+  radial-gradient(1000px 400px at 80% -10%,var(--brand-soft) 0%,transparent 60%),
+  radial-gradient(700px 300px at 10% 0%,var(--accent-soft) 0%,transparent 55%);}
+.hero-grid{display:grid;gap:44px}
+.badge{display:inline-flex;align-items:center;gap:8px;padding:6px 14px;border-radius:999px;
+  background:#fff;border:1px solid var(--border);font-size:13px;font-weight:600;color:var(--text-2);
+  box-shadow:var(--shadow)}
+.badge-dot{width:7px;height:7px;border-radius:50%;background:var(--accent);flex:none}
+.hero h1{font-size:clamp(30px,5.2vw,50px);margin:22px 0 18px;letter-spacing:-.03em}
+.hero h1 em{font-style:normal;color:var(--brand);position:relative}
+.hero-lead{font-size:clamp(16px,2.2vw,18.5px);color:var(--text-2);max-width:600px}
+.hero-lead strong{color:var(--text);font-weight:600}
+.hero-btns{display:flex;flex-wrap:wrap;gap:14px;margin:30px 0 22px}
+.hero-note{display:flex;gap:18px;flex-wrap:wrap;font-size:13.5px;color:var(--text-3)}
+.hero-note span{display:inline-flex;align-items:center;gap:6px}
+
+/* 预览卡 */
+.preview{background:#fff;border:1px solid var(--border);border-radius:var(--radius-lg);
+  box-shadow:var(--shadow-lg);overflow:hidden}
+.preview-bar{display:flex;align-items:center;gap:7px;padding:12px 16px;
+  background:var(--surface);border-bottom:1px solid var(--border)}
+.preview-bar i{width:10px;height:10px;border-radius:50%;background:var(--border-strong);display:block}
+.preview-bar i:first-child{background:#F87171}.preview-bar i:nth-child(2){background:#FBBF24}
+.preview-bar i:nth-child(3){background:#34D399}
+.preview-title{margin-left:6px;font-size:12.5px;font-weight:600;color:var(--text-3)}
+.preview-body{padding:20px}
+.score-row{display:flex;align-items:center;gap:18px;padding-bottom:18px;border-bottom:1px solid var(--border)}
+.score-circle{width:82px;height:82px;flex:none;border-radius:50%;display:grid;place-items:center;
+  background:conic-gradient(var(--brand) 0 72%,var(--surface-2) 72% 100%);position:relative}
+.score-circle::after{content:"";position:absolute;inset:7px;border-radius:50%;background:#fff}
+.score-num{position:relative;z-index:1;font-size:26px;font-weight:800;line-height:1}
+.score-num small{font-size:12px;font-weight:600;color:var(--text-3)}
+.score-meta h4{font-size:15px;margin-bottom:4px}
+.score-meta p{font-size:13px;color:var(--text-2)}
+.metric-list{margin-top:16px;display:grid;gap:12px}
+.metric{display:grid;grid-template-columns:82px 1fr 62px;align-items:center;gap:12px;font-size:13px}
+.metric-name{color:var(--text-2);font-weight:500}
+.metric-track{height:7px;border-radius:99px;background:var(--surface-2);overflow:hidden}
+.metric-fill{height:100%;border-radius:99px;background:var(--brand);transition:width .5s ease}
+.metric-fill.warn{background:var(--warn)}.metric-fill.danger{background:var(--danger)}
+.metric-fill.ok{background:var(--ok)}
+.metric-val{text-align:right;font-weight:600;font-size:12.5px;color:var(--text-2)}
+.preview-foot{margin-top:16px;padding:12px 14px;border-radius:11px;background:var(--brand-soft);
+  font-size:13px;color:var(--brand-dark);font-weight:500}
+
+/* ---------- 通用 section ---------- */
+.section{padding:76px 0}
+.section-alt{background:var(--surface);border-top:1px solid var(--border);border-bottom:1px solid var(--border)}
+.section-head{max-width:680px;margin-bottom:44px}
+.eyebrow{font-size:13px;font-weight:700;letter-spacing:.1em;color:var(--brand);
+  text-transform:uppercase;margin-bottom:12px}
+.section-head h2{font-size:clamp(24px,3.6vw,34px);letter-spacing:-.025em;margin-bottom:14px}
+.section-head p{color:var(--text-2);font-size:16.5px}
+
+/* 痛点 */
+.pain-grid{display:grid;gap:20px}
+.pain-card{background:#fff;border:1px solid var(--border);border-radius:var(--radius);
+  padding:26px;box-shadow:var(--shadow);transition:transform .2s ease,box-shadow .2s ease}
+.pain-card:hover{transform:translateY(-3px);box-shadow:var(--shadow-lg)}
+.pain-icon{width:42px;height:42px;border-radius:11px;display:grid;place-items:center;
+  background:var(--danger-soft);color:var(--danger);margin-bottom:16px}
+.pain-card h3{font-size:17px;margin-bottom:8px}
+.pain-card p{color:var(--text-2);font-size:15px}
+.pain-card .then{margin-top:14px;padding-top:14px;border-top:1px dashed var(--border-strong);
+  font-size:14px;color:var(--accent);font-weight:600}
+
+/* 模块 */
+.mod-grid{display:grid;gap:24px}
+.mod-card{position:relative;background:#fff;border:1px solid var(--border);border-radius:var(--radius-lg);
+  padding:30px;box-shadow:var(--shadow);overflow:hidden}
+.mod-card.featured{border-color:var(--brand);box-shadow:0 0 0 3px var(--brand-soft),var(--shadow-lg)}
+.mod-tag{position:absolute;top:18px;right:18px;font-size:11.5px;font-weight:700;letter-spacing:.04em;
+  padding:5px 11px;border-radius:999px;background:var(--brand);color:#fff}
+.mod-num{font-size:12px;font-weight:800;color:var(--text-3);letter-spacing:.1em;margin-bottom:10px}
+.mod-card h3{font-size:20px;margin-bottom:10px}
+.mod-card>.desc{color:var(--text-2);font-size:15.5px;margin-bottom:18px}
+.mod-list{display:grid;gap:10px;margin-bottom:20px}
+.mod-list li{display:flex;gap:10px;font-size:14.5px;color:var(--text-2);align-items:flex-start}
+.mod-check{width:18px;height:18px;flex:none;border-radius:50%;background:var(--ok-soft);color:var(--ok);
+  display:grid;place-items:center;font-size:11px;font-weight:800;margin-top:3px}
+.mod-demo{margin-top:auto;padding:14px 16px;border-radius:11px;background:var(--surface);
+  border:1px solid var(--border);font-size:13.5px;color:var(--text-2)}
+.mod-demo b{color:var(--text);display:block;font-size:12px;letter-spacing:.06em;
+  text-transform:uppercase;margin-bottom:6px;color:var(--text-3)}
+
+/* ---------- Demo 区 ---------- */
+.demo-wrap{background:#fff;border:1px solid var(--border);border-radius:var(--radius-lg);
+  box-shadow:var(--shadow-lg);overflow:hidden}
+.demo-head{padding:20px 24px;border-bottom:1px solid var(--border);background:var(--surface);
+  display:flex;flex-wrap:wrap;gap:12px;align-items:center;justify-content:space-between}
+.demo-head h3{font-size:17px}
+.demo-head p{font-size:13px;color:var(--text-3)}
+.steps{display:flex;gap:8px;flex-wrap:wrap;padding:18px 24px 0}
+.step-chip{display:inline-flex;align-items:center;gap:8px;padding:7px 14px;border-radius:999px;
+  font-size:13px;font-weight:600;background:var(--surface-2);color:var(--text-3);border:1px solid transparent}
+.step-chip .n{width:19px;height:19px;border-radius:50%;background:#fff;color:var(--text-3);
+  display:grid;place-items:center;font-size:11px;font-weight:800;flex:none}
+.step-chip.active{background:var(--brand-soft);color:var(--brand-dark);border-color:#C7D2FE}
+.step-chip.active .n{background:var(--brand);color:#fff}
+.step-chip.done .n{background:var(--ok);color:#fff}
+.demo-body{padding:24px}
+.panel{display:none;animation:fade .35s ease}
+.panel.active{display:block}
+@keyframes fade{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+.field-label{display:block;font-size:13.5px;font-weight:600;margin-bottom:8px;color:var(--text-2)}
+textarea{width:100%;min-height:150px;padding:14px 16px;border:1px solid var(--border-strong);
+  border-radius:12px;background:var(--surface);color:var(--text);resize:vertical;line-height:1.7}
+textarea:focus{outline:none;border-color:var(--brand);background:#fff;box-shadow:0 0 0 3px var(--brand-soft)}
+.demo-actions{display:flex;flex-wrap:wrap;gap:12px;margin-top:16px}
+.upload-fake{display:flex;align-items:center;gap:14px;padding:18px;border:1.5px dashed var(--border-strong);
+  border-radius:12px;background:var(--surface);margin-bottom:16px}
+.upload-fake .ui-icon{width:40px;height:40px;border-radius:10px;background:var(--brand-soft);
+  color:var(--brand);display:grid;place-items:center;flex:none}
+.upload-fake .txt b{display:block;font-size:14.5px}
+.upload-fake .txt span{font-size:13px;color:var(--text-3)}
+
+/* 报告 */
+.report-top{display:flex;flex-wrap:wrap;gap:20px;align-items:center;padding-bottom:20px;
+  border-bottom:1px solid var(--border);margin-bottom:20px}
+.report-sum{flex:1;min-width:240px}
+.report-sum h4{font-size:16px;margin-bottom:6px}
+.report-sum p{font-size:14px;color:var(--text-2)}
+.tabs{display:flex;gap:6px;margin-bottom:18px;flex-wrap:wrap}
+.tab{padding:8px 14px;border-radius:9px;font-size:13.5px;font-weight:600;color:var(--text-2);
+  background:var(--surface-2)}
+.tab.active{background:#fff;color:var(--brand);box-shadow:var(--shadow);border:1px solid var(--border)}
+.tab-pane{display:none}.tab-pane.active{display:block}
+.transcript{padding:18px 20px;border-radius:12px;background:var(--surface);border:1px solid var(--border);
+  font-size:15px;line-height:1.95;color:var(--text-2)}
+.transcript mark{background:var(--warn-soft);color:var(--warn);padding:1px 4px;border-radius:4px;
+  font-weight:600}
+.legend{display:flex;flex-wrap:wrap;gap:14px;margin-top:14px;font-size:13px;color:var(--text-3)}
+.legend i{display:inline-block;width:11px;height:11px;border-radius:3px;background:var(--warn-soft);
+  border:1px solid var(--warn);margin-right:5px;vertical-align:-1px}
+.advice-list{display:grid;gap:14px}
+.advice{display:flex;gap:14px;padding:16px 18px;border-radius:12px;border:1px solid var(--border);background:#fff}
+.advice .ai-icon{width:32px;height:32px;border-radius:9px;background:var(--accent-soft);color:var(--accent);
+  display:grid;place-items:center;flex:none}
+.advice b{display:block;font-size:14.5px;margin-bottom:3px}
+.advice p{font-size:14px;color:var(--text-2)}
+
+/* 聊天 */
+.chat-shell{border:1px solid var(--border);border-radius:14px;overflow:hidden;background:var(--surface)}
+.persona-bar{display:flex;gap:8px;flex-wrap:wrap;padding:14px 16px;background:#fff;border-bottom:1px solid var(--border)}
+.persona{padding:7px 13px;border-radius:999px;font-size:13px;font-weight:600;background:var(--surface-2);
+  color:var(--text-2);border:1px solid transparent}
+.persona.active{background:var(--brand-soft);color:var(--brand-dark);border-color:#C7D2FE}
+.chat-log{padding:18px 16px;display:grid;gap:14px;max-height:360px;overflow-y:auto;background:var(--surface)}
+.msg{display:flex;gap:10px;max-width:88%}
+.msg-in{align-self:flex-start}
+.msg-out{align-self:flex-end;flex-direction:row-reverse}
+.avatar{width:34px;height:34px;border-radius:10px;flex:none;display:grid;place-items:center;
+  font-size:12px;font-weight:800;color:#fff}
+.avatar.stu{background:var(--accent)}.avatar.tea{background:var(--brand)}
+.bubble{padding:11px 15px;border-radius:13px;font-size:14.5px;line-height:1.65}
+.msg-in .bubble{background:#fff;border:1px solid var(--border);border-top-left-radius:4px}
+.msg-out .bubble{background:var(--brand);color:#fff;border-top-right-radius:4px}
+.bubble small{display:block;font-size:11.5px;opacity:.7;margin-bottom:3px;font-weight:600}
+.typing{display:inline-flex;gap:4px;align-items:center}
+.typing i{width:6px;height:6px;border-radius:50%;background:var(--text-3);animation:blink 1.2s infinite}
+.typing i:nth-child(2){animation-delay:.2s}.typing i:nth-child(3){animation-delay:.4s}
+@keyframes blink{0%,60%,100%{opacity:.25}30%{opacity:1}}
+.chat-input{display:flex;gap:10px;padding:14px 16px;background:#fff;border-top:1px solid var(--border)}
+.chat-input input{flex:1;padding:11px 15px;border:1px solid var(--border-strong);border-radius:11px;
+  background:var(--surface)}
+.chat-input input:focus{outline:none;border-color:var(--brand);background:#fff;box-shadow:0 0 0 3px var(--brand-soft)}
+.demo-hint{margin-top:14px;font-size:13px;color:var(--text-3);display:flex;gap:6px;align-items:flex-start}
+
+/* ---------- 流程 ---------- */
+.flow-grid{display:grid;gap:20px}
+.flow-step{position:relative;background:#fff;border:1px solid var(--border);border-radius:var(--radius);
+  padding:24px;box-shadow:var(--shadow)}
+.flow-num{width:34px;height:34px;border-radius:10px;background:var(--brand-soft);color:var(--brand);
+  display:grid;place-items:center;font-weight:800;font-size:15px;margin-bottom:14px}
+.flow-step h4{font-size:16px;margin-bottom:8px}
+.flow-step p{font-size:14.5px;color:var(--text-2)}
+.flow-tech{margin-top:12px;display:flex;flex-wrap:wrap;gap:7px}
+.tag{font-size:11.5px;font-weight:600;padding:4px 9px;border-radius:6px;background:var(--surface-2);color:var(--text-2)}
+
+/* ---------- 部署 ---------- */
+.deploy-grid{display:grid;gap:20px}
+.deploy-card{background:#fff;border:1px solid var(--border);border-radius:var(--radius);padding:26px;
+  box-shadow:var(--shadow)}
+.deploy-card h4{font-size:16.5px;margin-bottom:12px;display:flex;align-items:center;gap:9px}
+.deploy-card ol{margin:0;padding-left:20px;display:grid;gap:9px;font-size:14.5px;color:var(--text-2)}
+.deploy-card li strong{color:var(--text)}
+code{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;background:var(--surface-2);
+  padding:2px 6px;border-radius:5px;font-size:.88em;color:var(--brand-dark)}
+.stack-list{display:grid;gap:10px;margin-top:6px}
+.stack-row{display:flex;gap:12px;align-items:baseline;font-size:14.5px;padding-bottom:10px;
+  border-bottom:1px dashed var(--border)}
+.stack-row:last-child{border:none}
+.stack-row b{flex:none;width:76px;font-size:13px;color:var(--text-3);font-weight:600}
+.stack-row span{color:var(--text-2)}
+
+/* ---------- Footer ---------- */
+.footer{padding:44px 0;background:var(--text);color:#CBD5E1}
+.footer-inner{display:flex;flex-wrap:wrap;gap:20px;justify-content:space-between;align-items:center}
+.footer .logo-mark{background:#fff;color:var(--text)}
+.footer p{font-size:13.5px}
+.footer-links{display:flex;gap:20px;font-size:13.5px}
+.footer-links a:hover{color:#fff}
+
+/* ---------- 响应式 ---------- */
+@media(min-width:768px){
+  .nav-links{display:flex}
+  .nav-toggle{display:none}
+  .hero{padding:88px 0 72px}
+  .pain-grid{grid-template-columns:repeat(3,1fr)}
+  .mod-grid{grid-template-columns:repeat(3,1fr)}
+  .mod-card{display:flex;flex-direction:column}
+  .flow-grid{grid-template-columns:repeat(4,1fr)}
+  .deploy-grid{grid-template-columns:repeat(2,1fr)}
+  .footer-inner{flex-direction:row}
+}
+@media(min-width:1024px){
+  .hero-grid{grid-template-columns:1.05fr .95fr;align-items:center;gap:56px}
+  .deploy-grid{grid-template-columns:repeat(3,1fr)}
+}
+@media(max-width:767px){
+  .section{padding:56px 0}
+  .demo-body{padding:18px}
+  .demo-head{padding:16px 18px}
+  .steps{padding:14px 18px 0}
+  .report-top{gap:14px}
+  .metric{grid-template-columns:70px 1fr 56px;font-size:12.5px}
+}
+@media(prefers-reduced-motion:reduce){
+  *{animation-duration:.01ms !important;transition-duration:.01ms !important;scroll-behavior:auto}
+}
+</style>
+</head>
+<body>
+
+<a class="sr-only" href="#demo">跳到在线 Demo</a>
+
+<!-- ========== 导航 ========== -->
+<nav class="nav">
+  <div class="container nav-inner">
+    <a class="logo" href="#top">
+      <span class="logo-mark">讲</span>
+      <span>
+        讲台求生
+        <span class="logo-sub">PODIUM SURVIVAL</span>
+      </span>
+    </a>
+    <div class="nav-links">
+      <a href="#pain">痛点</a>
+      <a href="#modules">核心功能</a>
+      <a href="#demo">在线 Demo</a>
+      <a href="#flow">实现流程</a>
+      <a href="#deploy">部署上线</a>
+    </div>
+    <div class="nav-cta">
+      <a class="btn btn-primary btn-sm" href="#demo">立即试玩</a>
+    </div>
+    <button class="nav-toggle" id="navToggle" aria-label="展开菜单" aria-expanded="false">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 6h18M3 12h18M3 18h18"/></svg>
+    </button>
+  </div>
+</nav>
+
+<main id="top">
+
+<!-- ========== Hero ========== -->
+<section class="hero">
+  <div class="container hero-grid">
+    <div>
+      <span class="badge"><span class="badge-dot"></span>华师 AI 黑客松 · 师范生专场比赛作品</span>
+      <h1>上台前，<br>先被 AI <em>拆台</em>一次。</h1>
+      <p class="hero-lead">
+        你是不是也经历过：试讲时台下鸦雀无声，自己却紧张得忘了下一句？<br>
+        <strong>讲台求生</strong>让你上传 3–5 分钟试讲视频，AI 从<strong>教学内容、互动提问、语速节奏、板书/PPT、学生反应</strong>五个维度打分，并派出「调皮学生 / 学霸 / 走神学生」<strong>实时向你发难</strong>，最后产出改进版逐字稿与教学建议。
+      </p>
+      <div class="hero-btns">
+        <a class="btn btn-primary" href="#demo">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+          免费试玩 Demo
+        </a>
+        <a class="btn btn-ghost" href="#modules">看看它能做什么</a>
+      </div>
+      <p class="hero-note">
+        <span>
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg>
+          零安装 · 浏览器打开即用
+        </span>
+        <span>
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+          3 分钟出完整复盘报告
+        </span>
+        <span>
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 2l3 7h7l-5.5 4.5L18 21l-6-4-6 4 2.5-7.5L2 9h7z"/></svg>
+          黑客松现场已验证效果
+        </span>
+      </p>
+    </div>
+
+    <!-- 报告预览卡（静态示意） -->
+    <div class="preview" aria-hidden="true">
+      <div class="preview-bar">
+        <i></i><i></i><i></i>
+        <span class="preview-title">讲台求生 · AI 复盘报告</span>
+      </div>
+      <div class="preview-body">
+        <div class="score-row">
+          <div class="score-circle"><span class="score-num">72<small>/100</small></span></div>
+          <div class="score-meta">
+            <h4>勾股定理（八年级）</h4>
+            <p>时长 4 分 12 秒 · 试讲者：李同学</p>
+          </div>
+        </div>
+        <div class="metric-list">
+          <div class="metric">
+            <span class="metric-name">语速</span>
+            <span class="metric-track"><span class="metric-fill danger" style="width:88%"></span></span>
+            <span class="metric-val">偏快</span>
+          </div>
+          <div class="metric">
+            <span class="metric-name">提问后等待</span>
+            <span class="metric-track"><span class="metric-fill danger" style="width:22%"></span></span>
+            <span class="metric-val">0.8s</span>
+          </div>
+          <div class="metric">
+            <span class="metric-name">口头禅</span>
+            <span class="metric-track"><span class="metric-fill warn" style="width:65%"></span></span>
+            <span class="metric-val">23 次</span>
+          </div>
+          <div class="metric">
+            <span class="metric-name">互动提问</span>
+            <span class="metric-track"><span class="metric-fill warn" style="width:40%"></span></span>
+            <span class="metric-val">2 次</span>
+          </div>
+          <div class="metric">
+            <span class="metric-name">知识点覆盖</span>
+            <span class="metric-track"><span class="metric-fill ok" style="width:72%"></span></span>
+            <span class="metric-val">72%</span>
+          </div>
+        </div>
+        <div class="preview-foot">
+          AI 学生「调皮型」追问：老师，勾股定理要是放到三维空间还算数吗？
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ========== 痛点 ========== -->
+<section class="section" id="pain">
+  <div class="container">
+    <div class="section-head">
+      <div class="eyebrow">Why we build</div>
+      <h2>师范生练讲课，从来缺的不是努力</h2>
+      <p>微格教室要预约、同学不好意思说真话、老师点评只有一句「再自然一点」。反馈的缺失，让每一次练习都打折。</p>
+    </div>
+    <div class="pain-grid">
+      <article class="pain-card">
+        <div class="pain-icon">
+          <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M17 18a2 2 0 0 0-2-2H9a2 2 0 0 0-2 2"/><rect x="3" y="4" width="18" height="12" rx="2"/><path d="M12 8v4M12 16h.01"/></svg>
+        </div>
+        <h3>台下全是「礼貌脸」</h3>
+        <p>试讲时同学只鼓掌不提问，你根本不知道哪里学生其实没听懂。</p>
+        <div class="then">→ AI 扮演真实学生，当场追问</div>
+      </article>
+      <article class="pain-card">
+        <div class="pain-icon">
+          <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 12h4l3 8 4-16 3 8h4"/></svg>
+        </div>
+        <h3>点评永远很抽象</h3>
+        <p>「语速有点快」——快多少？哪里快？没有人给你量化的数据和证据。</p>
+        <div class="then">→ 逐秒量化：语速 / 停顿 / 口头禅</div>
+      </article>
+      <article class="pain-card">
+        <div class="pain-icon">
+          <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M21 12a9 9 0 1 1-3-6.7"/><path d="M21 3v6h-6"/></svg>
+        </div>
+        <h3>练了十遍还是原地踏步</h3>
+        <p>缺少「改进版示范」，你只知道不好，却不知道好的版本长什么样。</p>
+        <div class="then">→ 直接生成改进版逐字稿</div>
+      </article>
+    </div>
+  </div>
+</section>
+
+<!-- ========== 三大模块 ========== -->
+<section class="section section-alt" id="modules">
+  <div class="container">
+    <div class="section-head">
+      <div class="eyebrow">Core modules</div>
+      <h2>三个模块，构成一次完整的「求生」闭环</h2>
+      <p>先看清自己怎么讲的（复盘）→ 再被学生打一顿（拆台）→ 最后拿到能照着练的答案（改进）。</p>
+    </div>
+    <div class="mod-grid">
+
+      <article class="mod-card">
+        <div class="mod-num">MODULE 01</div>
+        <h3>AI 导师复盘</h3>
+        <p class="desc">把一节试讲拆成可量化的数字，让「讲得好不好」第一次有了标准答案。</p>
+        <ul class="mod-list">
+          <li><span class="mod-check">✓</span><span>逐字稿转写（Whisper，带时间戳）</span></li>
+          <li><span class="mod-check">✓</span><span>语速曲线 / 停顿（&gt;2s）次数</span></li>
+          <li><span class="mod-check">✓</span><span>口头禅高亮：「那个」「然后」「就是」</span></li>
+          <li><span class="mod-check">✓</span><span>提问次数与「等待时间」是否达标</span></li>
+          <li><span class="mod-check">✓</span><span>知识点覆盖度 + 弗兰德斯互动统计</span></li>
+        </ul>
+        <div class="mod-demo"><b>输出样例</b>提问后平均等待仅 0.8 秒，低于有效等待 3 秒标准。</div>
+      </article>
+
+      <article class="mod-card featured">
+        <span class="mod-tag">核心亮点</span>
+        <div class="mod-num">MODULE 02</div>
+        <h3>AI 学生拆台</h3>
+        <p class="desc">这是路演最「炸」的一环。LLM 读完你的讲稿，摇身变成最难缠的学生。</p>
+        <ul class="mod-list">
+          <li><span class="mod-check">✓</span><span>调皮型：专挑边界条件追问</span></li>
+          <li><span class="mod-check">✓</span><span>学霸型：提前抛出超纲内容</span></li>
+          <li><span class="mod-check">✓</span><span>走神型：答非所问，逼你拉回注意力</span></li>
+          <li><span class="mod-check">✓</span><span>多轮上下文，会顺着你的回答继续追</span></li>
+        </ul>
+        <div class="mod-demo"><b>现场演示脚本</b>讲 1 分钟 → AI 点评 → 立刻抛出学生问题，全场笑场。</div>
+      </article>
+
+      <article class="mod-card">
+        <div class="mod-num">MODULE 03</div>
+        <h3>改进建议生成</h3>
+        <p class="desc">不止告诉你哪里烂，直接给你能照着念、照着写的版本。</p>
+        <ul class="mod-list">
+          <li><span class="mod-check">✓</span><span>改进版逐字稿（替换口头禅、补提问）</span></li>
+          <li><span class="mod-check">✓</span><span>板书 / PPT 结构建议</span></li>
+          <li><span class="mod-check">✓</span><span>分层作业设计（基础 / 提高 / 拓展）</span></li>
+          <li><span class="mod-check">✓</span><span>针对薄弱点的第二次训练任务</span></li>
+        </ul>
+        <div class="mod-demo"><b>教练价值</b>把「你讲太快」变成「第 3 段这句可删，留出 3 秒等待」。</div>
+      </article>
+
+    </div>
+  </div>
+</section>
+
+<!-- ========== 在线 Demo ========== -->
+<section class="section" id="demo">
+  <div class="container">
+    <div class="section-head">
+      <div class="eyebrow">Live demo</div>
+      <h2>不用上传，30 秒看完整个流程</h2>
+      <p>下面是可以<strong>直接点击操作</strong>的交互原型（内置示例数据与模拟 AI）。正式版接入 Whisper + DeepSeek 后，流程完全一致。</p>
+    </div>
+
+    <div class="demo-wrap">
+      <div class="demo-head">
+        <div>
+          <h3>讲台求生 · 交互原型</h3>
+          <p>示例课题：勾股定理（初中八年级）</p>
+        </div>
+        <button class="btn btn-ghost btn-sm" id="resetDemo" type="button">重新演示</button>
+      </div>
+
+      <div class="steps" role="list">
+        <span class="step-chip active" id="chip1" role="listitem"><span class="n">1</span>上传 / 粘贴讲稿</span>
+        <span class="step-chip" id="chip2" role="listitem"><span class="n">2</span>AI 导师复盘</span>
+        <span class="step-chip" id="chip3" role="listitem"><span class="n">3</span>AI 学生拆台</span>
+      </div>
+
+      <div class="demo-body">
+
+        <!-- Step 1 -->
+        <div class="panel active" id="panel1">
+          <div class="upload-fake">
+            <span class="ui-icon">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+            </span>
+            <span class="txt">
+              <b>上传试讲视频（正式版）</b>
+              <span>支持 mp4 / mov，3–5 分钟；此处为原型，请直接使用下方示例讲稿</span>
+            </span>
+          </div>
+          <label class="field-label" for="scriptInput">或直接粘贴你的讲稿 / 逐字稿</label>
+          <textarea id="scriptInput" placeholder="把你试讲时说的话粘到这里…"></textarea>
+          <div class="demo-actions">
+            <button class="btn btn-primary" id="fillSample" type="button">填入示例讲稿</button>
+            <button class="btn btn-primary" id="analyzeBtn" type="button" disabled>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><line x1="20" y1="20" x2="16.6" y2="16.6"/></svg>
+              开始 AI 分析
+            </button>
+          </div>
+          <p class="demo-hint">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" style="flex:none;margin-top:3px"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+            <span>提示：先点「填入示例讲稿」，再点「开始 AI 分析」，即可看到完整的复盘报告与学生提问。</span>
+          </p>
+        </div>
+
+        <!-- Step 2 -->
+        <div class="panel" id="panel2">
+          <div class="report-top">
+            <div class="score-circle" style="--v:72%"><span class="score-num">72<small>/100</small></span></div>
+            <div class="report-sum">
+              <h4>综合得分 72 ｜ 主要失分项：互动等待 & 口头禅</h4>
+              <p>你的知识讲解准确、板书逻辑清晰，但讲得偏快，且提问后没有给学生留出思考时间。</p>
+            </div>
+          </div>
+
+          <div class="tabs">
+            <button class="tab active" data-tab="m" type="button">量化指标</button>
+            <button class="tab" data-tab="t" type="button">逐字稿高亮</button>
+            <button class="tab" data-tab="a" type="button">改进建议</button>
+          </div>
+
+          <div class="tab-pane active" id="tab-m">
+            <div class="metric-list" id="metricList"></div>
+          </div>
+
+          <div class="tab-pane" id="tab-t">
+            <div class="transcript" id="transcriptBox"></div>
+            <div class="legend">
+              <span><i></i>黄色高亮 = 口头禅 / 冗余词（共 <b id="fillerCount">23</b> 处）</span>
+            </div>
+          </div>
+
+          <div class="tab-pane" id="tab-a">
+            <div class="advice-list" id="adviceList"></div>
+          </div>
+
+          <div class="demo-actions" style="margin-top:22px">
+            <button class="btn btn-primary" id="toChat" type="button">
+              进入 AI 学生拆台 →
+            </button>
+            <button class="btn btn-ghost" id="back1" type="button">返回修改讲稿</button>
+          </div>
+        </div>
+
+        <!-- Step 3 -->
+        <div class="panel" id="panel3">
+          <div class="persona-bar" id="personaBar">
+            <button class="persona active" data-p="naughty" type="button">调皮型</button>
+            <button class="persona" data-p="geek" type="button">学霸型</button>
+            <button class="persona" data-p="drift" type="button">走神型</button>
+          </div>
+          <div class="chat-shell">
+            <div class="chat-log" id="chatLog">
+              <div class="msg msg-in">
+                <span class="avatar stu">AI</span>
+                <div class="bubble">
+                  <small>系统提示</small>
+                  AI 学生已读完你的讲稿，随时准备提问。选一个性格，然后点下面的按钮。
+                </div>
+              </div>
+            </div>
+            <form class="chat-input" id="chatForm">
+              <input id="chatInput" type="text" placeholder="作为老师，回答这位学生…" autocomplete="off">
+              <button class="btn btn-primary btn-sm" type="submit">回答</button>
+            </form>
+          </div>
+          <div class="demo-actions">
+            <button class="btn btn-primary" id="askStu" type="button">让学生提问</button>
+            <button class="btn btn-ghost" id="back2" type="button">返回复盘报告</button>
+          </div>
+          <p class="demo-hint">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" style="flex:none;margin-top:3px"><path d="M12 2l3 7h7l-5.5 4.5L18 21l-6-4-6 4 2.5-7.5L2 9h7z"/></svg>
+            <span>路演建议：让现场同学对着麦克风讲 1 分钟，回来点「让学生提问」，效果最佳。</span>
+          </p>
+        </div>
+
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ========== 实现流程 ========== -->
+<section class="section section-alt" id="flow">
+  <div class="container">
+    <div class="section-head">
+      <div class="eyebrow">How it works</div>
+      <h2>从一段视频到一份报告，中间发生了什么</h2>
+      <p>四步流水线。前端负责呈现，后端负责编排，AI 能力层负责真正的「理解」。</p>
+    </div>
+    <div class="flow-grid">
+      <div class="flow-step">
+        <div class="flow-num">1</div>
+        <h4>接收素材</h4>
+        <p>前端上传视频到对象存储，或直接提交文本；返回文件 ID 交给后端排队。</p>
+        <div class="flow-tech"><span class="tag">Supabase Storage</span><span class="tag">S3</span></div>
+      </div>
+      <div class="flow-step">
+        <div class="flow-num">2</div>
+        <h4>语音转写</h4>
+        <p>抽取音轨 → Whisper 转成带时间戳的文本，顺带拿到停顿与时长。</p>
+        <div class="flow-tech"><span class="tag">Whisper API</span><span class="tag">faster-whisper</span></div>
+      </div>
+      <div class="flow-step">
+        <div class="flow-num">3</div>
+        <h4>LLM 分析</h4>
+        <p>结构化 Prompt 让模型输出 JSON：语速、口头禅、提问、知识点、互动矩阵。</p>
+        <div class="flow-tech"><span class="tag">DeepSeek</span><span class="tag">通义千问</span><span class="tag">Claude</span></div>
+      </div>
+      <div class="flow-step">
+        <div class="flow-num">4</div>
+        <h4>报告 & 对话</h4>
+        <p>渲染可视化复盘；AI 学生携带讲稿上下文进入多轮提问模式。</p>
+        <div class="flow-tech"><span class="tag">Next.js</span><span class="tag">Chart 图表</span></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ========== 部署上线 ========== -->
+<section class="section" id="deploy">
+  <div class="container">
+    <div class="section-head">
+      <div class="eyebrow">Ship it</div>
+      <h2>怎么把它部署上线</h2>
+      <p>当前这份页面是<strong>纯静态单文件</strong>，零依赖、零构建，任何静态托管都能跑。下面是三条最省事的上线路线。</p>
+    </div>
+    <div class="deploy-grid">
+
+      <div class="deploy-card">
+        <h4>
+          <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polygon points="12 2 22 20 2 20"/></svg>
+          路线 A：Vercel（推荐）
+        </h4>
+        <ol>
+          <li>把 <code>index.html</code> 放进任意文件夹，或直接推到 GitHub 仓库。</li>
+          <li>打开 <strong>vercel.com</strong> → <code>Add New → Project</code> → 导入该仓库。</li>
+          <li>框架预设选 <strong>Other / Static</strong>，构建命令留空，输出目录留空。</li>
+          <li>点 <strong>Deploy</strong>，约 30 秒拿到 <code>xxx.vercel.app</code> 域名。</li>
+          <li>如需自定义域名：Settings → Domains → 添加后按提示改 DNS。</li>
+        </ol>
+      </div>
+
+      <div class="deploy-card">
+        <h4>
+          <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 2l4 4-4 4-4-4z"/><path d="M12 14l4 4-4 4-4-4z"/></svg>
+          路线 B：Netlify / GitHub Pages
+        </h4>
+        <ol>
+          <li><strong>Netlify</strong>：把文件夹直接拖到 <code>app.netlify.com/drop</code>，即时上线。</li>
+          <li><strong>GitHub Pages</strong>：仓库 Settings → Pages → Source 选 <code>main / root</code>。</li>
+          <li>两者都免费提供 HTTPS 与二级域名，适合校内演示。</li>
+          <li>注意：Pages 仓库需公开（免费版），敏感信息勿入库。</li>
+        </ol>
+      </div>
+
+      <div class="deploy-card">
+        <h4>
+          <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg>
+          路线 C：升级成真全栈
+        </h4>
+        <ol>
+          <li>接真实 AI：把项目迁到 <strong>Next.js</strong>，用 API Routes 做后端代理。</li>
+          <li>在 <code>.env.local</code> 写 <code>DEEPSEEK_API_KEY</code>，<strong>绝不下发到浏览器</strong>。</li>
+          <li>Whisper 转写走服务端，避免密钥泄露与跨域问题。</li>
+          <li>后端部署 Render / Railway，前端仍用 Vercel。</li>
+        </ol>
+      </div>
+
+    </div>
+
+    <div class="deploy-card" style="margin-top:20px">
+      <h4>
+        <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 20h16M6 16l3-4 3 3 4-6 3 4"/></svg>
+        推荐技术栈组合
+      </h4>
+      <div class="stack-list">
+        <div class="stack-row"><b>前端</b><span>Next.js 14（App Router）+ Tailwind CSS + shadcn/ui —— 组件全、出图快</span></div>
+        <div class="stack-row"><b>后端</b><span>优先 Next.js API Routes（省一套部署）；需要 Python AI 生态时再上 FastAPI</span></div>
+        <div class="stack-row"><b>ASR</b><span>OpenAI Whisper API（约 $0.006/分钟）或本地 faster-whisper（离线更稳）</span></div>
+        <div class="stack-row"><b>LLM</b><span>DeepSeek / 通义千问：中文教学场景性价比高，响应快</span></div>
+        <div class="stack-row"><b>数据</b><span>Supabase：Auth + PostgreSQL + 文件存储一站式，省去自建数据库</span></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+</main>
+
+<!-- ========== Footer ========== -->
+<footer class="footer">
+  <div class="container footer-inner">
+    <a class="logo" href="#top">
+      <span class="logo-mark">讲</span>
+      <span>讲台求生<span class="logo-sub">让每一次试讲，都有学生在听</span></span>
+    </a>
+    <p>© 2026 讲台求生团队 · 华师 AI 黑客松</p>
+    <div class="footer-links">
+      <a href="#modules">功能</a>
+      <a href="#demo">Demo</a>
+      <a href="#deploy">部署</a>
+    </div>
+  </div>
+</footer>
+
+<script>
+(function () {
+  "use strict";
+
+  /* ---------- 工具 ---------- */
+  function el(id) { return document.getElementById(id); }
+  function qsa(sel, root) { return Array.prototype.slice.call((root || document).querySelectorAll(sel)); }
+
+  /* ---------- 移动端菜单 ---------- */
+  var navToggle = el("navToggle");
+  var navLinks = document.querySelector(".nav-links");
+  if (navToggle && navLinks) {
+    navToggle.addEventListener("click", function () {
+      var open = navLinks.classList.toggle("open");
+      navLinks.style.display = open ? "flex" : "";
+      navLinks.style.flexDirection = open ? "column" : "";
+      navLinks.style.position = open ? "absolute" : "";
+      navLinks.style.top = open ? "64px" : "";
+      navLinks.style.left = open ? "20px" : "";
+      navLinks.style.right = open ? "20px" : "";
+      navLinks.style.padding = open ? "16px" : "";
+      navLinks.style.background = open ? "#fff" : "";
+      navLinks.style.border = open ? "1px solid #E2E8F0" : "";
+      navLinks.style.borderRadius = open ? "12px" : "";
+      navLinks.style.boxShadow = open ? "0 12px 32px rgba(15,23,42,.1)" : "";
+      navToggle.setAttribute("aria-expanded", open ? "true" : "false");
+    });
+    navLinks.addEventListener("click", function (e) {
+      if (e.target.tagName === "A" && window.innerWidth < 768) {
+        navLinks.classList.remove("open");
+        navLinks.style.display = "";
+      }
+    });
+  }
+
+  /* ---------- 示例数据 ---------- */
+  var SAMPLE = "同学们好，那个，今天我们一起来学习勾股定理。然后大家看大屏幕，这里有一个直角三角形，直角边分别是 a 和 b，然后斜边是 c。就是我们在古代的时候，中国古代的数学家就发现了这个问题，那个西周的商高就提出过「勾三股四弦五」。然后我们来看一下这个公式，就是 a 的平方加 b 的平方等于 c 的平方。好，我问大家一个问题，这公式大家能理解吗？……那我们继续。然后我们来做一道例题，就是一个直角三角形的两条直角边分别是 3 和 4，然后求斜边。代入我们的公式就是 3 的平方加 4 的平方等于 25，所以斜边就是 5。就是这样的。然后大家记住这个结论就可以了，考试可能会考。那个今天我们作业是课后练习题第一题到第五题。好，下课。";
+
+  var METRICS = [
+    { name: "语速", value: "168 字/分", pct: 88, level: "danger", hint: "目标 120–150" },
+    { name: "等待时间", value: "0.8s", pct: 22, level: "danger", hint: "有效等待 ≥3s" },
+    { name: "口头禅", value: "23 次", pct: 65, level: "warn", hint: "「那个/然后/就是」" },
+    { name: "互动提问", value: "2 次", pct: 40, level: "warn", hint: "建议 5–8 次" },
+    { name: "知识点覆盖", value: "72%", pct: 72, level: "ok", hint: "缺公式推导" }
+  ];
+
+  var FILLERS = ["那个", "然后", "就是"];
+
+  var ADVICE = [
+    { t: "把「伪提问」改成「真提问」", d: "你说「能理解吗」后只停 0.8 秒。改成点名提问 + 默数 3 秒，例如：「请第三排穿白衣服的同学，说说 c 为什么是斜边？」留白本身就是教学。" },
+    { t: "删掉冗余口头禅", d: "全篇「那个 / 然后 / 就是」共 23 次。把讲稿打印出来通读一遍，凡是有这三个词开头的句子，直接删掉这个词，句子反而更干净。" },
+    { t: "补上公式推导，别只给结论", d: "你只说了 a²+b²=c²，没有演示为什么成立。建议加 1 分钟拼图/面积法演示，知识点覆盖可从 72% 提到 90%+。" },
+    { t: "结尾别急着赶下课", d: "收尾那句「记住结论就行、可能会考」略显仓促。建议首尾呼应：「今天我们揭开了直角三角形的秘密，下节课看看它在三维空间还灵不灵。」顺手埋一条伏笔，也为 AI 学生的追问留话题。" }
+  ];
+
+  var PERSONA = {
+    naughty: {
+      label: "调皮型",
+      asks: [
+        "老师，那勾股定理要是在三维空间还算数吗？立方体的对角线是不是也能量出来？",
+        "老师你一直在说公式，可是我连直角三角形的直角为什么要画在那个位置都还没搞懂诶。",
+        "老师，你说商高发现的，那外国有没有人发现啊？是不是中国人更早？"
+      ],
+      follow: [
+        "哦——那如果我画一个很扁很扁的三角形，它还成立吗？",
+        "听懂了一点点吧……但老师你刚才语速好快，能不能慢一点再说一遍？"
+      ]
+    },
+    geek: {
+      label: "学霸型",
+      asks: [
+        "老师，勾股定理的逆定理是不是也成立？满足 a²+b²=c² 的一定是直角三角形吗？",
+        "这个可以用向量点积来证明吗？我在竞赛书上看过，但没太懂。",
+        "老师，勾股数是不是有无穷多组？我们能不能用一个通式把它们全写出来？"
+      ],
+      follow: [
+        "明白了。那如果边长是无理数，比如根号 2，结论还成立吗？",
+        "所以其实它本质上描述的是内积空间里的正交关系？"
+      ]
+    },
+    drift: {
+      label: "走神型",
+      asks: [
+        "啊？老师你刚才说到第几题了……我刚才走神了，能再说一遍吗？",
+        "老师，这个公式跟我们上个月学的那个什么完全平方公式，是不是亲戚啊？",
+        "嗯……老师，学这个以后买菜能用上吗？"
+      ],
+      follow: [
+        "不好意思老师，你刚才那句我还是没跟上，能不能举个例子？",
+        "哦哦！所以是先平方再加起来对吧？我这次记住了。"
+      ]
+    }
+  };
+
+  /* ---------- DOM 引用 ---------- */
+  var scriptInput = el("scriptInput");
+  var fillSample = el("fillSample");
+  var analyzeBtn = el("analyzeBtn");
+  var resetDemo = el("resetDemo");
+  var toChat = el("toChat");
+  var back1 = el("back1");
+  var back2 = el("back2");
+  var askStu = el("askStu");
+  var chatLog = el("chatLog");
+  var chatForm = el("chatForm");
+  var chatInput = el("chatInput");
+  var personaBar = el("personaBar");
+
+  var currentPersona = "naughty";
+  var personaIndex = { naughty: 0, geek: 0, drift: 0 };
+
+  /* ---------- Step 切换 ---------- */
+  function showStep(n) {
+    qsa(".panel").forEach(function (p) { p.classList.remove("active"); });
+    var target = el("panel" + n);
+    if (target) target.classList.add("active");
+    for (var i = 1; i <= 3; i++) {
+      var chip = el("chip" + i);
+      if (!chip) continue;
+      chip.classList.remove("active", "done");
+      if (i === n) chip.classList.add("active");
+      else if (i < n) chip.classList.add("done");
+    }
+    if (n === 2) renderReport();
+  }
+
+  /* ---------- Step1 交互 ---------- */
+  if (fillSample && scriptInput) {
+    fillSample.addEventListener("click", function () {
+      scriptInput.value = SAMPLE;
+      if (analyzeBtn) analyzeBtn.disabled = false;
+      fillSample.textContent = "已填入示例讲稿";
+    });
+  }
+  if (scriptInput) {
+    scriptInput.addEventListener("input", function () {
+      if (analyzeBtn) analyzeBtn.disabled = scriptInput.value.trim().length < 10;
+    });
+  }
+  if (analyzeBtn) {
+    analyzeBtn.addEventListener("click", function () {
+      analyzeBtn.disabled = true;
+      analyzeBtn.textContent = "AI 正在分析…";
+      setTimeout(function () {
+        analyzeBtn.textContent = "分析完成";
+        showStep(2);
+      }, 1100);
+    });
+  }
+
+  /* ---------- Step2：渲染报告 ---------- */
+  var reportRendered = false;
+  function renderReport() {
+    if (reportRendered) return;
+    reportRendered = true;
+
+    // 指标条
+    var list = el("metricList");
+    if (list) {
+      list.innerHTML = "";
+      METRICS.forEach(function (m) {
+        var row = document.createElement("div");
+        row.className = "metric";
+        row.innerHTML =
+          '<span class="metric-name">' + m.name + "</span>" +
+          '<span class="metric-track"><span class="metric-fill ' + m.level + '" style="width:0%"></span></span>' +
+          '<span class="metric-val">' + m.value + "</span>";
+        list.appendChild(row);
+        // 动画填充
+        var fill = row.querySelector(".metric-fill");
+        setTimeout(function () { if (fill) fill.style.width = m.pct + "%"; }, 60);
+        // 提示气泡
+        if (m.hint) {
+          var nm = row.querySelector(".metric-name");
+          if (nm) nm.title = m.hint;
+        }
+      });
+    }
+
+    // 逐字稿高亮
+    var box = el("transcriptBox");
+    if (box) {
+      var html = scriptInput && scriptInput.value ? scriptInput.value : SAMPLE;
+      FILLERS.forEach(function (w) {
+        var parts = html.split(w);
+        html = parts.join('<mark>' + w + "</mark>");
+      });
+      box.innerHTML = html;
+      var cnt = 0;
+      FILLERS.forEach(function (w) {
+        cnt += (scriptInput && scriptInput.value ? scriptInput.value : SAMPLE).split(w).length - 1;
+      });
+      var fc = el("fillerCount");
+      if (fc) fc.textContent = String(cnt);
+    }
+
+    // 改进建议
+    var alist = el("adviceList");
+    if (alist) {
+      alist.innerHTML = "";
+      ADVICE.forEach(function (a) {
+        var d = document.createElement("div");
+        d.className = "advice";
+        d.innerHTML =
+          '<span class="ai-icon">' +
+          '<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 2l3 7h7l-5.5 4.5L18 21l-6-4-6 4 2.5-7.5L2 9h7z"/></svg>' +
+          "</span><div><b>" + a.t + "</b><p>" + a.d + "</p></div>";
+        alist.appendChild(d);
+      });
+    }
+  }
+
+  // Tab 切换
+  qsa(".tab").forEach(function (t) {
+    t.addEventListener("click", function () {
+      qsa(".tab").forEach(function (x) { x.classList.remove("active"); });
+      qsa(".tab-pane").forEach(function (x) { x.classList.remove("active"); });
+      t.classList.add("active");
+      var pane = el("tab-" + t.getAttribute("data-tab"));
+      if (pane) pane.classList.add("active");
+    });
+  });
+
+  if (toChat) toChat.addEventListener("click", function () { showStep(3); });
+  if (back1) back1.addEventListener("click", function () { showStep(1); });
+  if (back2) back2.addEventListener("click", function () { showStep(2); });
+
+  /* ---------- Step3：AI 学生对话 ---------- */
+  if (personaBar) {
+    personaBar.addEventListener("click", function (e) {
+      var btn = e.target.closest(".persona");
+      if (!btn) return;
+      qsa(".persona", personaBar).forEach(function (b) { b.classList.remove("active"); });
+      btn.classList.add("active");
+      currentPersona = btn.getAttribute("data-p") || "naughty";
+    });
+  }
+
+  function scrollChat() {
+    if (chatLog) chatLog.scrollTop = chatLog.scrollHeight;
+  }
+
+  function addMsg(who, text, name) {
+    if (!chatLog) return;
+    var wrap = document.createElement("div");
+    wrap.className = "msg " + (who === "stu" ? "msg-in" : "msg-out");
+    var av = document.createElement("span");
+    av.className = "avatar " + (who === "stu" ? "stu" : "tea");
+    av.textContent = who === "stu" ? "学" : "师";
+    var bub = document.createElement("div");
+    bub.className = "bubble";
+    if (name) {
+      var s = document.createElement("small");
+      s.textContent = name;
+      bub.appendChild(s);
+    }
+    bub.appendChild(document.createTextNode(text));
+    wrap.appendChild(av);
+    wrap.appendChild(bub);
+    chatLog.appendChild(wrap);
+    scrollChat();
+  }
+
+  function showTyping() {
+    if (!chatLog) return;
+    var wrap = document.createElement("div");
+    wrap.className = "msg msg-in";
+    wrap.innerHTML =
+      '<span class="avatar stu">学</span><div class="bubble"><span class="typing"><i></i><i></i><i></i></span></div>';
+    chatLog.appendChild(wrap);
+    scrollChat();
+    return wrap;
+  }
+
+  if (askStu) {
+    askStu.addEventListener("click", function () {
+      var p = PERSONA[currentPersona] || PERSONA.naughty;
+      var arr = p.asks;
+      var idx = personaIndex[currentPersona] % arr.length;
+      personaIndex[currentPersona]++;
+      askStu.disabled = true;
+      var t = showTyping();
+      setTimeout(function () {
+        if (t && t.parentNode) t.parentNode.removeChild(t);
+        addMsg("stu", arr[idx], p.label + "学生");
+        askStu.disabled = false;
+      }, 900);
+    });
+  }
+
+  if (chatForm) {
+    chatForm.addEventListener("submit", function (e) {
+      e.preventDefault();
+      var text = chatInput && chatInput.value ? chatInput.value.trim() : "";
+      if (!text) return;
+      addMsg("tea", text, "你（老师）");
+      if (chatInput) chatInput.value = "";
+      var p = PERSONA[currentPersona] || PERSONA.naughty;
+      var arr = p.follow;
+      var idx = Math.floor(Math.random() * arr.length);
+      var t = showTyping();
+      setTimeout(function () {
+        if (t && t.parentNode) t.parentNode.removeChild(t);
+        addMsg("stu", arr[idx], p.label + "学生");
+      }, 1200);
+    });
+  }
+
+  /* ---------- 重置 ---------- */
+  if (resetDemo) {
+    resetDemo.addEventListener("click", function () {
+      reportRendered = false;
+      if (scriptInput) scriptInput.value = "";
+      if (analyzeBtn) { analyzeBtn.disabled = true; analyzeBtn.textContent = "开始 AI 分析"; }
+      if (fillSample) fillSample.textContent = "填入示例讲稿";
+      if (chatLog) {
+        chatLog.innerHTML =
+          '<div class="msg msg-in"><span class="avatar stu">AI</span><div class="bubble">' +
+          "<small>系统提示</small>AI 学生已读完你的讲稿，随时准备提问。选一个性格，然后点下面的按钮。" +
+          "</div></div>";
+      }
+      personaIndex = { naughty: 0, geek: 0, drift: 0 };
+      showStep(1);
+    });
+  }
+
+})();
+</script>
+</body>
+</html>

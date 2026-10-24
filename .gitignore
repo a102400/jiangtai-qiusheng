@@ -1,0 +1,38 @@
+# 依赖与密钥，绝不入库
+node_modules/
+.env
+.env.local
+
+# 上传的临时视频
+app/uploads/
+*.mp4
+*.mov
+*.webm
+*.wav
+*.m4a
+
+# 系统与编辑器
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# 日志
+*.log
+npm-debug.log*
+
+# 非源码产物（绝不入库）
+备份/
+视觉验证截图/
+.workbuddy/
+讲台求生-离线版.html
+*.bak
+*.bak-*
+
+# 运行时缓存/临时
+app/uploads/
+app/server.log
+
+# 密钥与本地配置（保留 .env.example 作为模板）
+.env
+.env.local

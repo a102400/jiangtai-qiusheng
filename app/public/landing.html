@@ -1,0 +1,650 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<meta name="description" content="讲台求生 — 师范生 AI 试讲教练：讲一次，当场告诉你哪里会翻车。iFIAS 互动编码、AI 学生拆台、课堂崩塌模拟与成长轨迹。">
+	<meta property="og:title" content="讲台求生 · 师范生 AI 试讲教练">
+	<meta property="og:description" content="讲一次，当场告诉你哪里会翻车。">
+	<title>讲台求生 · 师范生 AI 试讲教练</title>
+	<style>
+		:root {
+			--bg-center: #eef2f8;
+			--paper: #ffffff;
+			--ink: #1a2332;
+			--muted: #5c6778;
+			--line: #dce3ee;
+			--brand: #2563eb;
+			--brand-soft: #eff6ff;
+			--brand-glow: rgba(37, 99, 235, 0.12);
+			--accent: #059669;
+			--accent-soft: #ecfdf5;
+			--accent-glow: rgba(5, 150, 105, 0.12);
+			--warn: #d97706;
+			--max: 1180px;
+			--radius: 14px;
+			--radius-sm: 8px;
+			--shadow: 0 1px 2px rgba(26, 35, 50, 0.04), 0 8px 32px rgba(26, 35, 50, 0.06);
+			--shadow-lg: 0 4px 16px rgba(26, 35, 50, 0.06), 0 20px 56px rgba(37, 99, 235, 0.08);
+		}
+
+		*, *::before, *::after { box-sizing: border-box; }
+
+		html { scroll-behavior: smooth; scroll-padding-top: 1.5rem; }
+
+		body {
+			margin: 0;
+			font-family: "Noto Sans SC", "PingFang SC", "Microsoft YaHei", sans-serif;
+			font-size: 15px;
+			line-height: 1.75;
+			color: var(--ink);
+			background-color: #DBEAFE;
+			background-image: none;
+			-webkit-font-smoothing: antialiased;
+		}
+
+		body::before {
+			content: "";
+			position: fixed;
+			inset: 0;
+			z-index: -1;
+			pointer-events: none;
+			background-image: radial-gradient(circle, rgba(26, 35, 50, 0.035) 1px, transparent 1px);
+			background-size: 28px 28px;
+			opacity: 0.5;
+		}
+
+		@keyframes shimmer {
+			0% { background-position: 0% 50%; }
+			100% { background-position: 200% 50%; }
+		}
+
+				a { color: var(--brand); text-decoration: none; }
+		a:hover { text-decoration: underline; }
+
+		.surface {
+			background: #FFFFFF;
+			border: 1px solid #E4EAF3;
+			border-radius: var(--radius);
+			box-shadow: var(--shadow);
+			transition: transform 0.3s ease, box-shadow 0.3s ease, border-color 0.3s ease;
+		}
+
+		.surface-interactive:hover {
+			transform: translateY(-3px);
+			box-shadow: 0 6px 24px rgba(26, 35, 50, 0.08), 0 16px 48px rgba(37, 99, 235, 0.07);
+			border-color: rgba(37, 99, 235, 0.18);
+		}
+
+		.hero-panel.surface {
+			background: #D3E5FC;
+			box-shadow: var(--shadow-lg);
+		}
+
+		.scroll-progress {
+			position: fixed; top: 0; left: 0; z-index: 1000; height: 3px; width: 0;
+			background: linear-gradient(90deg, var(--brand), #6366f1, var(--accent));
+			box-shadow: 0 0 8px rgba(37, 99, 235, 0.35);
+			pointer-events: none; transition: width 0.12s ease-out;
+		}
+
+		.reveal { opacity: 0; transform: translateY(22px); transition: opacity 0.65s cubic-bezier(0.22, 1, 0.36, 1), transform 0.65s cubic-bezier(0.22, 1, 0.36, 1); }
+		.reveal.visible { opacity: 1; transform: none; }
+		.reveal-delay-1 { transition-delay: 0.08s; }
+		.reveal-delay-2 { transition-delay: 0.16s; }
+
+		@media (prefers-reduced-motion: reduce) {
+			html { scroll-behavior: auto; }
+			.section-head h2::after { animation: none; }
+			.reveal { opacity: 1; transform: none; transition: none; }
+			.scroll-progress { transition: none; }
+			.surface-interactive:hover, .download-bar a:hover { transform: none; }
+		}
+
+		/* ── header ── */
+		.site-header { padding: 1.75rem 1.5rem 0; }
+		.header-shell { max-width: var(--max); margin: 0 auto; }
+		.hero-panel { position: relative; padding: 2.25rem 2rem 1.35rem; text-align: center; }
+
+		.lang-switch {
+			position: absolute; top: 1rem; right: 1rem; display: inline-flex;
+			border: 1px solid #E4EAF3; border-radius: 999px; overflow: hidden;
+			background: #FFFFFF;
+			box-shadow: 0 1px 4px rgba(26, 35, 50, 0.06); font-size: 13px; line-height: 1;
+		}
+		.lang-switch button {
+			margin: 0; padding: 0.45rem 0.75rem; border: none; background: transparent;
+			color: var(--muted); cursor: pointer; font-family: inherit; font-size: inherit;
+			transition: color 0.15s, background 0.15s;
+		}
+		.lang-switch button:hover { color: var(--ink); }
+		.lang-switch button.active { background: linear-gradient(135deg, var(--brand), #3b82f6); color: #fff; }
+
+		html[lang="zh-CN"] .i18n-en, html[lang="en"] .i18n-zh { display: none !important; }
+
+		.brand-mark {
+			display: inline-flex; align-items: center; gap: 0.6rem;
+			margin: 0 0 0.5rem; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", "Noto Sans CJK SC", sans-serif;
+			font-size: 2.1rem; font-weight: 600; letter-spacing: -0.02em;
+		}
+		.brand-mark .glyph {
+			width: 42px; height: 42px; border-radius: 12px; display: inline-flex;
+			align-items: center; justify-content: center; font-size: 21px; color: #fff;
+			background: linear-gradient(135deg, var(--brand), var(--accent));
+			box-shadow: 0 6px 18px rgba(37, 99, 235, 0.28);
+		}
+
+		.hero-caption { display: flex; flex-direction: column; align-items: center; padding: 0.55rem 0 0; text-align: center; }
+		.hero-caption > p, .hero-caption > nav { margin: 0; line-height: 1.6; }
+
+		.hero-title {
+			font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", "Noto Sans CJK SC", sans-serif;
+			font-size: 1.35rem; font-weight: 600; color: var(--ink);
+			letter-spacing: -0.015em; line-height: 1.45; max-width: 40em; text-align: center;
+		}
+		.hero-sub { margin-top: 0.5rem; font-size: 0.98rem; color: #7b8798; }
+		.hero-org {
+			margin-top: 0.7rem; font-size: 0.8125rem; font-weight: 500; color: #8b95a5;
+			letter-spacing: 0.06em; text-transform: uppercase;
+		}
+		.hero-org a { color: inherit; border-bottom: 1px solid rgba(139, 149, 165, 0.45); text-decoration: none; transition: color 0.15s, border-color 0.15s; }
+		.hero-org a:hover { color: var(--brand); border-bottom-color: rgba(37, 99, 235, 0.4); }
+
+		.hero-stats { display: flex; flex-wrap: wrap; justify-content: center; gap: 0.5rem; margin-top: 1.15rem; }
+		.hero-stat {
+			display: inline-flex; align-items: center; gap: 0.35rem; padding: 0.35rem 0.85rem;
+			border-radius: 999px; font-size: 12.5px; font-weight: 500; line-height: 1.3;
+			border: 1px solid #E4EAF3; background: #FFFFFF;
+			color: var(--ink); box-shadow: 0 1px 3px rgba(26, 35, 50, 0.04);
+		}
+		.hero-stat .dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
+		.hero-stat.smooth .dot { background: var(--brand); box-shadow: 0 0 0 3px var(--brand-glow); }
+		.hero-stat.duplex .dot { background: var(--accent); box-shadow: 0 0 0 3px var(--accent-glow); }
+		.hero-stat.neutral .dot { background: linear-gradient(135deg, var(--brand), var(--accent)); }
+
+		.nav-links {
+			display: inline-flex; flex-wrap: wrap; justify-content: center; gap: 0.45rem;
+			margin-top: 1.35rem; padding-top: 1.35rem;
+			border-top: 1px solid rgba(220, 227, 238, 0.8); font-size: 13.5px;
+		}
+		.nav-links a {
+			color: var(--ink); text-decoration: none; padding: 0.45rem 1rem; border-radius: 999px;
+			border: 1px solid var(--line); background: #FFFFFF; font-weight: 500;
+			transition: background 0.2s, color 0.2s, border-color 0.2s, transform 0.2s, box-shadow 0.2s;
+		}
+		.nav-links a:hover {
+			color: var(--brand); background: #fff; border-color: rgba(37, 99, 235, 0.25);
+			box-shadow: 0 2px 8px var(--brand-glow); transform: translateY(-1px); text-decoration: none;
+		}
+		.nav-links .cta {
+			color: #fff; font-weight: 500;
+			background: linear-gradient(135deg, var(--brand), #3b82f6); border-color: transparent;
+			box-shadow: 0 2px 10px var(--brand-glow);
+		}
+		.nav-links .cta:hover { background: linear-gradient(135deg, #1d4ed8, var(--brand)); color: #fff; }
+
+		/* ── main ── */
+		.page { max-width: var(--max); margin: 0 auto; padding: 2rem 2rem 4rem; }
+		.section { margin-bottom: 3.25rem; }
+		.section-head { margin-bottom: 1.6rem; }
+		.section-head h2 {
+			font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", "Noto Sans CJK SC", sans-serif; font-size: 1.5rem; font-weight: 600;
+			margin: 0 0 0.65rem; color: var(--ink); letter-spacing: -0.025em;
+		}
+		.section-head h2::after {
+			content: ""; display: block; width: 72px; height: 3px; margin-top: 0.55rem; border-radius: 2px;
+			background: linear-gradient(90deg, var(--brand), var(--accent), var(--brand));
+			background-size: 200% 100%; animation: shimmer 5s linear infinite;
+		}
+		.section-head p { margin: 0; font-size: 14px; color: var(--muted); }
+		.section-head p + p { margin-top: 0.5rem; }
+
+		.intro-card { padding: 1.75rem 2rem; background: #FFFFFF; }
+		.intro-card p { margin: 0; font-size: 14.5px; line-height: 1.85; color: var(--muted); }
+		.intro-card p + p { margin-top: 0.9rem; }
+		.intro-card strong { color: var(--ink); font-weight: 600; }
+		.intro-card .hl { color: var(--brand); font-weight: 600; }
+
+		/* 三步 */
+		.steps { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.1rem; }
+		.step { padding: 1.35rem 1.35rem 1.15rem; position: relative; }
+		.step .num {
+			display: inline-flex; width: 26px; height: 26px; border-radius: 8px; align-items: center; justify-content: center;
+			font-size: 12.5px; font-weight: 700; color: #fff; background: linear-gradient(135deg, var(--brand), #6366f1);
+			margin-bottom: 0.65rem;
+		}
+		.step:nth-child(2) .num { background: linear-gradient(135deg, #6366f1, #8b5cf6); }
+		.step:nth-child(3) .num { background: linear-gradient(135deg, var(--accent), #10b981); }
+		.step h3 { margin: 0 0 0.4rem; font-size: 0.98rem; font-weight: 600; }
+		.step p { margin: 0; font-size: 13.5px; color: var(--muted); line-height: 1.7; }
+		.step .quote {
+			margin-top: 0.75rem; padding: 0.5rem 0.7rem; border-radius: var(--radius-sm);
+			background: rgba(37, 99, 235, 0.06); border-left: 2px solid var(--brand);
+			font-size: 12.5px; color: #3f4b5e; font-style: italic;
+		}
+
+		/* 能力卡 */
+		.feat-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.1rem; }
+		.feat { padding: 1.3rem 1.35rem 1.15rem; }
+		.feat .panel-title {
+			display: flex; align-items: baseline; gap: 0.5rem; margin-bottom: 0.75rem;
+			padding-bottom: 0.6rem; border-bottom: 1px solid var(--line);
+		}
+		.feat .name { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", "Noto Sans CJK SC", sans-serif; font-size: 1.05rem; font-weight: 600; color: var(--brand); }
+		.feat .badge {
+			font-size: 10.5px; font-weight: 600; padding: 3px 9px; border-radius: 999px;
+			background: var(--brand-soft); color: var(--brand); letter-spacing: 0.02em;
+		}
+		.feat.accent .name { color: var(--accent); }
+		.feat.accent .badge { background: var(--accent-soft); color: var(--accent); }
+		.feat ul { margin: 0; padding: 0; list-style: none; }
+		.feat li { position: relative; padding-left: 1rem; font-size: 13.5px; line-height: 1.75; color: var(--muted); }
+		.feat li + li { margin-top: 0.45rem; }
+		.feat li::before {
+			content: ""; position: absolute; left: 0; top: 0.65em; width: 5px; height: 5px; border-radius: 50%;
+			background: linear-gradient(135deg, var(--brand), var(--accent));
+		}
+
+		/* 技术流水线 */
+		.pipe { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.85rem; }
+		.pipe-item { padding: 1.1rem 1.1rem 1rem; text-align: left; }
+		.pipe-item .k { font-size: 11px; font-weight: 700; letter-spacing: 0.08em; color: var(--brand); text-transform: uppercase; }
+		.pipe-item h4 { margin: 0.3rem 0 0.4rem; font-size: 0.95rem; font-weight: 600; }
+		.pipe-item p { margin: 0; font-size: 12.5px; color: var(--muted); line-height: 1.65; }
+		.pipe-arrow { display: none; }
+
+		.chips { display: flex; flex-wrap: wrap; gap: 0.45rem; margin-top: 1.1rem; }
+		.chip {
+			font-size: 12px; padding: 0.3rem 0.7rem; border-radius: 999px;
+			background: #FFFFFF; border: 1px solid var(--line); color: var(--muted);
+		}
+		.chip b { color: var(--brand); font-weight: 600; }
+
+		/* 伦理 */
+		.ethics-card { padding: 1.75rem 2rem; background: #FFFFFF; border-left: 3px solid var(--warn); }
+		.ethics-card ul { margin: 0; padding: 0; list-style: none; }
+		.ethics-card li { position: relative; padding-left: 1.1rem; font-size: 14px; line-height: 1.8; color: var(--muted); }
+		.ethics-card li + li { margin-top: 0.85rem; }
+		.ethics-card li::before {
+			content: ""; position: absolute; left: 0; top: 0.68em; width: 5px; height: 5px; border-radius: 50%;
+			background: linear-gradient(135deg, #d97706, #f59e0b);
+		}
+		.ethics-card li strong { color: var(--ink); font-weight: 600; }
+
+		/* CTA */
+		.download-bar {
+			display: flex; flex-wrap: wrap; justify-content: center; gap: 0.65rem 0.85rem;
+			padding: 1.65rem 1.5rem; font-size: 14px;
+			background: #FFFFFF;
+		}
+		.download-bar a {
+			font-weight: 600; padding: 0.55rem 1.15rem; border-radius: 999px; border: 1px solid transparent;
+			transition: background 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease;
+		}
+		.download-bar a:hover { transform: translateY(-2px); text-decoration: none; }
+		.download-bar .dl-primary { color: #fff; background: linear-gradient(135deg, var(--brand), #3b82f6); box-shadow: 0 2px 10px var(--brand-glow); }
+		.download-bar .dl-primary:hover { background: linear-gradient(135deg, #1d4ed8, var(--brand)); box-shadow: 0 4px 16px rgba(37, 99, 235, 0.25); }
+		.download-bar .dl-accent { color: #fff; background: linear-gradient(135deg, var(--accent), #10b981); box-shadow: 0 2px 10px var(--accent-glow); }
+		.download-bar .dl-accent:hover { background: linear-gradient(135deg, #047857, var(--accent)); box-shadow: 0 4px 16px rgba(5, 150, 105, 0.25); }
+		.download-bar .dl-secondary { color: var(--ink); background: #FFFFFF; border-color: var(--line); }
+		.download-bar .dl-secondary:hover { background: #fff; box-shadow: 0 2px 10px rgba(26, 35, 50, 0.08); }
+
+		.site-footer { margin-top: 2.5rem; padding: 1.75rem 1rem 0.5rem; border-top: 1px solid var(--line); text-align: center; font-size: 13px; color: var(--muted); }
+		.site-footer p { margin: 0.4rem 0; }
+		.site-footer a { color: var(--muted); border-bottom: 1px solid transparent; transition: color 0.15s, border-color 0.15s; }
+		.site-footer a:hover { color: var(--brand); border-bottom-color: rgba(37, 99, 235, 0.35); text-decoration: none; }
+
+		@media (max-width: 900px) {
+			.steps, .feat-grid { grid-template-columns: 1fr 1fr; }
+			.pipe { grid-template-columns: 1fr 1fr; }
+		}
+
+		@media (max-width: 720px) {
+			.site-header { padding: 1.25rem 1rem 0; }
+			.page { padding: 1.25rem 1rem 3rem; }
+			.hero-panel { padding: 1.75rem 1rem 1.15rem; }
+			.brand-mark { font-size: 1.6rem; }
+			.brand-mark .glyph { width: 34px; height: 34px; font-size: 17px; }
+			.hero-title { font-size: 1.12rem; }
+			.lang-switch { top: 0.65rem; right: 0.65rem; }
+			.nav-links a { padding: 0.35rem 0.75rem; font-size: 13px; }
+			.steps, .feat-grid, .pipe { grid-template-columns: 1fr; }
+			.intro-card, .ethics-card { padding: 1.25rem 1.15rem; }
+			.section-head h2 { font-size: 1.28rem; }
+		}
+	</style>
+	<style>
+		/* 主题兜底：避免缓存导致底色不生效 */
+		html, body { background-color: #DBEAFE !important; background-image: none !important; }
+		.hero-panel.surface { background: #D3E5FC !important; }
+	</style>
+</head>
+
+<body>
+
+<div class="scroll-progress" id="scroll-progress" aria-hidden="true"></div>
+
+<header class="site-header">
+	<div class="header-shell">
+		<div class="hero-panel surface reveal visible">
+			<div class="lang-switch" role="group" aria-label="Language">
+				<button type="button" id="lang-zh" data-lang="zh-CN">中文</button>
+				<button type="button" id="lang-en" data-lang="en">EN</button>
+			</div>
+
+			<div class="brand-mark">
+				<span class="glyph" aria-hidden="true">▣</span>
+				<span>讲台求生</span>
+			</div>
+
+			<div class="hero-caption">
+				<p class="hero-title">
+					<span class="i18n-en">AI Micro-teaching Coach for Pre-service Teachers</span>
+					<span class="i18n-zh">师范生的 AI 试讲教练 · 课堂模拟器</span>
+				</p>
+				<p class="hero-sub">
+					<span class="i18n-en">Speak once, and see exactly where your lesson collapses.</span>
+					<span class="i18n-zh">讲一次，当场告诉你哪里会翻车。</span>
+				</p>
+				<p class="hero-org">
+					<span class="i18n-en">AI Hackathon Project · South China Normal University</span>
+					<span class="i18n-zh">华南师范大学 · AI 黑客松参赛作品</span>
+				</p>
+
+				<div class="hero-stats">
+					<span class="hero-stat smooth"><span class="dot"></span><span class="i18n-en">14-category iFIAS coding</span><span class="i18n-zh">14 类 iFIAS 互动编码</span></span>
+					<span class="hero-stat duplex"><span class="dot"></span><span class="i18n-en">3 AI students with pressure meter</span><span class="i18n-zh">3 位 AI 学生 + 压力条</span></span>
+					<span class="hero-stat neutral"><span class="dot"></span><span class="i18n-en">6-stage crisis challenge</span><span class="i18n-zh">6 关课堂崩塌挑战</span></span>
+					<span class="hero-stat neutral"><span class="dot"></span><span class="i18n-en">6 modules in one canvas</span><span class="i18n-zh">6 大功能模块一体化</span></span>
+				</div>
+
+				<nav class="nav-links">
+					<a href="#problem"><span class="i18n-en">Problem</span><span class="i18n-zh">痛点</span></a>
+					<a href="#how"><span class="i18n-en">How it works</span><span class="i18n-zh">怎么用</span></a>
+					<a href="#features"><span class="i18n-en">Features</span><span class="i18n-zh">功能</span></a>
+					<a href="#tech"><span class="i18n-en">Under the hood</span><span class="i18n-zh">技术实现</span></a>
+					<a href="#ethics"><span class="i18n-en">Ethics</span><span class="i18n-zh">伦理</span></a>
+					<a class="cta" href="index.html"><span class="i18n-en">Try it live ↗</span><span class="i18n-zh">立即试用 ↗</span></a>
+				</nav>
+			</div>
+		</div>
+	</div>
+</header>
+
+<main class="page">
+
+	<!-- problem -->
+	<section class="section reveal" id="problem">
+		<div class="section-head">
+			<h2><span class="i18n-en">The problem</span><span class="i18n-zh">问题在哪</span></h2>
+			<p>
+				<span class="i18n-en">Every pre-service teacher must do micro-teaching. Almost none of them get told where it will break.</span>
+				<span class="i18n-zh">每个师范生都要试讲，但几乎没人告诉他们：哪里会翻车。</span>
+			</p>
+		</div>
+		<div class="intro-card surface">
+			<div class="i18n-zh">
+				<p>试讲的反馈通常是三句话：<strong>「讲得不错」「再自信一点」「多互动」</strong>。听起来都对，但下一次上台，你还是不知道<strong>哪一句</strong>让学生走神、<strong>哪个问题</strong>抛出去会冷场、<strong>哪一段</strong>语速快到学生跟不上。</p>
+				<p>更麻烦的是压力。<span class="hl">真实课堂的压迫感无法预演</span>——学生追问、后排起哄、投影突然黑掉，这些场景在实习前一节课都没练过，第一次遇到就是真课堂。</p>
+				<p>于是我们把这件事拆成两半：<strong>一半用数据量化</strong>（语速、等待、口头禅、互动结构），<strong>一半用 AI 演出来</strong>（三个性格迥异的学生当场拆台）。</p>
+			</div>
+			<div class="i18n-en">
+				<p>Feedback on micro-teaching is usually three sentences: <strong>"good job", "be more confident", "interact more"</strong>. All true, and all useless — because next time you still don't know <strong>which sentence</strong> lost the class, <strong>which question</strong> landed in silence, or <strong>which segment</strong> ran too fast to follow.</p>
+				<p>Worse is the pressure. <span class="hl">Real classroom pressure cannot be rehearsed</span> — a student pushing back, the back row acting up, the projector dying mid-derivation. None of it is practised before the internship, and the first time is the real thing.</p>
+				<p>So we split the problem in two: <strong>quantify one half with data</strong> (pace, wait time, filler words, interaction structure) and <strong>perform the other half with AI</strong> (three students with distinct personalities who push back in real time).</p>
+			</div>
+		</div>
+	</section>
+
+	<!-- how -->
+	<section class="section reveal reveal-delay-1" id="how">
+		<div class="section-head">
+			<h2><span class="i18n-en">How it works</span><span class="i18n-zh">三步就能跑完</span></h2>
+			<p>
+				<span class="i18n-en">Paste a script. Read the report. Face the students.</span>
+				<span class="i18n-zh">粘一段讲稿 → 看一份报告 → 面对三个学生。</span>
+			</p>
+		</div>
+		<div class="steps">
+			<div class="step surface surface-interactive">
+				<span class="num">1</span>
+				<h3><span class="i18n-en">Paste your script</span><span class="i18n-zh">粘讲稿</span></h3>
+				<p><span class="i18n-en">Type it, dictate it, or upload a video and let it transcribe. A lesson plan can be attached for coverage checking.</span><span class="i18n-zh">打字、语音输入，或上传讲课视频自动转写；还能贴一份教案，检查知识点覆盖。</span></p>
+				<div class="quote"><span class="i18n-en">"So today we'll learn fraction division…"</span><span class="i18n-zh">「同学们好，今天我们学习分数除法……」</span></div>
+			</div>
+			<div class="step surface surface-interactive">
+				<span class="num">2</span>
+				<h3><span class="i18n-en">Read the report</span><span class="i18n-zh">看报告</span></h3>
+				<p><span class="i18n-en">Score, danger moments, filler ranking, wait-time heatmap, time allocation, curriculum alignment, iFIAS matrix, and a rewritable script.</span><span class="i18n-zh">分数、危险瞬间、口头禅排行、等待热力图、时间分配、课标对照、iFIAS 矩阵，还有一份可直接照着练的改进稿。</span></p>
+				<div class="quote"><span class="i18n-en">"Pause 0.5s → students had no time to think."</span><span class="i18n-zh">「提问后只等了 0.5 秒，学生来不及想。」</span></div>
+			</div>
+			<div class="step surface surface-interactive">
+				<span class="num">3</span>
+				<h3><span class="i18n-en">Face the students</span><span class="i18n-zh">面对学生</span></h3>
+				<p><span class="i18n-en">Three AI students — the nitpicker, the over-achiever, the daydreamer — ask questions, quote your own words back, and drive a pressure meter up.</span><span class="i18n-zh">小皮抬杠、小霸追问原理、小走走神。他们会引用你刚说过的话反问，压力条一路往上顶。</span></p>
+				<div class="quote"><span class="i18n-en">"You just said 『multiply by the reciprocal』— then what about dividing by zero?"</span><span class="i18n-zh">「老师你刚才说『除以一个数等于乘倒数』，那除以 0 呢？」</span></div>
+			</div>
+		</div>
+	</section>
+
+	<!-- features -->
+	<section class="section reveal" id="features">
+		<div class="section-head">
+			<h2><span class="i18n-en">What's inside</span><span class="i18n-zh">六大模块</span></h2>
+			<p>
+				<span class="i18n-en">Six modules that share one transcript — no re-uploading, no separate tools.</span>
+				<span class="i18n-zh">六个模块共用同一份讲稿，不用反复上传，也不用在五个工具之间跳。</span>
+			</p>
+		</div>
+		<div class="feat-grid">
+			<div class="feat surface surface-interactive">
+				<div class="panel-title"><span class="name"><span class="i18n-en">Report</span><span class="i18n-zh">复盘报告</span></span><span class="badge"><span class="i18n-en">Core</span><span class="i18n-zh">核心</span></span></div>
+				<ul>
+					<li><span class="i18n-en">Danger moments: original sentence + why + how to fix</span><span class="i18n-zh">危险瞬间：原句 + 原因 + 改成什么</span></li>
+					<li><span class="i18n-en">Wait-time heatmap: red &lt;1s, green ≥2s</span><span class="i18n-zh">等待热力图：红色 &lt;1 秒，绿色 ≥2 秒</span></li>
+					<li><span class="i18n-en">Filler ranking with density per 100 characters</span><span class="i18n-zh">口头禅排行 + 每百字密度</span></li>
+				</ul>
+			</div>
+			<div class="feat accent surface surface-interactive">
+				<div class="panel-title"><span class="name"><span class="i18n-en">AI students</span><span class="i18n-zh">AI 学生</span></span><span class="badge"><span class="i18n-en">Highlight</span><span class="i18n-zh">高光</span></span></div>
+				<ul>
+					<li><span class="i18n-en">Three personas speaking in turn, each with mood</span><span class="i18n-zh">三种性格依次发言，各有表情</span></li>
+					<li><span class="i18n-en">Multi-turn memory: they quote what you said earlier</span><span class="i18n-zh">多轮记忆：会引用你前面说过的原话</span></li>
+					<li><span class="i18n-en">Pressure meter; full bar triggers the social-death ending</span><span class="i18n-zh">压力条满格触发社死结局</span></li>
+				</ul>
+			</div>
+			<div class="feat surface surface-interactive">
+				<div class="panel-title"><span class="name"><span class="i18n-en">Quant analysis</span><span class="i18n-zh">量化分析</span></span><span class="badge"><span class="i18n-en">Research</span><span class="i18n-zh">研究</span></span></div>
+				<ul>
+					<li><span class="i18n-en">iFIAS 14-category coding, 12×12 and raw 16×16 matrices</span><span class="i18n-zh">iFIAS 14 类编码，12×12 与原始 16×16 双矩阵</span></li>
+					<li><span class="i18n-en">Steady-state cells and content-cross area ratio</span><span class="i18n-zh">稳态格与内容十字区比率</span></li>
+					<li><span class="i18n-en">DBSCAN episode clustering + PCA structure map</span><span class="i18n-zh">DBSCAN 片段聚类 + PCA 结构图</span></li>
+				</ul>
+			</div>
+			<div class="feat accent surface surface-interactive">
+				<div class="panel-title"><span class="name"><span class="i18n-en">Crisis sim</span><span class="i18n-zh">崩塌模拟</span></span><span class="badge"><span class="i18n-en">Game</span><span class="i18n-zh">游戏化</span></span></div>
+				<ul>
+					<li><span class="i18n-en">Six escalating incidents with control-score feedback</span><span class="i18n-zh">六类递进事故 + 控场得分</span></li>
+					<li><span class="i18n-en">Challenge mode: 6 levels, 3 lives, S/A/B/C rating</span><span class="i18n-zh">挑战模式：6 关、3 条命、S/A/B/C 结算</span></li>
+					<li><span class="i18n-en">Replayable recording of your own rescue attempt</span><span class="i18n-zh">录像回放，看自己当时怎么救场</span></li>
+				</ul>
+			</div>
+			<div class="feat surface surface-interactive">
+				<div class="panel-title"><span class="name"><span class="i18n-en">Growth</span><span class="i18n-zh">成长档案</span></span><span class="badge"><span class="i18n-en">Retention</span><span class="i18n-zh">留存</span></span></div>
+				<ul>
+					<li><span class="i18n-en">Level titles, badges, daily practice with streaks</span><span class="i18n-zh">等级称号、徽章、每日一练打卡</span></li>
+					<li><span class="i18n-en">Campus leaderboard, weekly progress board, team board</span><span class="i18n-zh">校内榜、本周进步榜、战队榜</span></li>
+					<li><span class="i18n-en">Multi-session PCA trajectory of your teaching structure</span><span class="i18n-zh">多节课课堂结构 PCA 轨迹</span></li>
+				</ul>
+			</div>
+			<div class="feat surface surface-interactive">
+				<div class="panel-title"><span class="name"><span class="i18n-en">Support</span><span class="i18n-zh">陪伴与传播</span></span><span class="badge"><span class="i18n-en">Emotion</span><span class="i18n-zh">情感</span></span></div>
+				<ul>
+					<li><span class="i18n-en">Anonymous hollow: AI holds the feeling first, then one 30-second action</span><span class="i18n-zh">匿名树洞：先接住情绪，再给一个 30 秒能做的动作</span></li>
+					<li><span class="i18n-en">One-tap share poster with QR code</span><span class="i18n-zh">一键生成带二维码的分享海报</span></li>
+					<li><span class="i18n-en">PDF report and printable evaluation form</span><span class="i18n-zh">PDF 报告与可打印试讲考核表</span></li>
+				</ul>
+			</div>
+		</div>
+	</section>
+
+	<!-- tech -->
+	<section class="section reveal reveal-delay-2" id="tech">
+		<div class="section-head">
+			<h2><span class="i18n-en">Under the hood</span><span class="i18n-zh">技术实现</span></h2>
+			<p>
+				<span class="i18n-en">Zero-dependency Node backend + static front end; every AI feature has a rule-based fallback, so a dead network never kills a demo.</span>
+				<span class="i18n-zh">零依赖 Node 后端 + 静态前端；每个 AI 能力都有规则兜底，断网也演得下去。</span>
+			</p>
+		</div>
+		<div class="pipe">
+			<div class="pipe-item surface">
+				<div class="k">Step 01</div>
+				<h4><span class="i18n-en">Segment</span><span class="i18n-zh">切分话语单元</span></h4>
+				<p><span class="i18n-en">Split by sentence-final punctuation, then by commas for over-long turns.</span><span class="i18n-zh">按句末标点切分，过长句再按逗号切，上限 80 句。</span></p>
+			</div>
+			<div class="pipe-item surface">
+				<div class="k">Step 02</div>
+				<h4><span class="i18n-en">Code</span><span class="i18n-zh">逐句编码</span></h4>
+				<p><span class="i18n-en">LLM coder at temperature 0.2; keyword and punctuation rules as fallback.</span><span class="i18n-zh">大模型低温编码；关键词与标点规则兜底。</span></p>
+			</div>
+			<div class="pipe-item surface">
+				<div class="k">Step 03</div>
+				<h4><span class="i18n-en">Matrix</span><span class="i18n-zh">互动矩阵</span></h4>
+				<p><span class="i18n-en">Adjacent-transition counts, steady-state diagonal, content-cross ratio.</span><span class="i18n-zh">相邻转移计数、对角稳态格、内容十字区比率。</span></p>
+			</div>
+			<div class="pipe-item surface">
+				<div class="k">Step 04</div>
+				<h4><span class="i18n-en">Cluster + project</span><span class="i18n-zh">聚类与降维</span></h4>
+				<p><span class="i18n-en">7-D sliding-window features → DBSCAN with adaptive ε → Jacobi PCA to 2-D.</span><span class="i18n-zh">7 维滑窗特征 → 自适应 ε 的 DBSCAN → Jacobi PCA 降到 2 维。</span></p>
+			</div>
+		</div>
+		<div class="chips">
+			<span class="chip"><b>14</b> <span class="i18n-en">iFIAS categories</span><span class="i18n-zh">类互动编码</span></span>
+			<span class="chip"><b>16</b> <span class="i18n-en">raw code values</span><span class="i18n-zh">个可编码值</span></span>
+			<span class="chip"><b>12×12</b> <span class="i18n-en">aggregated matrix</span><span class="i18n-zh">聚合矩阵</span></span>
+			<span class="chip"><b>16×16</b> <span class="i18n-en">raw matrix</span><span class="i18n-zh">原始矩阵</span></span>
+			<span class="chip"><b>7-D</b> <span class="i18n-en">episode features</span><span class="i18n-zh">片段特征</span></span>
+			<span class="chip"><b>DBSCAN</b> <span class="i18n-en">adaptive ε</span><span class="i18n-zh">自适应 ε</span></span>
+			<span class="chip"><b>PCA</b> <span class="i18n-en">Jacobi eigen-solver</span><span class="i18n-zh">自写 Jacobi 特征分解</span></span>
+		</div>
+	</section>
+
+	<!-- ethics -->
+	<section class="section reveal" id="ethics">
+		<div class="section-head">
+			<h2><span class="i18n-en">Ethics &amp; limits</span><span class="i18n-zh">伦理与边界</span></h2>
+			<p>
+				<span class="i18n-en">This is a training tool for pre-service teachers, not a judge of who is fit to teach.</span>
+				<span class="i18n-zh">这是给师范生练习用的工具，不是判断谁「配不配当老师」的裁判。</span>
+			</p>
+		</div>
+		<div class="ethics-card surface">
+			<ul class="i18n-zh">
+				<li><strong>本地保存 ≠ 不联网。</strong>讲稿、报告、历史记录默认存在浏览器本地；但只要使用在线分析，内容就会发送到应用后端，启用外部模型或云端转写时还会发送至对应服务提供方。登录后，报告与讲稿正文会存档到云端。</li>
+				<li><strong>树洞是公开共享的。</strong>你发布的帖子正文、AI 回复与学校名会保存到云端并对所有用户展示（不展示昵称与账号，但仍可举报下架）。服务端可能通过账号关联识别发布者，因此它是「不显示身份」而非「无法追溯」。不登录则仅保存在本设备。</li>
+				<li><strong>分数不是评价，是参照。</strong>我们不承诺绝对分数，只承诺相对变化——同一个人的两次试讲放在一起看趋势，才是能力成长的证据。每项分数旁边都给可验证的依据：原句、秒数、次数。</li>
+				<li><strong>模拟反馈不是现实测量。</strong>AI 学生的专注、理解与压力值是模拟课堂状态，不是对真实学生心理的测量；六视角评价是模拟角色，不是真实督导、家长或同行意见。</li>
+				<li><strong>不用于替代真实教学评价。</strong>AI 反馈不能代替导师评课、学生反馈与真实课堂经验。它的位置是「上台之前的第二次机会」。</li>
+				<li><strong>告警与纠错。</strong>如发现内容被误判、被滥用，或涉及隐私问题，请联系项目团队，我们会修正或下架相关内容。</li>
+			</ul>
+			<ul class="i18n-en">
+				<li><strong>Local storage is not offline.</strong> Scripts, reports and history live in the browser by default, but any online analysis sends content to our server, and external model or cloud transcription providers may receive it too. Once signed in, reports and script text are archived in the cloud.</li>
+				<li><strong>The hollow is shared publicly.</strong> Your post, the AI reply and your school name are stored in the cloud and shown to all users (no nickname or account is displayed, but you can report a post for removal, and the server may still link a post to your account). Without signing in, posts stay on your device only.</li>
+				<li><strong>Scores are a reference, not a verdict.</strong> We promise relative change, not absolute truth: two attempts by the same person, read together, are the evidence. Every score ships with the sentence, seconds or counts behind it.</li>
+				<li><strong>Simulated feedback is not a real measurement.</strong> AI-student attention, comprehension and stress values simulate classroom states; they are not measurements of real students. The six-perspective review uses simulated roles, not real supervisors, parents or peers.</li>
+				<li><strong>Not a substitute for real evaluation.</strong> AI feedback cannot replace mentor reviews, peer feedback, or classroom experience. Its place is the second chance before the real class.</li>
+				<li><strong>Corrections welcome.</strong> If something is misjudged, misused, or privacy-sensitive, contact the team and we will fix or remove it.</li>
+			</ul>
+		</div>
+	</section>
+
+	<div class="download-bar surface reveal">
+		<a class="dl-primary" href="index.html"><span class="i18n-en">Open the app ↗</span><span class="i18n-zh">进入产品 ↗</span></a>
+		<a class="dl-accent" href="index.html?demo=1"><span class="i18n-en">One-tap demo</span><span class="i18n-zh">一键自动演示</span></a>
+		<a class="dl-secondary" href="#tech"><span class="i18n-en">How the coding works</span><span class="i18n-zh">编码怎么做的</span></a>
+		<a class="dl-secondary" href="#ethics"><span class="i18n-en">Ethics statement</span><span class="i18n-zh">伦理声明</span></a>
+	</div>
+
+	<footer class="site-footer">
+		<p>
+			<span class="i18n-en">Built for the AI Hackathon · Education × Speech × LLM</span>
+			<span class="i18n-zh">为 AI 黑客松而做 · 教育 × 语音 × 大模型</span>
+		</p>
+		<p>
+			<span class="i18n-en">Design language inspired by open dataset homepages.</span>
+			<span class="i18n-zh">视觉语言参考了公开数据集主页的排版规范。</span>
+		</p>
+	</footer>
+
+</main>
+
+<script>
+(function () {
+	var STORAGE_KEY = 'jtq-lang';
+	var titles = {
+		'en': 'JTQ · AI Micro-teaching Coach for Pre-service Teachers',
+		'zh-CN': '讲台求生 · 师范生 AI 试讲教练'
+	};
+	var btnZh = document.getElementById('lang-zh');
+	var btnEn = document.getElementById('lang-en');
+
+	function setLang(lang) {
+		document.documentElement.lang = lang;
+		try { localStorage.setItem(STORAGE_KEY, lang); } catch (e) { }
+		btnZh.classList.toggle('active', lang === 'zh-CN');
+		btnEn.classList.toggle('active', lang === 'en');
+		document.title = titles[lang] || titles.en;
+	}
+
+	btnZh.addEventListener('click', function () { setLang('zh-CN'); });
+	btnEn.addEventListener('click', function () { setLang('en'); });
+
+	var saved = null;
+	try { saved = localStorage.getItem(STORAGE_KEY); } catch (e) { }
+	var initial = saved || (navigator.language && navigator.language.toLowerCase().indexOf('zh') === 0 ? 'zh-CN' : 'en');
+	setLang(initial);
+
+	// 内链透传 sharecode：线上站点缺参数会 403，跳转时必须带上
+	try {
+		var sc = new URLSearchParams(location.search).get('sharecode');
+		if (sc) {
+			document.querySelectorAll('a[href^="index.html"]').forEach(function (a) {
+				var h = a.getAttribute('href');
+				if (h.indexOf('sharecode=') === -1) {
+					a.setAttribute('href', h + (h.indexOf('?') === -1 ? '?' : '&') + 'sharecode=' + encodeURIComponent(sc));
+				}
+			});
+		}
+	} catch (e) { }
+
+	var progressBar = document.getElementById('scroll-progress');
+	function updateScrollProgress() {
+		var scrollTop = window.scrollY || document.documentElement.scrollTop;
+		var docHeight = document.documentElement.scrollHeight - document.documentElement.clientHeight;
+		var pct = docHeight > 0 ? (scrollTop / docHeight) * 100 : 0;
+		progressBar.style.width = pct + '%';
+	}
+	window.addEventListener('scroll', updateScrollProgress, { passive: true });
+	window.addEventListener('resize', updateScrollProgress);
+	updateScrollProgress();
+
+	if (!window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+		var reveals = document.querySelectorAll('.reveal:not(.visible)');
+		var observer = new IntersectionObserver(function (entries) {
+			entries.forEach(function (entry) {
+				if (entry.isIntersecting) {
+					entry.target.classList.add('visible');
+					observer.unobserve(entry.target);
+				}
+			});
+		}, { threshold: 0.1, rootMargin: '0px 0px -32px 0px' });
+		reveals.forEach(function (el) { observer.observe(el); });
+	} else {
+		document.querySelectorAll('.reveal').forEach(function (el) { el.classList.add('visible'); });
+	}
+})();
+</script>
+</body>
+</html>

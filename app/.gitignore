@@ -1,0 +1,11 @@
+# 密钥与本地文件，绝不随代码分发
+.env
+.env.local
+uploads/
+node_modules/
+*.log
+
+# 临时备份文件（改动前的快照），不应进入发布包
+*.bak
+*.bak-*
+*.bak-*

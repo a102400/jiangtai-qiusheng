@@ -1,0 +1,17 @@
+{
+  "name": "jiangtai-qiusheng",
+  "version": "1.0.0",
+  "private": true,
+  "description": "讲台求生 · 师范生 AI 试讲教练（全栈版：Node 零依赖后端 + 真实大模型接口）",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js",
+    "test": "node --test tests/*.test.js"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {},
+  "comments": "零第三方依赖：只用 Node 内置模块 + Node 18+ 全局 fetch，所以不需要 npm install"
+}

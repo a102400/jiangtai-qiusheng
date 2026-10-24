@@ -1,0 +1,25 @@
+services:
+  - type: web
+    name: jiangtai-qiusheng
+    runtime: node
+    plan: free
+    rootDir: app
+    buildCommand: ""
+    startCommand: node server.js
+    healthCheckPath: /api/health
+    envVars:
+      - key: NODE_VERSION
+        value: "22"
+      - key: PORT
+        value: "3000"
+      - key: TRANSCRIBE_MODE
+        value: auto
+      # 密钥建议在 Render 面板里手动填写，不要写进仓库
+      - key: AI_API_KEY
+        sync: false
+      - key: AI_BASE_URL
+        sync: false
+
+# 说明：
+# rootDir: app  —— 因为服务代码在仓库根目录的 app/ 子目录下
+# healthCheckPath: /api/health —— 部署后访问该路径可确认服务是否真的起来了
