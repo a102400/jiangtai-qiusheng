@@ -97,7 +97,7 @@ function main() {
       return '<figure><img src="' + png + '" alt="' + ROLE_CN[key] + ' ' + STATE_CN[state] + '">' +
         '<figcaption>' + ROLE_CN[key] + ' · ' + STATE_CN[state] + '</figcaption></figure>';
     }).join('\n      ');
-    return '<section><h2>' + ROLE_CN[key] + '（' + key + '）· 五种状态</h2>\n      ' + items + '</section>';
+    return '<section><h2>' + ROLE_CN[key] + '（' + key + '）· 五种状态</h2>\n      <div class="row">\n      ' + items + '\n      </div></section>';
   }).join('\n    ');
 
   const html = `<!DOCTYPE html>
