@@ -69,6 +69,24 @@ function getJSON(port, p) {
   await send('Page.enable');
   await sleep(2500);
 
+  // 等演示真正跑出结果（#resultBody 解除隐藏），否则「复盘与演练」整块不可见，
+  // 单人画布的 getBoundingClientRect 是 0，drawSoloScene 会直接早退。
+  for (let i = 0; i < 120; i++) {
+    const ready = await evalJs(`(() => {
+      const b = document.getElementById('resultBody');
+      return !!(b && !b.hidden);
+    })()`);
+    if (ready) break;
+    await sleep(250);
+  }
+  // 演示驱动随后会自动滚动并切 Tab，按「暂停」冻住再截图，否则截图永远拍不到这块
+  await evalJs(`(() => {
+    const p = document.getElementById('dhPause');
+    if (p) p.click();
+    return true;
+  })()`);
+  await sleep(400);
+
   // 切到「复盘与演练 / AI 学生拆台」Tab，再确认单人模式
   await evalJs(`(() => {
     const tab = document.querySelector('.tabs .tab[data-tab="chat"]');
@@ -87,7 +105,29 @@ function getJSON(port, p) {
   })()`);
   await sleep(800);
 
+  const ensureChat = async () => {
+    for (let i = 0; i < 20; i++) {
+      await evalJs(`(() => {
+        const tab = document.querySelector('.tabs .tab[data-tab="chat"]');
+        if (tab && !tab.classList.contains('active')) tab.click();
+        const solo = document.querySelector('#chatModeBar .msw[data-mode="solo"]');
+        if (solo && !solo.classList.contains('active')) solo.click();
+        const c = document.getElementById('soloSceneCanvas');
+        if (c) c.scrollIntoView({ block: 'center' });
+        return true;
+      })()`);
+      await sleep(120);
+      const w = await evalJs(`(() => {
+        const c = document.getElementById('soloSceneCanvas');
+        return c ? Math.round(c.getBoundingClientRect().width) : 0;
+      })()`);
+      if (w > 0) return true;
+    }
+    return false;
+  };
+
   const shot = async (name, sel) => {
+    await ensureChat();
     const box = await evalJs(`(() => {
       const el = document.querySelector(${JSON.stringify(sel)});
       if (!el) return null;
@@ -106,8 +146,22 @@ function getJSON(port, p) {
     console.log('shot ' + name + ' ' + Math.round(box.w) + 'x' + Math.round(box.h));
   };
 
-  await shot('solo-scene-pi', '#soloSceneCanvas');
-  await shot('solo-card-pi', '#soloStudents');
+  // 画布截图走 toDataURL：Page.captureScreenshot 的 clip 是文档坐标，
+  // 元素滚出视口后截出来是空白（踩过）。卡片用视口截图。
+  await ensureChat();
+  const dataUrl = await evalJs(`(() => {
+    const c = document.getElementById('soloSceneCanvas');
+    return c ? c.toDataURL('image/png') : '';
+  })()`);
+  if (dataUrl && dataUrl.indexOf('data:image') === 0) {
+    fs.writeFileSync(path.join(OUT, 'solo-scene.png'), Buffer.from(dataUrl.split(',')[1], 'base64'));
+    console.log('shot solo-scene (toDataURL)');
+  } else {
+    console.log('shot solo-scene FAILED');
+  }
+  const vp = await send('Page.captureScreenshot', { format: 'png' });
+  fs.writeFileSync(path.join(OUT, 'solo-card.png'), Buffer.from(vp.result.data, 'base64'));
+  console.log('shot solo-card (viewport)');
 
   // 画布像素：确认真的画了东西（不是空白）
   const canvasInfo = await evalJs(`(() => {
@@ -147,6 +201,45 @@ function getJSON(port, p) {
   console.log('after-switch', JSON.stringify(model2));
   const full2 = await send('Page.captureScreenshot', { format: 'png' });
   fs.writeFileSync(path.join(OUT, 'solo-mode-geek.png'), Buffer.from(full2.result.data, 'base64'));
+
+  // 真实走一轮「让学生提问」：验状态机（举手→张嘴→闭嘴）、气泡头像、难度标签
+  await evalJs(`(() => {
+    const b = document.getElementById('askBtn');
+    if (b) b.click();
+    return true;
+  })()`);
+  await sleep(300);
+  const rais = await evalJs(`(() => {
+    const c = document.querySelector('#soloStudents .cs-card');
+    return c ? { raise: !!c.querySelector('.cs-raise'), speaking: c.classList.contains('speaking') } : null;
+  })()`);
+  console.log('state-300ms', JSON.stringify(rais));
+  await sleep(900);
+  const speak = await evalJs(`(() => {
+    const c = document.querySelector('#soloStudents .cs-card');
+    return c ? { raise: !!c.querySelector('.cs-raise'), speaking: c.classList.contains('speaking') } : null;
+  })()`);
+  console.log('state-1.2s', JSON.stringify(speak));
+  await sleep(7000);
+  const done = await evalJs(`(() => {
+    const c = document.querySelector('#soloStudents .cs-card');
+    const last = document.querySelectorAll('#chatLog .msg');
+    const el = last[last.length - 1];
+    return {
+      card: c ? { raise: !!c.querySelector('.cs-raise'), speaking: c.classList.contains('speaking'), diff: (c.querySelector('.difficulty-tag') || {}).textContent || '' } : null,
+      bubbleAvatar: !!(el && el.querySelector('.av-stu img')),
+      bubbleText: el ? (el.textContent || '').slice(0, 60) : '',
+    };
+  })()`);
+  console.log('after-reply', JSON.stringify(done));
+  await evalJs(`(() => {
+    const c = document.querySelector('#soloStudents');
+    if (c) c.scrollIntoView({ block: 'center' });
+    return true;
+  })()`);
+  await sleep(400);
+  const vp2 = await send('Page.captureScreenshot', { format: 'png' });
+  fs.writeFileSync(path.join(OUT, 'solo-after-ask.png'), Buffer.from(vp2.result.data, 'base64'));
 
   console.log('console/errors:', logs.length ? logs.join(' | ') : 'none');
   sock.close();

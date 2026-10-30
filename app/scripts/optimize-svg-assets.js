@@ -23,10 +23,10 @@ const ROOT = path.join(__dirname, '..');
 const STUDENT_DIR = path.join(ROOT, 'public', 'assets', 'students', 'svg');
 const CONFIG = path.join(__dirname, 'svgo-students.config.cjs');
 
-const STATES = ['default', 'closed', 'raise'];
+const STATES = ['default', 'closed', 'raise', 'speak-raise', 'idle-down'];
 const KEYS = ['geek', 'naughty', 'drift'];
 const GROUPS = [
-  'desk', 'body', 'head', 'eyes',
+  'desk', 'body', 'head', 'eyes', 'eyes-down',
   'mouth-open', 'mouth-closed', 'arm-down', 'arm-raise'
 ];
 
@@ -93,15 +93,27 @@ function validateStudent(before, after, key, state) {
   }
   const expected = {
     desk: false,
-    'mouth-open': state !== 'closed',
-    'mouth-closed': state === 'closed',
-    'arm-down': state !== 'raise',
-    'arm-raise': state === 'raise'
+    'mouth-open': state === 'default' || state === 'speak-raise',
+    'mouth-closed': state !== 'default' && state !== 'speak-raise',
+    'arm-down': state !== 'raise' && state !== 'speak-raise',
+    'arm-raise': state === 'raise' || state === 'speak-raise',
+    'eyes': state !== 'idle-down',
+    'eyes-down': state === 'idle-down'
   };
   for (const [id, wanted] of Object.entries(expected)) {
     if (visible(after, id) !== wanted) {
       throw new Error('#' + id + ' 显隐状态被改变');
     }
+  }
+
+  // 走神态的头部下倾 transform 必须留着（低头是这一态的全部意义）
+  const head = groupTag(after, 'head');
+  const hasTilt = /transform="rotate\([-\d.]+ [\d.]+ [\d.]+\) translate\(0 \d+\)"/.test(head);
+  if (state === 'idle-down' && !hasTilt) {
+    throw new Error('走神态的 head 下倾 transform 被删掉了');
+  }
+  if (state !== 'idle-down' && hasTilt) {
+    throw new Error('非走神态的 head 不该带下倾 transform');
   }
 }
 

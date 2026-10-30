@@ -40,7 +40,7 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
     await sleep(250);
     try {
       const list = await getJSON(port, '/json/list');
-      const page = list.find((t) => t.type === 'page' && t.url.indexOf('http') === 0);
+      const page = list.find((t) => t.type === 'page' && t.url.indexOf('http') === 0 || t.url.indexOf('file') === 0);
       if (page) wsUrl = page.webSocketDebuggerUrl;
     } catch (e) { /* 浏览器还没起来 */ }
   }

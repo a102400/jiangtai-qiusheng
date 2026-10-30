@@ -57,9 +57,9 @@ const STATE_NAMES = {
 // 每个角色的「低头」姿态：绕颈部 pivot 转 tilt 度，再整体下移 drop。
 // 低头 + 眯眼 = 走神/犯困；只眯眼会像在挤眼睛，只低头会像鞠躬。
 const HEAD_POSE = {
-  geek: { pivot: [300, 392], drop: 10, tilt: 5 },
-  naughty: { pivot: [302, 448], drop: 12, tilt: 5 },
-  drift: { pivot: [300, 294], drop: 8, tilt: 5 },
+  geek: { pivot: [300, 392], drop: 12, tilt: 6 },
+  naughty: { pivot: [302, 448], drop: 14, tilt: 6 },
+  drift: { pivot: [300, 294], drop: 10, tilt: 6 },
 };
 
 fs.mkdirSync(OUT, { recursive: true });

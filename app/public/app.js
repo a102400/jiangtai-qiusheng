@@ -2671,7 +2671,8 @@ function soloAvatarHtml() {
     ? window.jtqStudentArt.srcOf(key, portraitStateOf(soloStudent))
     : '';
   if (!src) return '<span class="av">学</span>';
-  return '<span class="av av-stu">学' +
+  // 头像是装饰性的（气泡里已经写了「AI 学生 / 定制学生」），读屏不必再念一个「学」字
+  return '<span class="av av-stu" aria-hidden="true">学' +
     '<img src="' + src + '" alt="" decoding="async" onerror="this.remove()">' +
     '</span>';
 }
@@ -6076,14 +6077,22 @@ async function demoWaitFor(check, timeout) {
  * 放在讲稿页上就是「唰」一下，评委根本跟不上视线。
  */
 function demoScrollTo(el, duration) {
-  const ms = duration == null ? 800 : duration;
   if (!el || !el.getBoundingClientRect) return Promise.resolve();
 
   const rect = el.getBoundingClientRect();
+  // 元素隐藏时 rect 全是 0，滚过去等于滚到页面顶端——宁可不滚，也别乱飞
+  if (!rect.width && !rect.height) return Promise.resolve();
+
   const to = Math.max(0, window.scrollY + rect.top - 96);
   const from = window.scrollY;
+  const dist = Math.abs(to - from);
 
-  if (PREFERS_REDUCE || ms <= 0 || Math.abs(to - from) < 8) {
+  // 距离越长给的时间越多：从首屏跳到报告区有 2900px，
+  // 固定 900ms 在投影上就是「唰」一下，评委只看到画面糊过去。
+  const auto = Math.min(2200, Math.max(600, dist * 0.55));
+  const ms = Math.max(Number(duration) || 0, auto);
+
+  if (PREFERS_REDUCE || dist < 8) {
     window.scrollTo(0, to);
     return Promise.resolve();
   }
@@ -6220,13 +6229,13 @@ const DEMO_STEPS = [
         await demoWait(1200);
         await respondCrisis();
       }
-      await demoScrollTo($('pane-crisis'), 800);
+      await demoScrollTo($('crisisEventCard') || $('pane-crisis'), 900);
     }
   },
   {
     key: 'pano',
-    title: '六视角透视：一节课的互动矩阵',
-    tip: '自研 iFIAS 把整节课编码成 12×12 矩阵：稳态格、内容十字区、师生话语比一眼可见。',
+    title: '六视角透视：同一节课，六个人怎么看',
+    tip: '导师、学生、教研组长、同行、家长、学情分析师各给一个分（雷达图）；往下是本课 12×12 互动编码矩阵。',
     hold: 7500,
     run: async () => {
       switchTab('pano');
@@ -6238,7 +6247,7 @@ const DEMO_STEPS = [
   {
     key: 'growth',
     title: '成长档案：练过的每一次都算数',
-    tip: '得分曲线、校内榜 / 战队榜、匿名树洞都在这里——把「练一次」变成「想再练一次」。',
+    tip: '最近几次的总分连成一条上升曲线；校内榜 / 战队榜需登录后才有名次，匿名树洞随时可用。',
     hold: 7500,
     run: async () => {
       switchTab('growth');
@@ -6250,7 +6259,8 @@ const DEMO_STEPS = [
       try {
         await loadHollow();
       } catch (e) { /* 树洞失败不影响演示 */ }
-      await demoScrollTo($('pane-growth'), 800);
+      // 曲线在面板后半段：滚到 pane 顶部只能看到上传板书和空榜单
+      await demoScrollTo($('growthCurve') || $('pane-growth'), 900);
     }
   }
 ];

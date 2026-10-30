@@ -268,11 +268,16 @@
     <path d="M219 320L217 323M390 319L393 322" stroke="#6b5948" stroke-opacity=".48" stroke-width=".9" stroke-linecap="round"/>
     </g>
 
-    <!-- 眯眼：低头走神态用。眼皮压成一条弧，瞳孔不画。 -->
+    <!-- 半垂眼：低头走神态用。上眼皮压下来、虹膜只露一条窄缝，
+         比「闭眼」更像走神犯困，而不是睡着。 -->
     <g id="eyes-down">
-      <path d="M212 302C228 313 258 313 274 301M332 300C348 311 378 309 394 298" stroke="#4f4338" stroke-width="2" stroke-linecap="round" fill="none"/>
-      <path d="M216 308C232 317 256 317 270 308M336 306C352 315 376 313 390 304" stroke="#a78d7a" stroke-opacity=".45" stroke-width="1" stroke-linecap="round" fill="none"/>
-      <path d="M208 299C223 276 258 274 278 298M330 298C350 274 383 276 399 299" stroke="#4f4338" stroke-opacity=".45" stroke-width="1.5" stroke-linecap="round" fill="none"/>
+      <path d="M211 303C224 285 256 283 276 302C262 316 233 319 213 308ZM332 302C350 284 381 283 397 301C381 315 352 316 333 307Z" fill="url(#fp-eye-white)"/>
+      <ellipse cx="244" cy="304" rx="10.5" ry="4" fill="url(#fp-iris)"/>
+      <ellipse cx="244" cy="305" rx="5.6" ry="2.2" fill="url(#fp-pupil)"/>
+      <ellipse cx="365" cy="302" rx="10.2" ry="3.8" fill="url(#fp-iris)"/>
+      <ellipse cx="365" cy="303" rx="5.4" ry="2.1" fill="url(#fp-pupil)"/>
+      <path d="M207 298C223 275 258 273 279 297M329 297C350 273 383 275 400 298" stroke="#4f4338" stroke-width="2.9" stroke-linecap="round" fill="none"/>
+      <path d="M213 309C230 323 258 322 273 306M335 306C350 322 378 324 395 309" stroke="#a78d7a" stroke-opacity=".55" stroke-width="1" stroke-linecap="round" fill="none"/>
     </g>
 
     <!-- Understated nose, no hard contour -->

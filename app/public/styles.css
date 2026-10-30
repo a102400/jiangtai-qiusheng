@@ -2731,3 +2731,18 @@ body.is-demo-running {
 @media (prefers-reduced-motion: reduce) {
   .demo-hud { animation: none; }
 }
+
+/* Tab 面板切换：给一帧淡入上移，代替「硬切」的跳变感。
+   只动 opacity / transform，不改变高度，不会把下方内容顶得抖一下。 */
+.tabpane.active {
+  animation: paneFadeIn .38s ease both;
+}
+
+@keyframes paneFadeIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tabpane.active { animation: none; }
+}

@@ -14,7 +14,11 @@ module.exports = {
           collapseGroups: false,
           inlineStyles: false,
           removeDesc: false,
-          removeHiddenElems: false
+          removeHiddenElems: false,
+          // convertTransform 会把「绕颈部旋转 + 下移」合并成等价的
+          // rotate(5 185.481 387)，数字更难读、也让状态校验认不出低头姿态。
+          // 留着原式，体积差可以忽略。
+          convertTransform: false
         }
       }
     }

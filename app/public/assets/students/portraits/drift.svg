@@ -208,13 +208,20 @@
 <path d="M334 226C340 234 350 234 357 226" stroke="#466a2b" stroke-opacity=".32" stroke-width="1" stroke-linecap="round"/>
 </g>
 </g>
-<!-- 眯眼：低头走神态用。眼皮压成一条弧，瞳孔不画。 -->
+<!-- 半垂眼：低头走神态用。上眼皮压下来、虹膜只露一条窄缝，
+     比「闭眼」更像走神犯困，而不是睡着。 -->
 <g id="eyes-down">
 <g transform="rotate(8 255 212)">
-<path d="M240 214C248 221 262 221 270 212" stroke="#4b702d" stroke-width="2.4" stroke-linecap="round" fill="none"/>
+<ellipse cx="255" cy="214" rx="13" ry="8" fill="#c8d583"/>
+<ellipse cx="255" cy="215" rx="9" ry="5" fill="url(#y-iris)"/>
+<ellipse cx="255" cy="216" rx="5.6" ry="2.8" fill="url(#y-pupil)"/>
+<path d="M241 210C248 204 262 204 269 210" stroke="#4b702d" stroke-width="2.3" stroke-linecap="round" fill="none"/>
 </g>
 <g transform="rotate(-7 345 212)">
-<path d="M330 212C338 219 352 219 360 210" stroke="#466a2b" stroke-width="2.4" stroke-linecap="round" fill="none"/>
+<ellipse cx="345" cy="214" rx="13" ry="8" fill="#becf7b"/>
+<ellipse cx="345" cy="215" rx="9" ry="5" fill="url(#y-iris)"/>
+<ellipse cx="345" cy="216" rx="5.6" ry="2.8" fill="url(#y-pupil)"/>
+<path d="M331 210C338 204 352 204 359 210" stroke="#466a2b" stroke-width="2.3" stroke-linecap="round" fill="none"/>
 </g>
 </g>
 <g id="mouth-open">
