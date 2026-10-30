@@ -15,8 +15,59 @@ const DEMO_ANALYSIS = {
   speech_rate: { chars_per_min: 168, judge: '偏快' },
   pauses: { count_gt_2s: 3, longest_sec: 2.8 },
   filler_words: { total: 12, detail: { 那个: 4, 然后: 5, 就是: 3 } },
-  questions: { asked: 2, avg_wait_sec: 1.1, genuine_questions: 0, total: 2, authentic: 0 },
-  knowledge: { covered: ['勾股定理公式', '勾三股四弦五'], missing: ['公式推导过程', '逆定理'], cover_percent: 65 },
+  questions: {
+    asked: 2,
+    avg_wait_sec: 1.1,
+    genuine_questions: 0,
+    fake_questions: 2,
+    source: 'offline-demo',
+    wait_source: 'offline-demo',
+    note: '固定演示等待值，不代表当前讲稿的真实等待时间。',
+    total: 2,
+    authentic: 0
+  },
+  // 等待指标（新契约 wait_metrics）：
+  // moments 逐条是「文本推断」的固定演示示例，average_sec 只是这 4 条的平均，
+  // 不是任何一次真实课堂的等待时间。
+  wait_metrics: {
+    moments: [
+      { quote: '好，我问大家一个问题，这公式大家能理解吗？', wait_sec: 0.5, source: 'text-heuristic', reaction: '固定演示：没等人反应过来就进了下一句' },
+      { quote: '然后我们来看一下这个公式', wait_sec: 0.8, source: 'text-heuristic', reaction: '固定演示：学生还在抄，已经翻页' },
+      { quote: '李XX，你说说这一步为什么这么设？', wait_sec: 3, source: 'text-heuristic', reaction: '固定演示：李同学答出了关键思路' },
+      { quote: '这个结论考试可能会考，大家记住了吗？', wait_sec: 0.5, source: 'text-heuristic', reaction: '固定演示：齐声敷衍"记住了"' }
+    ],
+    average_sec: 1.2,
+    source: 'offline-demo',
+    note: '固定演示示例值，不代表当前讲稿的真实等待时间。'
+  },
+  // 通用教学环节线索：七环节关键词命中口径（不是知识点掌握率）。
+  knowledge: {
+    covered: ['情境引入', '知识推导', '公式结论', '例题讲解', '作业布置'],
+    missing: ['课堂互动', '小结回顾'],
+    cover_percent: 71,
+    scheme: 'generic-seven-phase-cues-v1',
+    source: 'text-keyword-rules'
+  },
+  // 学科内容核对：模型提示，需人工确认（不是评分，也不是结论）。
+  subject_knowledge: {
+    covered: [
+      {
+        point: '勾股定理',
+        evidence_quote: '……就是 a 的平方加 b 的平方等于 c 的平方。（固定演示）'
+      },
+      {
+        point: '勾三股四弦五',
+        evidence_quote: '……那个西周的商高就提出过「勾三股四弦五」。（固定演示）'
+      }
+    ],
+    needs_review: [
+      {
+        point: '逆定理',
+        reason: '固定演示：讲稿未展开，需人工核对'
+      }
+    ],
+    scope_note: '固定演示数据，不代表真实核对结果。'
+  },
   suggestions: [
     { title: '放慢语速到 150 字/分', detail: '当前 168 字/分，重点讲授段建议降到 130 并配合板书停顿。' },
     { title: '把伪提问改成真提问', detail: '"这公式大家能理解吗"是伪提问，改成点名 + 明确等待 3 秒。' },
@@ -109,6 +160,42 @@ const DEMO_CLASSROOM = {
   profile_effect: '',
 };
 
+/* 课堂点名（点谁谁答）的固定演示剧本。
+ * 三个人设分开写，且刻意不是「同一句话换名字」——
+ * 演示时观众点谁都能看到不同的反应，才证明这是三套人格而不是一个模板。 */
+const DEMO_CLASS_CALLON = {
+  naughty: {
+    key: 'naughty', name: '小皮', mood: '🤔',
+    line: '……行吧我试试。是不是先把两边同时除以二？',
+    answer_quality: 'partial',
+    attention: 58, comprehension: 66,
+    state_reason: '被点到，勉强给了一半',
+    difficulty: 'core',
+    pressure_delta: 2, pressure_reason: '答得不完整，还得再补一句',
+    engine: 'offline-demo', profile_applied: false,
+  },
+  geek: {
+    key: 'geek', name: '小霸', mood: '😊',
+    line: '先设未知数再代入，跟上次那题一个套路。那系数是负数的时候，这步还成立吗？',
+    answer_quality: 'good',
+    attention: 92, comprehension: 94,
+    state_reason: '答完还追问了变式',
+    difficulty: 'core',
+    pressure_delta: -8, pressure_reason: '点名答得利落，课堂稳住了',
+    engine: 'offline-demo', profile_applied: false,
+  },
+  drift: {
+    key: 'drift', name: '小走', mood: '😵',
+    line: '啊？我？……什么题？',
+    answer_quality: 'poor',
+    attention: 36, comprehension: 30,
+    state_reason: '被点到，完全没跟上',
+    difficulty: 'basic',
+    pressure_delta: 6, pressure_reason: '点名卡住，其他学生开始走神',
+    engine: 'offline-demo', profile_applied: false,
+  },
+};
+
 const DEMO_DANGER = {
   moments: [
     { type: '伪提问', quote: '「这公式大家能理解吗？」', reason: '提问后未等待也未点名，属于自问自答', fix: '改成「李XX，你说说这一步为什么这么设」并等 3 秒' },
@@ -119,12 +206,31 @@ const DEMO_DANGER = {
 };
 
 const DEMO_HEATMAP = {
+  // 旧字段保留：后端仍会返回 wait_moments / wait_source / wait_note，
+  // 前端要能同时兼容新旧两种形态。
   wait_moments: [
     { quote: '好，我问大家一个问题，这公式大家能理解吗？', wait_sec: 0.5, reaction: '离线演示：没等人反应过来就进了下一句' },
     { quote: '然后我们来看一下这个公式', wait_sec: 0.8, reaction: '离线演示：学生还在抄，已经翻页' },
     { quote: '李XX，你说说这一步为什么这么设？', wait_sec: 3, reaction: '离线演示：李同学答出了关键思路' },
     { quote: '这个结论考试可能会考，大家记住了吗？', wait_sec: 0.5, reaction: '离线演示：齐声敷衍"记住了"' },
   ],
+  // 演示数据里的秒数是固定示例，不是任何一次真实课堂的实测值。
+  // 若将来加入「整段未检测到提问」条目，其 wait_sec 必须是 null，
+  // 与后端口径一致，否则前端会把它渲染成红色「0 秒」。
+  wait_source: 'offline-demo',
+  wait_note: '本图每条等待秒数都是文本推断口径的固定演示示例值（示例），不是音频时间戳实测值。',
+  // 等待指标（新契约 wait_metrics）：前端优先读这一份。
+  wait_metrics: {
+    moments: [
+      { quote: '好，我问大家一个问题，这公式大家能理解吗？', wait_sec: 0.5, source: 'text-heuristic', reaction: '固定演示：没等人反应过来就进了下一句' },
+      { quote: '然后我们来看一下这个公式', wait_sec: 0.8, source: 'text-heuristic', reaction: '固定演示：学生还在抄，已经翻页' },
+      { quote: '李XX，你说说这一步为什么这么设？', wait_sec: 3, source: 'text-heuristic', reaction: '固定演示：李同学答出了关键思路' },
+      { quote: '这个结论考试可能会考，大家记住了吗？', wait_sec: 0.5, source: 'text-heuristic', reaction: '固定演示：齐声敷衍"记住了"' }
+    ],
+    average_sec: 1.2,
+    source: 'offline-demo',
+    note: '本图每条等待秒数都是文本推断口径的固定演示示例值（示例），不是音频时间戳实测值。'
+  },
   time_allocation: { teacher: 26, student: 4, interaction: 6, transition: 4 },
   segments: [
     {
@@ -298,9 +404,9 @@ const DEMO_DRILL_SKILLS = {
     {
       key: "intro_design",
       label: "导入设计",
-      focus: "前 15% 讲稿完成情境、冲突或复习衔接",
+      focus: "用情境/冲突/复习衔接开场，再自然进入新课（按语义切分导入段）",
       brief:
-        "用 3 分钟设计并讲解一个导入：从生活情境、旧知复习或一个反常现象切入，导入段落不超过整段讲稿的 15%。",
+        "用 3 分钟设计并讲解一个导入：从生活情境、旧知复习或一个反常现象切入，导入段按语义切分（遇到「进入新课」类信号即止，不再按字数盲切前 15%）。",
       checklist: [
         "导入有具体情境或冲突",
         "与旧知或生活经验相连",
@@ -339,10 +445,10 @@ const DEMO_DRILL_RESULT = {
   duration_sec: 168,
   score: 78,
   grade: "合格",
-  summary: "提问后平均留白约 1.4 秒，学生多数来不及开口。",
+  summary: "提问后只在 1 处写了等待标记，学生多数来不及开口。",
   dimensions: [
     { key: "density", label: "有效提问密度", score: 82, weight: 0.35, evidence: "每分钟 1.67 个需要思考的提问", fix: "每分钟至少设计 1 个开放提问，问完留 3 秒" },
-    { key: "wait", label: "提问后留白", score: 58, weight: 0.35, evidence: "提问后平均留白约 1.4 秒", fix: "问完在心里默数三下，再开口讲" },
+    { key: "wait", label: "提问后留白", score: 58, weight: 0.35, evidence: "提问后写了等待 1 处 / 共 5 个提问（文本证据，非实测秒数）", fix: "问完在心里默数三下，再开口讲" },
     { key: "marker", label: "等待标记", score: 70, weight: 0.2, evidence: "讲稿里标出等待 1 处", fix: "在提问后写上「（停顿）」，逼自己真的等" },
     { key: "fake", label: "假提问扣分", score: 70, weight: 0.1, evidence: "检测到 2 处封闭式提问", fix: "把「听懂了吗」改成点名 + 「说说你的理由」" }
   ],
@@ -351,7 +457,7 @@ const DEMO_DRILL_RESULT = {
     { quote: "然后我们来做一道例题", reason: "口头禅承接，缺少过渡句", fix: "把它换成一次停顿" }
   ],
   suggestions: [
-    { title: "提问后停满 2 秒", detail: "你平均提问后等了 1.4 秒，学生来不及开口，试着停满 2 秒再点人。" },
+    { title: "提问后停满 2 秒", detail: "讲稿里只有 1 处提问后写了等待标记（规则按文本证据判定，无法测出真实等待秒数），学生来不及开口，试着每次问完都停满再点人。" },
     { title: "去掉 1 处伪提问", detail: "「这公式大家能理解吗」是伪提问，改成点名 + 明确等待 3 秒。" }
   ],
   next_drill: { skill: "pace_filler", reason: "提问节奏已经稳住，接着控语速更省力" },
@@ -361,7 +467,8 @@ const DEMO_DRILL_RESULT = {
     questions_asked: 5,
     genuine_questions: 4,
     fake_questions: 2,
-    avg_wait_sec: 1.4,
+    avg_wait_sec: null,
+    wait_source: "unmeasured",
     cover_percent: 62,
     pause_count: 2,
     matched_markers: 1
@@ -420,7 +527,7 @@ const DEMO_STUDENT_CHAT_PROFILE = {
 
 const JTQ_DEMO = {
   DEMO_ANALYSIS, DEMO_IMPROVE, DEMO_CRISIS, DEMO_CRISIS_SCORE, DEMO_PANORAMA,
-  DEMO_CLASSROOM, DEMO_DANGER, DEMO_HEATMAP, DEMO_LESSONPLAN, DEMO_CURRICULUM, DEMO_HOLLOW, DEMO_IFIAS, DEMO_IFIAS_BATCH,
+  DEMO_CLASSROOM, DEMO_CLASS_CALLON, DEMO_DANGER, DEMO_HEATMAP, DEMO_LESSONPLAN, DEMO_CURRICULUM, DEMO_HOLLOW, DEMO_IFIAS, DEMO_IFIAS_BATCH,
   DEMO_PROFILE, DEMO_DRILL_SKILLS, DEMO_DRILL_RESULT, DEMO_CLASSROOM_PROFILE, DEMO_STUDENT_CHAT_PROFILE,
   probeBackend,
 };

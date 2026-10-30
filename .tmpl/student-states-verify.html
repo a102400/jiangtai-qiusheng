@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>立绘状态验证 · m6</title>
+<style>
+  body { font: 14px/1.6 -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif; background: #F4F9FF; margin: 0; padding: 18px; color: #0F172A; }
+  h2 { font-size: 15px; margin: 0 0 10px; }
+  .row { margin-bottom: 22px; }
+  .cap { font-size: 12px; color: #64748B; margin-bottom: 6px; }
+  canvas { display: block; border: 1px solid #DDE5E0; border-radius: 12px; background: #fff; }
+</style>
+</head>
+<body>
+<div class="row">
+  <h2>真实课堂渲染：默认 / 某人举手 / 某人发言</h2>
+  <div class="cap">下方画布用的是 app.js 的真实函数 drawClassStudent，不是重写的示意图。</div>
+</div>
+<div class="row"><canvas id="c1" width="1100" height="330"></canvas></div>
+<div class="row"><canvas id="c2" width="1100" height="330"></canvas></div>
+<div class="row"><canvas id="c3" width="1100" height="330"></canvas></div>
+<div class="row"><canvas id="c4" width="340" height="240"></canvas><div class="cap">窄屏 340×240</div></div>
+<script src="students-art.js"></script>
+<script>
+(function () {
+  'use strict';
+  var SRC = null;
+  // 外层也要有这两个变量：render() 在外层作用域，而 drawClassStudent
+  // 用的是 new Function() 内部的另一份同名变量。
+  var lastSubject = '三角形的内角和';
+  var lastClassStates = [];
+
+  function grab(name) {
+    var i = SRC.indexOf('function ' + name + '(');
+    if (i < 0) throw new Error('not found: ' + name);
+    var depth = 0, j = SRC.indexOf('{', i), started = false;
+    for (; j < SRC.length; j++) {
+      var c = SRC[j];
+      if (c === '{') { depth++; started = true; }
+      else if (c === '}') { depth--; if (started && depth === 0) { j++; break; } }
+    }
+    return SRC.slice(i, j);
+  }
+
+  var VARS = [
+    'var CLASS_META = { naughty:{name:"小皮",desc:"调皮型"}, geek:{name:"小霸",desc:"学霸型"}, drift:{name:"小走",desc:"走神型"} };',
+    'var CLASS_SCENE_COLOR = { naughty:{body:"#197A63",skin:"#DCEFE8"}, geek:{body:"#5262A3",skin:"#E8EAF6"}, drift:{body:"#A66B16",skin:"#F7EBDD"} };',
+    'function hasClassKey(k){ return Object.prototype.hasOwnProperty.call(CLASS_META,k); }',
+    'function scoreOf(v){ var n=Number(v); return Number.isFinite(n)?Math.max(0,Math.min(100,Math.round(n))):null; }',
+    'function stateColor(v){ var n=scoreOf(v); if(n===null) return "#94A3B8"; return n>=60?"#16A34A":n>=30?"#F59E0B":"#DC2626"; }',
+    'function getCssVar(n,f){ return f; }',
+    'function roundRect(ctx,x,y,w,h,r){ ctx.beginPath(); ctx.moveTo(x+r,y); ctx.arcTo(x+w,y,x+w,y+h,r); ctx.arcTo(x+w,y+h,x,y+h,r); ctx.arcTo(x,y+h,x,y,r); ctx.arcTo(x,y,x+w,y,r); ctx.closePath(); }',
+    'function truncateStr(s,n){ return String(s).slice(0,n); }',
+    'var lastSubject = "三角形的内角和";',
+    'var lastClassStates = [];',
+  ].join('\n');
+
+  var FUNCS = '';
+
+  function render(canvasId, states) {
+    var canvas = document.getElementById(canvasId);
+    var ctx = canvas.getContext('2d');
+    lastClassStates = states;
+    var W = canvas.width, H = canvas.height;
+    ctx.clearRect(0, 0, W, H);
+    ctx.fillStyle = '#F4F9FF'; ctx.fillRect(0, 0, W, H);
+
+    var boardX = W * 0.17, boardY = H * 0.035, boardW = W * 0.66, boardH = H * 0.185;
+    ctx.fillStyle = '#244C42';
+    ctx.beginPath();
+    ctx.moveTo(boardX + 10, boardY);
+    ctx.arcTo(boardX + boardW, boardY, boardX + boardW, boardY + boardH, 10);
+    ctx.arcTo(boardX + boardW, boardY + boardH, boardX, boardY + boardH, 10);
+    ctx.arcTo(boardX, boardY + boardH, boardX, boardY, 10);
+    ctx.arcTo(boardX, boardY, boardX + boardW, boardY, 10);
+    ctx.closePath(); ctx.fill();
+    ctx.fillStyle = '#F1F5F2';
+    ctx.textAlign = 'center';
+    ctx.font = '600 ' + Math.round(H * 0.058) + 'px sans-serif';
+    ctx.fillText('课题：' + lastSubject, W * 0.5, boardY + boardH * 0.46);
+    ctx.font = Math.round(H * 0.042) + 'px sans-serif';
+    ctx.fillStyle = '#D6E7DF';
+    ctx.fillText('三学生课堂 · 模拟状态', W * 0.5, boardY + boardH * 0.82);
+
+    var floorY = H * 0.845, maxH = H * 0.62, maxW = W * 0.27;
+    var seated = states.slice(0, 3);
+    var positions = seated.length === 1 ? [0.5] : seated.length === 2 ? [0.33, 0.67] : [0.25, 0.5, 0.75];
+    seated.forEach(function (s, i) {
+      api.drawClassStudent(ctx, W * positions[i], floorY, s, maxW, maxH);
+    });
+
+    ctx.fillStyle = 'rgba(37,49,44,0.34)';
+    ctx.textAlign = 'left';
+    ctx.font = Math.round(H * 0.038) + 'px sans-serif';
+    ctx.fillText('教师视角', W * 0.05, H * 0.965);
+  }
+
+  var api = null;
+
+  function boot() {
+    return fetch('app.js').then(function (r) { return r.text(); }).then(function (text) {
+      SRC = text;
+      FUNCS = ['drawClassStudent'].map(grab).join('\n');
+      var fn = new Function(VARS + '\n' + FUNCS + '\nreturn { drawClassStudent: drawClassStudent };');
+      api = fn();
+      return window.jtqStudentArt.onReady(function () {
+        render('c1', [
+          { key: 'naughty', mood: '😊', hand_raise: false, attention: 70, speaking: false },
+          { key: 'geek', mood: '🤓', hand_raise: false, attention: 85, speaking: false },
+          { key: 'drift', mood: '😵', hand_raise: false, attention: 40, speaking: false },
+        ]);
+        render('c2', [
+          { key: 'naughty', mood: '😊', hand_raise: false, attention: 70, speaking: false },
+          { key: 'geek', mood: '🤓', hand_raise: true, attention: 85, speaking: false },
+          { key: 'drift', mood: '😵', hand_raise: false, attention: 40, speaking: false },
+        ]);
+        render('c3', [
+          { key: 'naughty', mood: '😊', hand_raise: false, attention: 70, speaking: true },
+          { key: 'geek', mood: '🤓', hand_raise: false, attention: 85, speaking: false },
+          { key: 'drift', mood: '😵', hand_raise: false, attention: 40, speaking: false },
+        ]);
+        render('c4', [
+          { key: 'naughty', mood: '😊', hand_raise: true, attention: 70, speaking: false },
+          { key: 'geek', mood: '🤓', hand_raise: false, attention: 85, speaking: false },
+          { key: 'drift', mood: '😵', hand_raise: false, attention: 40, speaking: false },
+        ]);
+        document.body.setAttribute('data-ready', '1');
+      });
+    });
+  }
+
+  boot().catch(function (e) {
+    document.body.setAttribute('data-ready', 'ERR:' + (e && e.message));
+    document.body.setAttribute('data-error', (e && e.stack) || String(e));
+  });
+})();
+</script>
+</body>
+</html>

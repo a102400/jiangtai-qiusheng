@@ -19,6 +19,7 @@
  */
 
 const ai = require('./deepseek');
+const { withFallback } = require('./fallback-reason');
 
 /* ---------------- 编码表 ---------------- */
 const CODE_TABLE = [
@@ -587,12 +588,15 @@ async function ifiasAnalyze(input = {}) {
 
   let coded = null;
   let engine = 'rule';
+  // 捕获真实错误：模型失败时据此判定降级原因（不许笼统报成一种）
+  let modelError = null;
   if (ai.hasKey()) {
     try {
       console.log('[ifias] 调用大模型做 iFIAS 编码…');
       coded = await llmCode(units);
       engine = 'llm';
     } catch (e) {
+      modelError = e;
       console.warn('[ifias] 编码降级本地规则 ->', e && e.message ? e.message : e);
     }
   }
@@ -604,7 +608,7 @@ async function ifiasAnalyze(input = {}) {
   const clustering = clusterEpisodes(coded);
   const verdict = buildVerdict(ratios, clustering, coded);
 
-  return {
+  return withFallback({
     engine: engine,
     total_units: coded.length,
     codes: coded,
@@ -623,7 +627,7 @@ async function ifiasAnalyze(input = {}) {
     min_pts: clustering.min_pts || null,
     verdict: verdict,
     code_table: CODE_TABLE.map((c) => ({ code: c.code, label: c.label, group: c.group })),
-  };
+  }, modelError, ai.hasKey());
 }
 
 module.exports = {

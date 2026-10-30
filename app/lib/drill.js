@@ -15,6 +15,11 @@
 
 const { analyzeRule } = require('./analyzer');
 const { deriveLevelParams, PROFILE_LABELS } = require('./profile');
+/* 问句判定统一走 wait-metrics.js（唯一事实来源）。
+   本文件原先有一个同名但口径更松的本地实现（把「吗/呢」结尾的陈述句也当问句），
+   同名不同义是维护陷阱，已删除，改用共享实现。
+   切句也用同一套（splitSentencesKeepPunct）—— 判定依赖问号，切句必须保留标点。 */
+const { isQuestionSentence, splitSentencesKeepPunct } = require('./wait-metrics');
 
 /* ---------------- 五项技能定义（规格 §2.7 / §3.4） ---------------- */
 const SKILLS = [
@@ -66,7 +71,7 @@ const SKILLS = [
   {
     key: 'intro_design',
     label: '导入设计',
-    focus: '前 15% 讲稿完成情境、冲突或复习衔接',
+    focus: '用情境/冲突/复习衔接开场，再自然进入新课（按语义切分导入段）',
     brief:
       '用 3 分钟设计并讲解一个导入：从生活情境、旧知复习或一个反常现象切入，导入段落不超过整段讲稿的 15%。',
     checklist: [
@@ -283,12 +288,82 @@ const BOARD_MARKERS = ['板书', '写下来', '黑板', '大屏', 'PPT', '投影
 const STRUCT_MARKERS = ['课题', '第一步', '第二步', '第三步', '第二', '第三', '结论', '所以', '因此'];
 /* 导入信号 */
 const INTRO_MARKERS = ['情境', '冲突', '问题', '复习', '上节课', '还记得', '猜一猜', '上周', '同学们'];
+/* 新课开始信号：命中即视为「已进入新授」，该句不被计入导入段（语义切分断点） */
+const INTRO_END_MARKERS = [
+  '进入新课', '新课', '我们今天要学', '今天我们学习', '今天我们来学习', '今天我们来讲',
+  '这就是我们今天', '正式开始', '下面我们一起来', '接下来我们一起来',
+  '下面我们来', '接下来我们来', '现在我们来学习', '本节课我们',
+  '我们要学习', '我们来研究', '我们要研究', '请大家看课本', '翻开课本',
+  '看课本第', '出示课题', '这节课我们', '一起来学习',
+];
 /* 具体情境名词（数字/图形/生活场景） */
 const CONCRETE_MARKERS = ['米', '厘米', '厘米的', '三角形', '圆', '正方形', '汽车', '自行车', '球', '水', '书', '苹果', '楼房', '温度', '角度'];
+
+/**
+ * 语义切分「导入段」：沿句子边界找到「导入 → 新授」的语义断点，取代原先「盲切前 15% 字数」。
+ * 规则（断点优先，字数只当安全网）：
+ *   · 从开头逐句累加，遇到第一句含「新课开始」信号就停止（该句归入新授，不计入导入）；
+ *   · 全文**存在**断点时，一律以断点为准，不再加字数上限：上限会按全文比例算，
+ *     短讲稿里它比导入本身还短，会把「猜一猜 / 为什么」这类关键提问整段砍掉（已踩过）；
+ *     此时只保留 40 句的病理上界。
+ *   · 全文**不存在**断点时退回保守上界：前 8 句且不超过 35% 字数，避免整篇被算成导入。
+ * 返回值额外带 `ratio`（导入段占全文比例），供打分侧判断「导入是否超长」时使用，
+ * 本函数只负责切段，不负责判分。
+ * @param {string} transcript
+ * @returns {{text:string, sentences:string[], ratio:number}}
+ */
+function extractIntroSegment(transcript) {
+  const sentences = splitSentencesKeepPunct(transcript);
+  const bodyLen = String(transcript || '').replace(/\s/g, '').length;
+
+  // 断点是否存在，决定了「字数上界」该不该收紧：
+  // 有断点 → 断点就是真正的终点；无断点 → 只能用保守上界兜住。
+  const hasBreak = sentences.some((sent) =>
+    INTRO_END_MARKERS.some((m) => sent.indexOf(m) !== -1)
+  );
+  const maxChars = hasBreak ? Infinity : Math.max(1, Math.round(bodyLen * 0.35));
+  const maxSent = Math.min(sentences.length, hasBreak ? 40 : 8);
+
+  const picked = [];
+  let chars = 0;
+  for (let i = 0; i < maxSent; i++) {
+    const sent = sentences[i];
+    // 命中「新课开始」信号 → 导入段到此为止，这句不算导入（i=0 命中即表示「直接开讲」，导入段为空）
+    if (INTRO_END_MARKERS.some((m) => sent.indexOf(m) !== -1)) break;
+    const len = sent.replace(/\s/g, '').length;
+    // 字数上界只约束「后续句子」，首句永远纳入（否则一个长开场白会被整句砍掉导致导入段为空）
+    if (i > 0 && chars + len > maxChars) break;
+    picked.push(sent);
+    chars += len;
+  }
+  return { text: picked.join(''), sentences: picked, ratio: bodyLen ? chars / bodyLen : 0 };
+}
 /* 过渡词 */
 const TRANSITION_MARKERS = ['接下来', '下面', '回到', '再看', '因此', '所以', '小结', '总结', '最后'];
 /* 收口词 */
 const CLOSE_MARKERS = ['小结', '总结', '作业', '下课'];
+
+/* 封闭式提问的固定短语（识别「确认式提问」用）。
+   与 isQuestionSentence 的分工（别再把两者混用）：
+     · isQuestionSentence —— 判断「这句是不是在向学生提问」（问句判定），
+       唯一事实来源在 wait-metrics.js，问号/疑问结构/邀请式都归它管；
+     · FAKE_PHRASES —— 判断「这句是不是封闭式的确认句」（懂了吗/对不对/行不行…），
+       它是问句的一个**子集**，不是问句判定。
+   为什么不能把 FAKE_PHRASES 换成 isQuestionSentence：
+   那样会把每一个真问句都当成伪提问扣分，方向完全反了。
+   句级「需要思考的提问」= 句级问句数 − 句级封闭式提问数，
+   其中「句级封闭式提问数」只统计「既是句级问句、又含这些短语」的句子。 */
+const FAKE_PHRASES = [
+  '听懂了吗',
+  '理解了吗',
+  '明白了吗',
+  '对不对',
+  '好不好',
+  '行不行',
+  '跟上没有',
+  '算不算',
+  '是不是啊',
+];
 
 function countOccur(text, needle) {
   if (!needle) return 0;
@@ -309,7 +384,12 @@ function countMarkers(text, markers) {
   return c;
 }
 
-/* 切句：按 。！？；\n 切，保留原文片段（片段一定是原文子串，可直接当 evidence） */
+/* 切句：按 。！？；\n 切，保留原文片段（片段一定是原文子串，可直接当 evidence）。
+   注意：**这个版本不丢标点**（句末的 。！？ 会跟着片段走），与 heatmap.js 那个
+   「丢标点的旧 splitSentences」不是一回事 —— 问号还在，判定不会失效。
+   本函数只用于 evidence 引文（s.sentences：板书句/过渡句/收口句/封闭式提问句）；
+   **问句判定一律走 wait-metrics.js 的 splitSentencesKeepPunct**（与判定同源），
+   不要用本函数去数提问。 */
 function splitSentences(text) {
   const src = String(text || '');
   const out = [];
@@ -332,6 +412,77 @@ function clamp(n, min, max) {
   return Math.max(min, Math.min(max, n));
 }
 
+/**
+ * 提问密度的展示文案（保真版，维度文案与建议文案共用同一套规则）。
+ * 硬规则：**非零密度绝不允许显示成 0** ——
+ *   「每分钟 0 个需要思考的提问」会被读成「一个需要思考的提问都没有」，
+ *   而实际可能有 1 个（只是摊到每分钟不足 1 个）。
+ * 三档：
+ *   density >= 1   → 每分钟 1.2 个需要思考的提问
+ *   0 < density < 1 → 约每 3 分钟 1 个需要思考的提问（M = 1/density，向上不夸大）
+ *   density === 0  → 每分钟 0 个需要思考的提问（真的一个都没有才这么写）
+ * @param {number} density 每分钟「需要思考的提问」数
+ * @returns {string} 可直接嵌进句子的短语
+ */
+function formatDensityPhrase(density) {
+  const n = Number(density);
+  if (!Number.isFinite(n) || n <= 0) return '每分钟 0 个需要思考的提问';
+  if (n >= 1) return `每分钟 ${n.toFixed(1)} 个需要思考的提问`;
+  // 0 < n < 1：改用间隔表述，既不显示 0，也不假装有精确小数
+  const m = 1 / n;
+  const text = m >= 10 ? String(Math.round(m)) : String(Number(m.toFixed(1)));
+  return `约每 ${text} 分钟 1 个需要思考的提问`;
+}
+
+/* ---------------- 等待证据（文本判定，不测秒数） ---------------- */
+
+/* 提问句判定：直接用 wait-metrics.js 的共享实现（问号 / 疑问结构 / 邀请式）。
+   不要再在本文件另写一份 —— 同名不同义会让人误以为改了一处就改了两处。
+   配套切句也用同一套 splitSentencesKeepPunct：判定依赖问号，切句丢了标点就会失效。 */
+
+/* 讲稿里是否写了等待（停顿 / 想一想 / 默数…） */
+function hasWaitMarker(s) {
+  return WAIT_MARKERS.some((m) => String(s).indexOf(m) !== -1);
+}
+
+/**
+ * 句级提问数：数「有多少句是提问」。
+ * 为什么不用 analyzer 的 questions.asked（问号个数）：
+ *   问号计数是对外口径（questions.asked 已被接口/前端契约依赖，不能改），
+ *   但它数的是标点、不是问句 ——「李同学，你说说这一步为什么这样设。」没有问号，
+ *   却是明确的提问。用问号计数当分母，会把「明明有提问」误报成「整段未检测到提问」。
+ * 所以等待维度的分子（等待标记数）与分母（提问数）必须同源：同一套切句 + 同一套问句判定。
+ */
+function countQuestionSentences(text) {
+  return splitSentencesKeepPunct(text).filter((s) => isQuestionSentence(s)).length;
+}
+
+/**
+ * 句级「封闭式提问」数：既是句级问句、又含封闭式短语的那些句子。
+ * 只统计问句 —— 不是问句的句子不进分母，也不该被减掉。
+ */
+function countClosedQuestions(text) {
+  return splitSentencesKeepPunct(text).filter(
+    (s) => isQuestionSentence(s) && FAKE_PHRASES.some((f) => s.indexOf(f) !== -1)
+  ).length;
+}
+
+/* 提问后是否真的留白：只认文本里的等待标记。
+   没有音频时间戳，真实等待秒数不可测量，这里只判断「有没有设计留白」。
+   切句与提问计数同源（splitSentencesKeepPunct），保证分子 ≤ 分母。 */
+function countWaitAfterQuestions(text) {
+  const sents = splitSentencesKeepPunct(text);
+  let count = 0;
+  for (let i = 0; i < sents.length; i++) {
+    const s = sents[i];
+    if (!isQuestionSentence(s)) continue;
+    const next = sents[i + 1] || '';
+    // 等待标记写在问句本身里，或紧跟在问句后的下一句，都算这一处留了白
+    if (hasWaitMarker(s) || hasWaitMarker(next)) count += 1;
+  }
+  return count;
+}
+
 /* ---------------- 通用统计（复用 analyzer，口径完全一致） ---------------- */
 function buildStat(input) {
   const transcript = String(input.transcript || '').trim();
@@ -343,6 +494,13 @@ function buildStat(input) {
     grade: input.grade || '',
     durationSec,
   });
+  const waitAfterQuestions = countWaitAfterQuestions(transcript);
+  // 句级提问数：与上面的等待标记数同源（同切句 + 同问句判定），
+  // 用作等待维度的分母；analyzer 的 questions.asked（问号计数）是对外口径，原样保留。
+  const questionCount = countQuestionSentences(transcript);
+  // 句级「需要思考的提问」= 句级问句数 − 句级封闭式提问数
+  const closedCount = countClosedQuestions(transcript);
+  const thinkingCount = Math.max(0, questionCount - closedCount);
   return {
     transcript,
     durationSec,
@@ -352,10 +510,20 @@ function buildStat(input) {
     rate: stat.speech_rate.chars_per_min,
     fillerTotal: stat.filler_words.total,
     fillerDetail: stat.filler_words.detail || {},
+    // analyzer 对外口径：全文问号个数（questions.asked 是接口契约，不能改）
     asked: stat.questions.asked,
+    // 句级问句数：等待维度的分母（与等待标记数同源）
+    questionCount,
+    // 句级封闭式提问数 / 句级「需要思考的提问」数：提问密度维度的分子
+    closedCount,
+    thinkingCount,
     genuine: stat.questions.genuine_questions,
     fake: stat.questions.fake_questions,
-    avgWait: stat.questions.avg_wait_sec,
+    // 等待时长不可测量（没有音频时间戳）：avg_wait_sec 恒为 null，
+    // 等待维度改用文本证据（提问后是否写了等待标记）判定。
+    avgWait: null,
+    waitAfterQuestions,
+    waitCoverage: questionCount > 0 ? waitAfterQuestions / questionCount : 0,
     coverPercent: stat.knowledge.cover_percent,
     covered: stat.knowledge.covered || [],
     missing: stat.knowledge.missing || [],
@@ -370,7 +538,10 @@ function buildStat(input) {
 
 function scoreQuestionWait(s, profile) {
   const minutes = s.durationSec / 60;
-  const density = s.genuine / minutes;
+  // 提问密度与 wait_time 必须同源：都用句级问句判定数出来的数字。
+  // （原来这里用 s.genuine —— analyzer 的问号计数口径，于是同一张卡片里
+  //   「每分钟 0.00 个需要思考的提问」和「共 1 个提问」自相矛盾。）
+  const density = s.thinkingCount / minutes; // 句级「需要思考的提问」÷ 分钟数
   // 学情口径：弱档班对「有效提问密度」的达标线放宽（0.6/min），优秀档不放宽
   const lv = profile && profile.class ? profile.class.level : 'good';
   const densityTarget = lv === 'weak' || lv === 'basic' ? 0.6 : 1;
@@ -382,11 +553,20 @@ function scoreQuestionWait(s, profile) {
   else densityPoints = Math.max(0, ((density / 0.3) * 25) - 1);
   densityPoints = clamp(Math.round(densityPoints), 0, 40);
 
-  // ③ 等待时长：≥3 秒 30 分；2–3 秒 15–29；<2 秒 ≤14
+  // ③ 等待时长：没有音频时间戳 → 真实等待秒数不可测量，
+  //    改用文本证据判定：提问后写了等待标记（停顿 / 想一想 / 默数…）的比例。
+  //    分母用句级提问数（questionCount），与分子同源；
+  //    不用 analyzer 的问号计数（asked）—— 那个数的是标点不是问句，
+  //    会出现「等待 2 处 / 共 1 个提问」这种分子分母打架，或把有提问误报成「整段未检测到提问」。
+  //    ≥80% 的提问留了白得 30 分；50%–80% 得 15–29；低于 50% 得 ≤15。
+  const questionCount = s.questionCount; // 句级问句数（同源分母）
+  const waitEvidence = s.waitAfterQuestions;
+  const waitCoverage = questionCount > 0 ? waitEvidence / questionCount : 0;
   let waitPoints;
-  if (s.avgWait >= 3) waitPoints = 30;
-  else if (s.avgWait >= 2) waitPoints = 15 + ((s.avgWait - 2) / 1) * 15;
-  else waitPoints = clamp(Math.round((s.avgWait / 2) * 15), 0, 15);
+  if (questionCount === 0) waitPoints = 0;
+  else if (waitCoverage >= 0.8) waitPoints = 30;
+  else if (waitCoverage >= 0.5) waitPoints = 15 + ((waitCoverage - 0.5) / 0.3) * 15;
+  else waitPoints = clamp(Math.round(waitCoverage * 30), 0, 15);
 
   // ④ 等待标记：每处 +5，上限 +15
   const markerPoints = clamp(s.waitMarkers * 5, 0, 15);
@@ -400,7 +580,7 @@ function scoreQuestionWait(s, profile) {
       label: '有效提问密度',
       max: 40,
       points: densityPoints,
-      evidenceText: `每分钟 ${density.toFixed(2)} 个需要思考的提问`,
+      evidenceText: `${formatDensityPhrase(density)}（句级问句判定）`,
       fix: '每分钟至少设计 1 个开放提问，问完留 3 秒',
     },
     {
@@ -408,7 +588,10 @@ function scoreQuestionWait(s, profile) {
       label: '提问后留白',
       max: 30,
       points: waitPoints,
-      evidenceText: `提问后平均留白约 ${s.avgWait} 秒`,
+      evidenceText:
+        questionCount > 0
+          ? `提问后写了等待 ${waitEvidence} 处 / 共 ${questionCount} 个提问（句级问句判定，文本证据，非实测秒数）`
+          : '整段未检测到提问，无等待证据',
       fix: '问完在心里默数三下，再开口讲',
     },
     {
@@ -537,9 +720,8 @@ function scoreBoardStructure(s) {
 }
 
 function scoreIntroDesign(s) {
-  // ① 取讲稿前 15% 文本（按字数切）
-  const introLen = Math.max(1, Math.round(s.chars * 0.15));
-  const intro = s.transcript.slice(0, introLen);
+  // ① 语义切分导入段（不再按字数盲切前 15%）
+  const { text: intro } = extractIntroSegment(s.transcript);
   const introHits = INTRO_MARKERS.filter((m) => intro.indexOf(m) !== -1);
 
   // ② 导入信号：≥2 得 50；1 得 28；0 得 0
@@ -549,7 +731,8 @@ function scoreIntroDesign(s) {
   else signalPoints = 0;
 
   // ③ 导入段含提问得 20
-  const askPoints = /[?？]/.test(intro) ? 20 : 0;
+  //    问句判定收敛到共享实现：不再只认问号，也不认「吗/呢」结尾的陈述句。
+  const askPoints = isQuestionSentence(intro) ? 20 : 0;
 
   // ④ 导入段 ≥40 字得 15；<20 字 −10
   const introChars = intro.replace(/\s/g, '').length;
@@ -667,8 +850,7 @@ const SKILL_SCORERS = {
 
 /* 找出讲稿里的封闭式提问句（用于 question_wait 的证据） */
 function findFakeQuestionSentences(sentences) {
-  const FAKE = ['听懂了吗', '理解了吗', '明白了吗', '对不对', '好不好', '行不行', '跟上没有', '算不算', '是不是啊'];
-  return sentences.filter((x) => FAKE.some((f) => x.indexOf(f) !== -1));
+  return sentences.filter((x) => FAKE_PHRASES.some((f) => x.indexOf(f) !== -1));
 }
 
 function findSentencesWith(sentences, markers) {
@@ -714,9 +896,9 @@ function collectEvidence(skill, s) {
       push(x, '这一句带结构标记', '板书写成课题→步骤→结论三行')
     );
   } else if (skill === 'intro_design') {
-    const introLen = Math.max(1, Math.round(s.chars * 0.15));
-    const intro = s.transcript.slice(0, introLen);
-    const introSent = s.sentences.filter((x) => intro.indexOf(x) !== -1).slice(0, 2);
+    // 语义切分导入段，取其中的句子做引用
+    const introSeg = extractIntroSegment(s.transcript);
+    const introSent = introSeg.sentences.slice(0, 2);
     introSent.forEach((x) => push(x, '这句在导入段里', '把情境补具体，并加一个真实问题'));
     if (!introSent.length) push(s.sentences[0] || '', '这是讲稿开头', '先给情境再进定义');
   } else if (skill === 'transition') {
@@ -747,13 +929,13 @@ function buildSuggestions(skill, s, components) {
     if (d && d.points < 35) {
       list.push({
         title: '加密有效提问',
-        detail: `当前每分钟 ${(s.genuine / (s.durationSec / 60)).toFixed(2)} 个需要思考的提问，密度得分只有 ${d.points}。每分钟补 1 个开放提问。`,
+        detail: `当前${formatDensityPhrase(s.thinkingCount / (s.durationSec / 60))}，密度得分只有 ${d.points}。每分钟补 1 个开放提问。`,
       });
     }
     if (w && w.points < 25) {
       list.push({
         title: '提问后留白三秒',
-        detail: `按讲稿推算提问后平均留白 ${s.avgWait} 秒（文本启发式，非实测）。问完在心里数三下再讲。`,
+        detail: `讲稿里只有 ${s.waitAfterQuestions} 处提问后写了等待标记（规则按文本证据判定，无法测出真实等待秒数）。问完在心里数三下再讲。`,
       });
     }
     if (s.waitMarkers < 3) {
@@ -821,16 +1003,20 @@ function buildSuggestions(skill, s, components) {
     const sg = byKey('signal');
     const l = byKey('length');
     const c = byKey('concrete');
+    // 语义切分导入段，统一口径计算命中数与字数
+    const introText = extractIntroSegment(s.transcript).text;
+    const introHits = INTRO_MARKERS.filter((m) => introText.indexOf(m) !== -1).length;
+    const introChars = introText.replace(/\s/g, '').length;
     if (sg && sg.points < 40) {
       list.push({
         title: '导入先给情境',
-        detail: `导入段只命中 ${INTRO_MARKERS.filter((m) => s.transcript.slice(0, Math.max(1, Math.round(s.chars * 0.15))).indexOf(m) !== -1).length} 个导入信号。用生活情境或旧知冲突开场。`,
+        detail: `导入段只命中 ${introHits} 个导入信号。用生活情境或旧知冲突开场。`,
       });
     }
     if (l && l.points < 15) {
       list.push({
         title: '导入写够 40 字',
-        detail: `导入段约 ${Math.max(1, Math.round(s.chars * 0.15))} 字，太短会显得直接开讲。把情境铺完整再进新课。`,
+        detail: `导入段约 ${introChars} 字，太短会显得直接开讲。把情境铺完整再进新课。`,
       });
     }
     if (c && c.points < 0) {
@@ -839,10 +1025,17 @@ function buildSuggestions(skill, s, components) {
         detail: '导入段里没有数字、图形或生活场景词。补一个具体事物，学生才有代入感。',
       });
     }
+    const ask = byKey('ask');
+    if (ask && ask.points < 20) {
+      list.push({
+        title: '导入里抛一个问题',
+        detail: '导入段没有检测到提问。用「李同学，你说说……」把问题抛给学生，别直接开讲。',
+      });
+    }
     if (!list.length) {
       list.push({
         title: '导入结构已达标',
-        detail: `导入信号 ${INTRO_MARKERS.filter((m) => s.transcript.slice(0, Math.max(1, Math.round(s.chars * 0.15))).indexOf(m) !== -1).length} 个、含提问。下一轮可练导入到新知的过渡。`,
+        detail: `导入信号 ${introHits} 个、含提问。下一轮可练导入到新知的过渡。`,
       });
     }
   } else if (skill === 'transition') {
@@ -886,15 +1079,16 @@ function buildSuggestions(skill, s, components) {
 function weaknessScores(s) {
   const transHits = countMarkers(s.transcript, TRANSITION_MARKERS);
   const boardHits = countMarkers(s.transcript, BOARD_MARKERS);
-  const introLen = Math.max(1, Math.round(s.chars * 0.15));
-  const intro = s.transcript.slice(0, introLen);
-  const introHits = countMarkers(intro, INTRO_MARKERS);
-  const density = s.genuine / (s.durationSec / 60);
+  // 语义切分导入段（不再按字数盲切前 15%）
+  const introText = extractIntroSegment(s.transcript).text;
+  const introHits = countMarkers(introText, INTRO_MARKERS);
+  // 与 question_design 维度同源：句级「需要思考的提问」密度（不用 analyzer 的问号计数）
+  const density = s.thinkingCount / (s.durationSec / 60);
   return {
-    question_wait: (100 - density * 40) + s.fake * 6 + (s.avgWait < 3 ? 15 : 0) - s.waitMarkers * 2,
+    question_wait: (100 - density * 40) + s.fake * 6 + (s.waitCoverage < 0.5 ? 15 : 0) - s.waitMarkers * 2,
     pace_filler: Math.abs(s.rate - 135) / 3 + s.fillerTotal * 2 + (s.chars > 0 && s.fillerTotal / (s.chars / 100) > 4 ? 10 : 0),
     board_structure: (boardHits < 3 ? 30 : 0) + s.missing.length * 5,
-    intro_design: (introHits < 2 ? 30 : 0) + (intro.replace(/\s/g, '').length < 40 ? 10 : 0),
+    intro_design: (introHits < 2 ? 30 : 0) + (introText.replace(/\s/g, '').length < 40 ? 10 : 0),
     transition: (transHits < 4 ? 30 : 0) + (s.coverPercent < 50 ? 15 : 0),
   };
 }
@@ -964,7 +1158,7 @@ function drillRule(input = {}) {
 
   const summaryParts = [];
   summaryParts.push(`${skillDef.label}得分 ${score} 分（${grade}）`);
-  summaryParts.push(`讲稿 ${s.chars} 字、语速 ${s.rate} 字/分、有效提问 ${s.genuine} 个`);
+  summaryParts.push(`讲稿 ${s.chars} 字、语速 ${s.rate} 字/分、需要思考的提问 ${s.thinkingCount} 个（句级问句判定）`);
   if (profile && profile.class && profile.class.level) {
     const lv = PROFILE_LABELS.level[profile.class.level] || PROFILE_LABELS.level.good;
     summaryParts.push(`按「${lv}」班口径`);
@@ -977,7 +1171,9 @@ function drillRule(input = {}) {
     questions_asked: s.asked,
     genuine_questions: s.genuine,
     fake_questions: s.fake,
-    avg_wait_sec: s.avgWait,
+    // 等待时长不可测量：没有音频时间戳，不输出任何秒数（字段保留，值恒为 null）
+    avg_wait_sec: null,
+    wait_source: 'unmeasured',
     cover_percent: s.coverPercent,
     pause_count: s.pauseCount,
     matched_markers: s.waitMarkers,
@@ -996,7 +1192,7 @@ function drillRule(input = {}) {
     next_drill: nextDrill(skill, score, s),
     metrics,
     engine: 'rule',
-    source_note: '本地规则判定：基于讲稿文本的真实统计（语速/提问/口头禅/环节覆盖），非音频实测',
+    source_note: '本地规则判定：基于讲稿文本的真实统计（语速/提问/口头禅/环节覆盖），非音频实测；等待时长无时间戳不可测量，等待维度改按文本证据（等待标记）判定',
   };
 }
 
@@ -1130,7 +1326,9 @@ function validateLlmResult(json, input = {}) {
       questions_asked: s.asked,
       genuine_questions: s.genuine,
       fake_questions: s.fake,
-      avg_wait_sec: s.avgWait,
+      // 等待时长不可测量：没有音频时间戳，不输出任何秒数
+      avg_wait_sec: null,
+      wait_source: 'unmeasured',
       cover_percent: s.coverPercent,
       pause_count: s.pauseCount,
       matched_markers: s.waitMarkers,
@@ -1138,11 +1336,14 @@ function validateLlmResult(json, input = {}) {
   } catch (e) {
     metrics = {
       chars_per_min: 0, filler_total: 0, questions_asked: 0, genuine_questions: 0,
-      fake_questions: 0, avg_wait_sec: 0, cover_percent: 0, pause_count: 0, matched_markers: 0,
+      fake_questions: 0, avg_wait_sec: null, wait_source: 'unmeasured',
+      cover_percent: 0, pause_count: 0, matched_markers: 0,
     };
   }
   const llmMetrics = json.metrics && typeof json.metrics === 'object' ? json.metrics : {};
   Object.keys(metrics).forEach((k) => {
+    // avg_wait_sec / wait_source 是「不可测量」的口径标记，不允许被模型数值覆盖
+    if (k === 'avg_wait_sec' || k === 'wait_source') return;
     if (isFinite(Number(llmMetrics[k]))) metrics[k] = Number(llmMetrics[k]);
   });
   return {
@@ -1158,7 +1359,7 @@ function validateLlmResult(json, input = {}) {
     next_drill: { skill: nextSkill, reason: nextReason },
     metrics,
     engine: 'llm',
-    source_note: '大模型实时分析：基于本次讲稿文本的语义判断',
+    source_note: '大模型实时分析：基于本次讲稿文本的语义判断；等待时长无时间戳不可测量，等待维度按文本证据（等待标记）判定',
   };
 }
 
@@ -1180,6 +1381,9 @@ module.exports = {
   BOARD_MARKERS,
   STRUCT_MARKERS,
   INTRO_MARKERS,
+  INTRO_END_MARKERS,
+  extractIntroSegment,
+  scoreIntroDesign,
   TRANSITION_MARKERS,
   CLOSE_MARKERS,
   deriveLevelParams,

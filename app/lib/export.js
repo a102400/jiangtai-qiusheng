@@ -31,8 +31,26 @@ function metricCards(report) {
     items.push(['口头禅', fw.total + ' 处', detail]);
   }
   const q = report.questions || {};
-  if (q.total != null || q.authentic != null) {
-    items.push(['提问', (q.total || 0) + ' 次', '真提问 ' + (q.authentic || 0) + ' 次']);
+  // 新数据用 asked / genuine_questions；同时兼容旧历史记录的 total / authentic。
+  // 不输出任何等待秒数：没有音频时间戳，等待时长不可测量。
+  if (
+    q.asked != null ||
+    q.genuine_questions != null ||
+    q.total != null ||
+    q.authentic != null
+  ) {
+    const asked = q.asked != null ? q.asked : q.total;
+    const genuine =
+      q.genuine_questions != null
+        ? q.genuine_questions
+        : q.authentic;
+    items.push([
+      '文本提问',
+      asked == null ? '未提供' : asked + ' 次',
+      genuine == null
+        ? '候选分类未记录'
+        : '候选思考题 ' + genuine + ' 次'
+    ]);
   }
   if (!items.length) return '';
   return (

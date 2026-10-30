@@ -1,0 +1,288 @@
+<!-- 归档件：用户提供的原始素材（偏分短发女生）。产品已改用 svg/ 下的九状态版本，
+     本文件仅作原始出处留档，不再被任何代码引用。角色现映射为 naughty。 -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 760" fill="none" role="img" aria-labelledby="girlTitle girlDescription">
+<title id="girlTitle">偏分短发女生 · 哑光水粉纸感立绘</title>
+<desc id="girlDescription">低饱和烟棕色波波头女生，柔和棕色眼睛、安静微笑，灰绿色针织上衣与暖白波浪边翻领。柔光、克制干刷纹理与细微纸张颗粒，背景透明。</desc>
+
+<defs>
+  <!-- Restrained palette: warm paper lights, cool grey-green shadows. -->
+  <radialGradient id="fp-skin" cx="40%" cy="29%" r="81%">
+    <stop stop-color="#ead8c7"/>
+    <stop offset=".36" stop-color="#dfc4b3"/>
+    <stop offset=".7" stop-color="#cfad9e"/>
+    <stop offset="1" stop-color="#aa8e83"/>
+  </radialGradient>
+  <linearGradient id="fp-neck" x1="30%" y1="0%" x2="70%" y2="100%">
+    <stop stop-color="#a18479"/>
+    <stop offset=".36" stop-color="#c2a294"/>
+    <stop offset=".76" stop-color="#d8bdab"/>
+    <stop offset="1" stop-color="#dfcbb7"/>
+  </linearGradient>
+  <radialGradient id="fp-ear" cx="32%" cy="36%" r="86%">
+    <stop stop-color="#dfc4b1"/>
+    <stop offset=".6" stop-color="#cfad9d"/>
+    <stop offset="1" stop-color="#b49487"/>
+  </radialGradient>
+
+  <linearGradient id="fp-hair-back" x1="8%" y1="0%" x2="90%" y2="93%">
+    <stop stop-color="#76675a"/>
+    <stop offset=".3" stop-color="#5e5046"/>
+    <stop offset=".67" stop-color="#49413a"/>
+    <stop offset="1" stop-color="#41413a"/>
+  </linearGradient>
+  <linearGradient id="fp-hair-left" x1="0%" y1="12%" x2="100%" y2="74%">
+    <stop stop-color="#625e52"/>
+    <stop offset=".27" stop-color="#77695b"/>
+    <stop offset=".57" stop-color="#625247"/>
+    <stop offset=".83" stop-color="#51453d"/>
+    <stop offset="1" stop-color="#494039"/>
+  </linearGradient>
+  <linearGradient id="fp-hair-right" x1="0%" y1="0%" x2="100%" y2="85%">
+    <stop stop-color="#6d5c4e"/>
+    <stop offset=".48" stop-color="#584b41"/>
+    <stop offset="1" stop-color="#424039"/>
+  </linearGradient>
+
+  <radialGradient id="fp-eye-white" cx="45%" cy="67%" r="80%">
+    <stop stop-color="#e6e1d3"/>
+    <stop offset=".6" stop-color="#d9d5c9"/>
+    <stop offset="1" stop-color="#aaa89c"/>
+  </radialGradient>
+  <radialGradient id="fp-iris" cx="43%" cy="72%" r="80%">
+    <stop stop-color="#8f7961"/>
+    <stop offset=".4" stop-color="#74604e"/>
+    <stop offset=".76" stop-color="#53483d"/>
+    <stop offset="1" stop-color="#393a32"/>
+  </radialGradient>
+  <radialGradient id="fp-pupil" cx="40%" cy="35%" r="85%">
+    <stop stop-color="#3b3831"/>
+    <stop offset="1" stop-color="#2b3029"/>
+  </radialGradient>
+  <radialGradient id="fp-cheek">
+    <stop stop-color="#bb8c83" stop-opacity=".3"/>
+    <stop offset=".5" stop-color="#bc958a" stop-opacity=".13"/>
+    <stop offset="1" stop-color="#bc958a" stop-opacity="0"/>
+  </radialGradient>
+  <linearGradient id="fp-lip" x1="0%" y1="0%" x2="0%" y2="100%">
+    <stop stop-color="#aa7f73"/>
+    <stop offset=".5" stop-color="#bd9485"/>
+    <stop offset="1" stop-color="#cfab98"/>
+  </linearGradient>
+
+  <radialGradient id="fp-knit" cx="40%" cy="23%" r="88%">
+    <stop stop-color="#969c91"/>
+    <stop offset=".42" stop-color="#818b81"/>
+    <stop offset=".75" stop-color="#6b7870"/>
+    <stop offset="1" stop-color="#53645e"/>
+  </radialGradient>
+  <linearGradient id="fp-sleeve-left" x1="0%" y1="10%" x2="100%" y2="80%">
+    <stop stop-color="#6e7a70"/>
+    <stop offset=".43" stop-color="#91998d"/>
+    <stop offset="1" stop-color="#64756b"/>
+  </linearGradient>
+  <linearGradient id="fp-sleeve-right" x1="0%" y1="0%" x2="100%" y2="80%">
+    <stop stop-color="#929b8d"/>
+    <stop offset=".45" stop-color="#7b887b"/>
+    <stop offset="1" stop-color="#5c6f63"/>
+  </linearGradient>
+  <linearGradient id="fp-collar" x1="20%" y1="0%" x2="80%" y2="100%">
+    <stop stop-color="#e9e5d6"/>
+    <stop offset=".44" stop-color="#dedfce"/>
+    <stop offset=".8" stop-color="#c8d0bd"/>
+    <stop offset="1" stop-color="#a9b8a6"/>
+  </linearGradient>
+
+  <filter id="fp-soft" x="-40%" y="-40%" width="180%" height="180%">
+    <feGaussianBlur stdDeviation="3.5"/>
+  </filter>
+  <filter id="fp-wash" x="-40%" y="-40%" width="180%" height="180%">
+    <feGaussianBlur stdDeviation="8"/>
+  </filter>
+
+  <!-- Fine grain stays inside the artwork; no rectangular background. -->
+  <filter id="fp-paper" x="-3%" y="-3%" width="106%" height="106%" color-interpolation-filters="sRGB">
+    <feTurbulence type="fractalNoise" baseFrequency=".72" numOctaves="3" seed="26" result="fine"/>
+    <feColorMatrix in="fine" type="saturate" values="0" result="mono"/>
+    <feComponentTransfer in="mono" result="lightGrain">
+      <feFuncA type="linear" slope=".12"/>
+    </feComponentTransfer>
+    <feComposite in="lightGrain" in2="SourceGraphic" operator="in" result="clippedGrain"/>
+    <feBlend in="SourceGraphic" in2="clippedGrain" mode="soft-light"/>
+  </filter>
+
+  <!-- Dry brush: an irregular, translucent paint film, not a sharp outline. -->
+  <filter id="fp-dry" x="-10%" y="-20%" width="120%" height="140%" color-interpolation-filters="sRGB">
+    <feTurbulence type="fractalNoise" baseFrequency=".12 .7" numOctaves="2" seed="14" result="brush"/>
+    <feColorMatrix in="brush" type="luminanceToAlpha" result="brushAlpha"/>
+    <feComposite in="SourceGraphic" in2="brushAlpha" operator="in"/>
+  </filter>
+
+  <!-- Low frequency pigment variation provides a quiet gouache surface. -->
+  <filter id="fp-pigment" x="-3%" y="-3%" width="106%" height="106%" color-interpolation-filters="sRGB">
+    <feTurbulence type="fractalNoise" baseFrequency=".025 .04" numOctaves="3" seed="19" result="cloud"/>
+    <feColorMatrix in="cloud" type="saturate" values="0" result="cloudMono"/>
+    <feComponentTransfer in="cloudMono" result="thinWash">
+      <feFuncA type="linear" slope=".07"/>
+    </feComponentTransfer>
+    <feComposite in="thinWash" in2="SourceGraphic" operator="in" result="clippedWash"/>
+    <feBlend in="SourceGraphic" in2="clippedWash" mode="multiply"/>
+  </filter>
+
+  <clipPath id="fp-face-clip">
+    <path d="M183 244C190 195 235 158 293 155C350 153 398 190 412 242L416 317C412 367 389 406 350 433C328 449 307 454 286 449C248 441 213 416 193 382C176 352 176 291 183 244Z"/>
+  </clipPath>
+  <clipPath id="fp-left-eye">
+    <path d="M208 299C223 276 258 274 278 298C263 320 231 326 211 309Z"/>
+  </clipPath>
+  <clipPath id="fp-right-eye">
+    <path d="M330 298C350 274 383 276 399 299L397 308C378 325 346 320 330 298Z"/>
+  </clipPath>
+  <clipPath id="fp-body-clip">
+    <path d="M239 484C211 490 173 501 149 517C119 538 102 586 91 647L76 760H528L512 647C501 587 487 541 457 519C431 502 394 490 363 484Z"/>
+  </clipPath>
+  <clipPath id="fp-hair-left-clip">
+    <path d="M317 93C279 68 228 74 188 110C143 151 128 216 132 291L137 447C157 456 179 462 203 462L195 398C186 363 186 324 191 285C196 245 215 210 246 188C268 172 291 161 318 158C329 139 329 113 317 93Z"/>
+  </clipPath>
+
+  <pattern id="fp-knit-stitch" width="18" height="23" patternUnits="userSpaceOnUse">
+    <path d="M5 0V23" stroke="#d5d7c4" stroke-opacity=".08" stroke-width="1"/>
+    <path d="M8 0V23" stroke="#435a4b" stroke-opacity=".13" stroke-width="1.2"/>
+    <path d="M13 3L15 8L13 13L15 18" stroke="#d1d5bf" stroke-opacity=".055" stroke-width=".7"/>
+  </pattern>
+</defs>
+
+<!-- Static by design: quiet portrait, no perpetual decorative motion. -->
+<g filter="url(#fp-paper)">
+  <g filter="url(#fp-pigment)">
+
+    <!-- Back hair, broad matte masses -->
+    <path d="M125 262C119 191 148 125 204 91C245 68 291 71 320 93C351 82 386 94 414 126C446 165 454 218 447 283L438 447C405 463 366 469 325 463L184 467L131 449Z" fill="url(#fp-hair-back)"/>
+    <path d="M176 354C191 401 228 440 271 449L358 451C392 435 414 403 424 365L422 461C346 472 251 473 182 464Z" fill="#3b3931"/>
+    <path d="M416 211C432 277 431 355 420 430" stroke="#8f7e65" stroke-opacity=".13" stroke-width="11" stroke-linecap="round" filter="url(#fp-dry)"/>
+
+    <!-- Shoulders and knit clothing -->
+    <path d="M239 484C211 490 173 501 149 517C119 538 102 586 91 647L76 760H528L512 647C501 587 487 541 457 519C431 502 394 490 363 484Z" fill="url(#fp-knit)"/>
+    <path d="M149 516C128 521 110 544 100 575C86 618 75 680 68 760H150L166 610C170 570 167 536 149 516Z" fill="url(#fp-sleeve-left)"/>
+    <path d="M455 518C476 523 492 546 502 578C516 623 527 686 533 760H451L435 610C431 570 437 537 455 518Z" fill="url(#fp-sleeve-right)"/>
+
+    <g clip-path="url(#fp-body-clip)">
+      <path d="M70 486H540V760H70Z" fill="url(#fp-knit-stitch)"/>
+      <path d="M156 544C178 587 178 649 168 713M447 545C426 586 427 649 436 713" stroke="#405b4e" stroke-opacity=".19" stroke-width="14" filter="url(#fp-wash)"/>
+      <path d="M186 645C212 659 237 662 263 662M341 663C369 663 393 656 416 646" stroke="#40584b" stroke-opacity=".19" stroke-width="6" stroke-linecap="round" filter="url(#fp-soft)"/>
+      <path d="M186 640C212 654 238 656 262 656M342 657C369 657 392 651 414 641" stroke="#c0c8b4" stroke-opacity=".18" stroke-width="3" stroke-linecap="round" filter="url(#fp-dry)"/>
+      <path d="M219 622L211 747M386 621L395 749" stroke="#c0c8b4" stroke-opacity=".1" stroke-width="8" filter="url(#fp-dry)"/>
+      <path d="M112 595L96 724M489 597L508 735" stroke="#bac3ac" stroke-opacity=".2" stroke-width="13" stroke-linecap="round" filter="url(#fp-dry)"/>
+    </g>
+    <path d="M112 574C119 550 131 535 147 530M493 577C487 553 475 537 459 531" stroke="#c4cbb7" stroke-opacity=".26" stroke-width="2.2" stroke-linecap="round" filter="url(#fp-dry)"/>
+
+    <!-- Neck and soft reflected light -->
+    <path d="M258 421L253 488C260 518 278 542 302 554C326 542 344 518 350 488L344 420Z" fill="url(#fp-neck)"/>
+    <path d="M258 440C281 457 323 458 345 439L347 453C324 475 282 474 256 455Z" fill="#82776b" opacity=".19" filter="url(#fp-soft)"/>
+    <path d="M279 485C282 505 288 521 299 534" stroke="#e7d4bc" stroke-opacity=".2" stroke-width="13" stroke-linecap="round" filter="url(#fp-wash)"/>
+    <path d="M331 486L321 524" stroke="#b7bea5" stroke-opacity=".12" stroke-width="11" filter="url(#fp-wash)"/>
+
+    <!-- Collar shadows -->
+    <path d="M250 480C253 512 270 542 302 564C286 593 256 607 230 587C218 589 208 580 208 569C194 566 189 555 192 545C182 537 184 526 191 518C190 507 201 497 211 499C219 486 232 485 240 490Z" fill="#435e50" opacity=".22" transform="translate(1 6)" filter="url(#fp-soft)"/>
+    <path d="M352 480C349 512 333 542 302 564C318 593 348 607 374 587C386 589 396 580 396 569C410 566 415 555 412 545C422 537 420 526 413 518C414 507 403 497 393 499C385 486 372 485 364 490Z" fill="#435e50" opacity=".22" transform="translate(-1 6)" filter="url(#fp-soft)"/>
+
+    <!-- Warm paper-white scalloped collar -->
+    <path d="M250 476C251 507 268 539 302 561C286 589 258 603 232 583C219 584 211 576 211 565C197 562 192 552 195 542C185 534 187 523 195 515C193 504 204 496 214 497C221 485 233 482 242 487Z" fill="url(#fp-collar)"/>
+    <path d="M352 476C351 507 335 539 302 561C318 589 346 603 372 583C385 584 393 576 393 565C407 562 412 556 409 542C419 534 417 523 409 515C411 504 400 496 390 497C383 485 371 482 362 487Z" fill="url(#fp-collar)"/>
+    <path d="M240 491C242 518 259 548 285 565M364 491C362 518 345 548 319 565" stroke="#f0ecdb" stroke-opacity=".52" stroke-width="3" stroke-linecap="round" filter="url(#fp-dry)"/>
+    <path d="M224 510C221 518 225 524 232 528M211 538C212 546 217 550 225 553M242 575C250 580 258 581 268 577M380 510C383 518 379 524 372 528M393 538C392 546 387 550 379 553M362 575C354 580 346 581 336 577" stroke="#a3b09a" stroke-opacity=".34" stroke-width="1.1" stroke-linecap="round"/>
+    <path d="M294 562H309L317 760H289Z" fill="url(#fp-collar)"/>
+    <path d="M297 614L298 750M308 615L313 750" stroke="#9fb095" stroke-opacity=".32" stroke-width=".8" stroke-dasharray="1.5 3"/>
+
+    <!-- Small cloth tie, no metallic ornament -->
+    <path d="M301 604C289 593 276 598 279 607C282 614 292 614 301 609C310 614 320 614 323 607C325 598 313 596 301 604Z" fill="#c9d1bc"/>
+    <path d="M299 609L290 647L301 640L305 615L314 647L322 651L309 609Z" fill="url(#fp-collar)"/>
+    <ellipse cx="302" cy="607" rx="4" ry="5" fill="#d9ddc9"/>
+    <circle cx="304" cy="690" r="3.5" fill="#c7d0ba" stroke="#94a58e" stroke-width=".8"/>
+    <circle cx="306" cy="735" r="3.5" fill="#c7d0ba" stroke="#94a58e" stroke-width=".8"/>
+
+    <!-- Exposed ear -->
+    <path d="M408 294C424 282 442 291 446 309C451 330 438 351 418 355L406 340Z" fill="url(#fp-ear)"/>
+    <path d="M423 308C433 301 438 311 433 324C430 331 426 334 422 335" stroke="#ac8a7b" stroke-opacity=".48" stroke-width="2.2" stroke-linecap="round"/>
+
+    <!-- Face: soft tonal planes rather than glossy rendering -->
+    <path d="M183 244C190 195 235 158 293 155C350 153 398 190 412 242L416 317C412 367 389 406 350 433C328 449 307 454 286 449C248 441 213 416 193 382C176 352 176 291 183 244Z" fill="url(#fp-skin)"/>
+    <g clip-path="url(#fp-face-clip)">
+      <path d="M191 248C207 215 238 191 274 182" stroke="#998470" stroke-opacity=".18" stroke-width="15" stroke-linecap="round" filter="url(#fp-wash)"/>
+      <path d="M403 281C414 335 393 391 355 418" stroke="#798473" stroke-opacity=".14" stroke-width="15" stroke-linecap="round" filter="url(#fp-wash)"/>
+      <ellipse cx="286" cy="230" rx="46" ry="35" fill="#eee1cd" opacity=".19" filter="url(#fp-wash)"/>
+      <ellipse cx="223" cy="350" rx="44" ry="33" fill="url(#fp-cheek)"/>
+      <ellipse cx="377" cy="349" rx="41" ry="32" fill="url(#fp-cheek)"/>
+      <path d="M211 340C221 334 234 333 246 337M358 338C370 334 383 337 391 342" stroke="#cfaa98" stroke-opacity=".18" stroke-width="11" stroke-linecap="round" filter="url(#fp-dry)"/>
+      <path d="M255 407C276 426 309 435 333 424" stroke="#e5cbb5" stroke-opacity=".16" stroke-width="9" stroke-linecap="round" filter="url(#fp-dry)"/>
+      <path d="M286 189C302 186 319 188 332 193" stroke="#f0e0c8" stroke-opacity=".15" stroke-width="8" stroke-linecap="round" filter="url(#fp-dry)"/>
+    </g>
+
+    <!-- Natural, quieter brows -->
+    <path d="M207 253C225 245 247 245 266 251" stroke="#655345" stroke-width="8" stroke-linecap="round"/>
+    <path d="M339 250C357 246 379 250 394 259" stroke="#655345" stroke-width="7.5" stroke-linecap="round"/>
+    <path d="M211 250C229 244 247 245 262 249M343 248C361 246 377 251 390 257" stroke="#a58b6d" stroke-opacity=".26" stroke-width="1.8" stroke-linecap="round" filter="url(#fp-dry)"/>
+
+    <!-- Eyes: reduced gloss, warm grey-brown iris -->
+    <path d="M208 299C223 276 258 274 278 298C263 320 231 326 211 309Z" fill="url(#fp-eye-white)"/>
+    <g clip-path="url(#fp-left-eye)">
+      <ellipse cx="246" cy="299" rx="25.5" ry="29" fill="#454438"/>
+      <ellipse cx="246" cy="300" rx="23.5" ry="27" fill="url(#fp-iris)"/>
+      <ellipse cx="246" cy="296" rx="14.5" ry="19.5" fill="url(#fp-pupil)"/>
+      <path d="M233 316C241 322 251 322 260 313" stroke="#b69a79" stroke-opacity=".34" stroke-width="2" stroke-linecap="round" filter="url(#fp-dry)"/>
+      <ellipse cx="238" cy="289" rx="4.2" ry="5.3" fill="#e5e4d2" opacity=".78"/>
+      <ellipse cx="253" cy="307" rx="1.3" ry="1.6" fill="#c9cbb7" opacity=".36"/>
+    </g>
+    <path d="M330 298C350 274 383 276 399 299L397 308C378 325 346 320 330 298Z" fill="url(#fp-eye-white)"/>
+    <g clip-path="url(#fp-right-eye)">
+      <ellipse cx="364" cy="299" rx="25.5" ry="29" fill="#454438"/>
+      <ellipse cx="364" cy="300" rx="23.5" ry="27" fill="url(#fp-iris)"/>
+      <ellipse cx="364" cy="296" rx="14.5" ry="19.5" fill="url(#fp-pupil)"/>
+      <path d="M351 316C359 322 369 322 378 313" stroke="#b69a79" stroke-opacity=".34" stroke-width="2" stroke-linecap="round" filter="url(#fp-dry)"/>
+      <ellipse cx="356" cy="289" rx="4.2" ry="5.3" fill="#e5e4d2" opacity=".73"/>
+      <ellipse cx="371" cy="307" rx="1.3" ry="1.6" fill="#c9cbb7" opacity=".3"/>
+    </g>
+
+    <path d="M208 299C223 276 258 274 278 298M330 298C350 274 383 276 399 299" stroke="#4f4338" stroke-width="3.5" stroke-linecap="round"/>
+    <path d="M211 294L203 286M396 293L404 286" stroke="#514538" stroke-width="2" stroke-linecap="round"/>
+    <path d="M213 310C230 324 258 323 273 307M335 307C350 323 378 325 395 310" stroke="#a78d7c" stroke-opacity=".7" stroke-width="1.2" stroke-linecap="round"/>
+    <path d="M216 278C234 271 255 273 269 283M341 282C357 273 378 275 391 284" stroke="#b79b85" stroke-opacity=".5" stroke-width="1.2" stroke-linecap="round"/>
+    <path d="M219 320L217 323M390 319L393 322" stroke="#6b5948" stroke-opacity=".48" stroke-width=".9" stroke-linecap="round"/>
+
+    <!-- Understated nose, no hard contour -->
+    <path d="M302 319C299 331 297 341 298 347C303 352 310 352 316 349" stroke="#a88d7a" stroke-opacity=".38" stroke-width="2" stroke-linecap="round" filter="url(#fp-soft)"/>
+    <ellipse cx="307" cy="350" rx="12" ry="4" fill="#ab8c7b" opacity=".2" filter="url(#fp-soft)"/>
+    <path d="M300 343L308 343" stroke="#e9d5bd" stroke-opacity=".45" stroke-width="3" stroke-linecap="round" filter="url(#fp-dry)"/>
+
+    <!-- Closed, calm smile -->
+    <path d="M274 385C285 381 294 382 303 384C314 381 325 382 336 384C324 393 286 396 274 385Z" fill="#aa8576" opacity=".65"/>
+    <path d="M275 386C294 391 317 391 335 384C326 397 294 404 279 391Z" fill="url(#fp-lip)"/>
+    <path d="M276 386C293 390 317 391 334 385" stroke="#8b6e60" stroke-width="1.25" stroke-linecap="round"/>
+    <path d="M291 397C302 400 314 398 322 394" stroke="#dfbfaa" stroke-opacity=".48" stroke-width="1.7" stroke-linecap="round" filter="url(#fp-dry)"/>
+    <path d="M295 421C303 423 313 422 320 420" stroke="#e3cbb3" stroke-opacity=".22" stroke-width="4" stroke-linecap="round" filter="url(#fp-soft)"/>
+
+    <!-- Swept right side -->
+    <path d="M317 109C350 91 384 106 406 137C432 172 438 223 423 275L413 302C415 264 402 231 378 211C358 196 339 184 321 166L308 145Z" fill="url(#fp-hair-right)"/>
+    <path d="M333 123C364 119 392 141 406 172C414 190 419 210 419 230" stroke="#b4a080" stroke-opacity=".16" stroke-width="13" stroke-linecap="round" filter="url(#fp-dry)"/>
+    <path d="M331 141C360 145 384 164 398 189" stroke="#a99171" stroke-opacity=".15" stroke-width="3" stroke-linecap="round" filter="url(#fp-dry)"/>
+    <path d="M423 357L420 424L405 447L411 367Z" fill="#474137"/>
+
+    <!-- Broad left sweep: paint shapes instead of sharp individual strands -->
+    <path d="M317 93C279 68 228 74 188 110C143 151 128 216 132 291L137 447C157 456 179 462 203 462L195 398C186 363 186 324 191 285C196 245 215 210 246 188C268 172 291 161 318 158C329 139 329 113 317 93Z" fill="url(#fp-hair-left)"/>
+
+    <g clip-path="url(#fp-hair-left-clip)">
+      <path d="M152 421C139 328 144 240 171 181C194 133 232 101 274 95" stroke="#bbac8b" stroke-opacity=".2" stroke-width="18" stroke-linecap="round" filter="url(#fp-wash)"/>
+      <path d="M155 424C143 332 148 251 171 194C192 145 229 112 268 101" stroke="#c7b896" stroke-opacity=".27" stroke-width="8" stroke-linecap="round" filter="url(#fp-dry)"/>
+      <path d="M170 436C159 359 163 281 181 226C198 179 222 146 254 126" stroke="#ac987a" stroke-opacity=".23" stroke-width="6" stroke-linecap="round" filter="url(#fp-dry)"/>
+      <path d="M189 413C178 361 180 312 191 273" stroke="#393a31" stroke-opacity=".3" stroke-width="8" stroke-linecap="round" filter="url(#fp-dry)"/>
+      <path d="M183 134C207 109 239 92 269 90" stroke="#d1c3a2" stroke-opacity=".17" stroke-width="4" stroke-linecap="round" filter="url(#fp-dry)"/>
+      <path d="M144 441C162 449 182 453 202 454" stroke="#3b3a31" stroke-opacity=".35" stroke-width="3" stroke-linecap="round" filter="url(#fp-dry)"/>
+      <path d="M146 247L142 323M153 338L158 402M186 180L208 150M226 132L248 116" stroke="#c3b18b" stroke-opacity=".14" stroke-width="2.2" stroke-linecap="round" filter="url(#fp-dry)"/>
+    </g>
+
+    <!-- Soft parting, no glossy rim light -->
+    <path d="M312 103C319 121 318 138 314 151" stroke="#403a31" stroke-opacity=".5" stroke-width="2.5" stroke-linecap="round"/>
+    <path d="M317 102C323 118 322 135 319 147" stroke="#b39c78" stroke-opacity=".17" stroke-width="1.5" stroke-linecap="round" filter="url(#fp-dry)"/>
+
+  </g>
+</g>
+</svg>

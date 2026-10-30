@@ -26,6 +26,35 @@ const scriptBWrap = $('scriptBWrap');
 const durationInput = $('durationInput');
 const scriptInput = $('scriptInput');
 
+/* ==================================================================
+   等待秒数口径（唯一事实来源）
+   ------------------------------------------------------------------
+   没有音频时间戳 → 真实等待时间「不可测量」。
+   讲稿文本推算出来的秒数只是启发式推断，不能冒充实测值，
+   也不允许参与「最弱维度」判断或达标判断。
+   唯一允许显示具体秒数的场景是固定演示（?jtq-demo=1），
+   且界面必须标注「示例」。
+   ================================================================== */
+function waitSecondsForDisplay(q, isDemo) {
+  const payload = Number(q && q.avg_wait_sec);
+
+  if (Number.isFinite(payload) && payload >= 0) return payload;
+
+  // 只有固定演示才允许退回内置示例值；正常分析一律「不可测量」。
+  if (!isDemo) return null;
+
+  // 演示模式：后端可能不再下发 avg_wait_sec，退回内置演示值（固定示例）。
+  const demoQ =
+    window.JTQDemo &&
+    window.JTQDemo.DEMO_ANALYSIS &&
+    window.JTQDemo.DEMO_ANALYSIS.questions;
+
+  if (!demoQ) return null;
+
+  const demo = Number(demoQ.avg_wait_sec);
+  return Number.isFinite(demo) && demo >= 0 ? demo : null;
+}
+
 /*
  * 时长来源标注。
  * 后端只要 durationSec 非 0 就按 'user-duration' 计算，但这个值可能来自
@@ -192,6 +221,12 @@ function offlineFallback(url, body) {
     }
     return D.DEMO_CLASSROOM;
   }
+  if (url === '/api/classroom/call-on') {
+    // 点名是按学生分流的：点谁就得回谁，返回同一个模板会让演示立刻露馅
+    const all = D.DEMO_CLASS_CALLON || {};
+    const key = body && body.key;
+    return (key && all[key]) || all.naughty || null;
+  }
   if (url === '/api/danger') return D.DEMO_DANGER;
   if (url === '/api/heatmap') return D.DEMO_HEATMAP;
   if (url === '/api/lesson-plan') return D.DEMO_LESSONPLAN;
@@ -202,11 +237,35 @@ function offlineFallback(url, body) {
   if (url === '/api/drill/skills') return D.DEMO_DRILL_SKILLS;
   if (url === '/api/drill') return D.DEMO_DRILL_RESULT;
   if (url === '/api/student/chat') {
-    // 带学情的请求用带学情的演示台词。
-    if (body && body.profile) return D.DEMO_STUDENT_CHAT_PROFILE;
+    // 离线演示也必须「听得见老师刚说了什么」：
+    // 之前带学情时无条件返回同一条固定台词，无论老师说哪一句都是同一句反问，
+    // 演示时立刻露馅（看起来像没接模型）。这里按两点轮换：是否已有老师发言、第几轮。
+    const list = Array.isArray(body && body.messages) ? body.messages : [];
+    const teacherLines = list.filter((m) => m.role === 'teacher').map((m) => String(m.content || ''));
+    const askedCount = list.filter((m) => m.role === 'student').length;
+    const lastTeacher = teacherLines.length ? teacherLines[teacherLines.length - 1] : '';
+    // 朴素回声：截老师原话开头，套进反问模板，让离线演示也有「接住你」的观感
+    const echo = lastTeacher.replace(/[「」“”"'《》]/g, '').replace(/\s+/g, '');
+    const tail = echo.length > 12 ? echo.slice(0, 12) + '…' : echo;
+    const echoTemplates = [
+      (t) => '老师你刚才说「' + t + '」，那要是条件换一下还成立吗？',
+      (t) => '「' + t + '」这一步我没太跟上，是从这儿开始变的吗？',
+      (t) => '老师你说「' + t + '」的时候有点快，能再说一遍吗？',
+    ];
     const asks = ['老师，这个结论放到特殊情况还成立吗？', '如果我把条件反过来，答案会不会反过来？', '老师你讲太快了，能不能慢一点？'];
-    const used = (body.messages || []).filter((m) => m.role === 'student').length;
-    return { reply: asks[used % asks.length], persona: 'geek', label: 'AI 学生', engine: 'offline-demo' };
+    const line = echo
+      ? echoTemplates[askedCount % echoTemplates.length](tail)
+      : asks[askedCount % asks.length];
+    const hasProfile = !!(body && body.profile);
+    return {
+      reply: line,
+      persona: hasProfile ? 'naughty' : 'geek',
+      label: 'AI 学生',
+      engine: 'offline-demo',
+      profile_applied: hasProfile,
+      difficulty: 'core',
+      profile_summary: hasProfile ? '学情：中等 · 提问聚焦概念与常见错误' : '',
+    };
   }
   if (url === '/api/blackboard') return { mode: 'checklist', checklist: ['主板书写课题与主问题', '推导编号分步', '副板书留给学生生成', '重点加框'], layout_template: '主板书 | 副板书', key_points: ['课题', '推导', '结论'], common_mistakes: ['随写随擦'], engine: 'offline-demo' };
   return null;
@@ -409,6 +468,125 @@ async function loadHealth() {
   }
 }
 
+/* ==================================================================
+   结果来源标签（唯一事实来源：后端 report.engine + report.fallback_reason）
+   ------------------------------------------------------------------
+   fallback_reason 只在「模型调用失败、降级到规则引擎」时出现，取值表与后端
+   契约严格一致，不要自行扩充：
+     none                  模型调用成功，没有发生降级
+     key-not-configured   服务端没有配置 API Key
+     rate-limited          上游 429，调用太频繁
+     insufficient-balance  上游 402，账户余额不足
+     auth-failed           上游 401/403，密钥无效
+     model-error           其它模型调用失败
+   旧报告（存于 localStorage 或云端）没有这个字段 → 走兜底分支，
+   既不能报错，也不能显示 undefined。
+   ================================================================== */
+
+/* 真正「降级了」的原因：模型调了但失败，用户需要知道下一步该做什么。 */
+const FALLBACK_REASON_DEGRADED = {
+  'rate-limited': '模型请求过于频繁，请稍后重试',
+  'insufficient-balance': '模型账户余额不足，请联系部署方充值',
+  'auth-failed': '模型密钥无效，请联系部署方检查',
+  'model-error': '模型请求失败，已降级'
+};
+
+/* 服务端压根没配 Key：不是「调了失败」，是纯规则模式。 */
+const FALLBACK_REASON_KEY_NOT_CONFIGURED = 'key-not-configured';
+
+function hasFallbackReason(reason) {
+  return (
+    typeof reason === 'string' &&
+    Object.prototype.hasOwnProperty.call(FALLBACK_REASON_DEGRADED, reason)
+  );
+}
+
+/**
+ * 报告的「结果来源」标签。
+ * 降级后返回的报告仍然是规则引擎的计算结果，所以文案先说清楚「规则计算」，
+ * 再说降级原因，不能只显示一条错误信息让用户以为报告没生成。
+ * @param {string} engine 后端报告里的 engine
+ * @param {string} [fallbackReason] 后端报告里的 fallback_reason（可能缺失）
+ * @returns {{className: string, text: string}}
+ */
+function describeSourceLabel(engine, fallbackReason) {
+  const reason = typeof fallbackReason === 'string' ? fallbackReason : '';
+
+  // 固定演示永远显示「固定示例」，绝不显示任何降级原因。
+  if (engine === 'offline-demo') {
+    return { className: 'demo', text: '固定示例 · 非对当前讲稿的分析' };
+  }
+  if (engine === 'llm') {
+    return { className: 'llm', text: '模型生成 · 反馈需结合原文核对' };
+  }
+
+  // 板书评分既可能走视觉模型（上传图片），也可能走 LLM/规则，单独标注。
+  if (engine === 'vision') {
+    return { className: 'vision', text: '视觉模型评分 · 需人工复核' };
+  }
+
+  if (engine === 'rule' || engine === 'rules') {
+    if (hasFallbackReason(reason)) {
+      return {
+        className: 'rule-degraded',
+        text: '规则计算 · ' + FALLBACK_REASON_DEGRADED[reason]
+      };
+    }
+
+    if (reason === FALLBACK_REASON_KEY_NOT_CONFIGURED) {
+      return { className: 'rule', text: '服务端规则计算 · 未配置模型' };
+    }
+
+    // 旧报告 / 未知取值：只说清楚是规则计算，不编造降级原因。
+    return { className: 'rule', text: '服务端规则计算 · 不等同于固定示例' };
+  }
+
+  return { className: '', text: '结果来源未明确 · 请先核对分析配置' };
+}
+
+/**
+ * 其它模块（危险瞬间、教案覆盖、课标对照、专项练习…）的来源标签样式。
+ * 各模块文案不同，但「是否降级、用哪种样式」必须走同一套判断。
+ * @param {string} engine
+ * @param {string} [fallbackReason]
+ * @param {string} [fallbackClassName] 非降级时使用的样式名，默认 rule
+ */
+function sourceTagClassName(engine, fallbackReason, fallbackClassName) {
+  const reason = typeof fallbackReason === 'string' ? fallbackReason : '';
+  const fallback = fallbackClassName || 'rule';
+
+  if (engine === 'llm') return 'llm';
+
+  if (engine === 'rule' || engine === 'rules') {
+    return hasFallbackReason(reason) ? 'rule-degraded' : fallback;
+  }
+
+  return fallback;
+}
+
+/** 降级原因的补充说明（供其它模块的来源说明复用）；没有降级时返回空串。 */
+function degradedSuffix(fallbackReason) {
+  if (!hasFallbackReason(fallbackReason)) return '';
+  return ' · ' + FALLBACK_REASON_DEGRADED[fallbackReason];
+}
+
+/* 把「来源标签」渲染成一个 engine-tag 小徽标；无明确来源（engine 缺失/未知）时返回空串，
+   绝不显示 undefined。供 heatmap / panorama / hollow / blackboard 四个模块复用，
+   与 iFIAS / 教案覆盖 / 课标对照 走同一套口径（describeSourceLabel 是唯一事实来源）。 */
+function sourceTagSpan(engine, fallbackReason) {
+  const info = describeSourceLabel(engine, fallbackReason);
+  if (!info || !info.text) return '';
+  const cls = info.className || '';
+  return '<span class="engine-tag' + (cls ? ' ' + cls : '') + '">' + escapeHtml(info.text) + '</span>';
+}
+
+/* 供 cloud.js 复用同一套逻辑（cloud.js 在 app.js 之前加载，只能运行时取用）。 */
+window.JTQSourceLabel = {
+  describe: describeSourceLabel,
+  tagClass: sourceTagClassName,
+  suffix: degradedSuffix
+};
+
 /* ---------- 分析 ---------- */
 function renderAnalysis(report) {
   const q = report.questions || {};
@@ -417,38 +595,27 @@ function renderAnalysis(report) {
   const r = report.speech_rate || {};
   const p = report.pauses || {};
 
-  // 分数环
+  // 分数环 + 总分
+  // 数字列滚动与环的 conic-gradient 由 countup.js 用同一根曲线推进（0 → score）。
+  // 没有 countup.js（老缓存 / 被裁掉的构建）时退回落静态值，绝不显示空白。
   const score = report.overall_score || 0;
-  scoreNum.textContent = score;
-  scoreRing.style.background =
-    'conic-gradient(var(--brand) 0 ' + score + '%, var(--line) ' + score + '% 100%)';
+  if (window.jtqCount && typeof window.jtqCount.score === 'function') {
+    window.jtqCount.score(score);
+  } else {
+    scoreNum.textContent = score;
+    scoreRing.style.background =
+      'conic-gradient(var(--brand) 0 ' + score + '%, var(--line) ' + score + '% 100%)';
+  }
+
+  // 结论句：整段淡入会像「一块色板糊上来」，按字拆开、逐字模糊渐入
+  // （BlurText 的 blur 档）。同一段文字只播一次，重放历史不会反复糊屏。
   scoreSummary.textContent = report.summary || '';
+  if (window.jtqBlurText) window.jtqBlurText.mount(scoreSummary);
 
   // 结果来源标签：不再把所有非模型结果都说成「未配置 API Key」。
   // 规则模式也可能是模型请求失败后由服务端规则处理，两者来源不同。
-  const engineLabels = {
-    llm: {
-      className: 'llm',
-      text: '模型生成 · 反馈需结合原文核对'
-    },
-    rule: {
-      className: 'rule',
-      text: '服务端规则计算 · 不代表模型评价'
-    },
-    rules: {
-      className: 'rule',
-      text: '服务端规则计算 · 不代表模型评价'
-    },
-    'offline-demo': {
-      className: 'demo',
-      text: '固定示例 · 不代表对当前讲稿的真实分析'
-    }
-  };
-
-  const engineInfo = engineLabels[report.engine] || {
-    className: '',
-    text: '结果来源未明确 · 请先核对分析配置'
-  };
+  // 后端用 fallback_reason 说明「为什么降级」，前端照实显示。
+  const engineInfo = describeSourceLabel(report.engine, report.fallback_reason);
 
   engineTag.className =
     'engine-tag' + (engineInfo.className ? ' ' + engineInfo.className : '');
@@ -498,7 +665,11 @@ function renderAnalysis(report) {
   const candidateQuestions =
     validNumber(q.genuine_questions, 0, Infinity);
   const coverage = validNumber(k.cover_percent, 0, 100);
-  const demoWait = validNumber(q.avg_wait_sec, 0, Infinity);
+
+  // 等待秒数口径：没有音频时间戳时，等待时间「不可测量」。
+  // 唯一允许显示具体秒数的是固定演示（且必须标注「示例」）；
+  // 正常分析里后端把 avg_wait_sec 置为 null，这里不会用文本推断值冒充实测值。
+  const demoWait = waitSecondsForDisplay(q, isDemo);
 
   const sourceChars = Array.from(
     String(lastScript || '').replace(/\s/g, '')
@@ -512,24 +683,20 @@ function renderAnalysis(report) {
   const coveredItems = listValues(k.covered);
   const missingItems = listValues(k.missing);
 
-  const genericPhases = new Set([
-    '情境引入',
-    '知识推导',
-    '公式结论',
-    '例题讲解',
-    '课堂互动',
-    '小结回顾',
-    '作业布置'
-  ]);
+  // 七环节清单只有一份定义（见文件顶部 GENERIC_PHASE_NAMES）。
+  const genericPhases = new Set(GENERIC_PHASE_NAMES);
 
   const reportedCoverageItems = [
     ...coveredItems,
     ...missingItems
   ];
 
+  // 后端已冻结契约：knowledge 永远只含七环节（模型分支也不得覆盖，
+  // 仍取规则引擎的 base.knowledge）。所以这里不再看 engine，
+  // 只校验「报告回来的条目是不是那七个环节」：
+  // 万一拿到旧数据 / 异常数据，就不硬套七环节口径，改用保守措辞。
   const isGenericRuleCoverage =
     !isDemo &&
-    (report.engine === 'rule' || report.engine === 'rules') &&
     reportedCoverageItems.length > 0 &&
     reportedCoverageItems.every((item) => genericPhases.has(item));
 
@@ -590,20 +757,34 @@ function renderAnalysis(report) {
       '；仅为启发式或模型分类，不代表有效互动。';
   }
 
+  // 覆盖口径统一说明（唯一事实来源）：
+  // 这一项是「逐字稿里匹配到的通用教学环节线索比例」，
+  // 绝不能被读成知识点掌握情况、课堂质量或课程完成度的结论。
+  // 七环节名称固定为后端 knowledge.missing 里可能出现的那七个。
+  const GENERIC_PHASE_REF =
+    '逐字稿中匹配到的通用教学环节线索比例' +
+    '（七环节：情境引入 / 知识推导 / 公式结论 / 例题讲解 / 课堂互动 / 小结回顾 / 作业布置），' +
+    '不是知识点掌握率。';
+
   let coverageReference;
 
   if (isDemo) {
-    coverageReference = '固定示例覆盖率，与真实训练结果不可直接比较。';
+    coverageReference = '固定示例环节线索比例，与真实训练结果不可直接比较。';
   } else if (isGenericRuleCoverage) {
-    coverageReference = '通用七环节关键词命中率，不代表环节已充分完成。';
+    coverageReference = GENERIC_PHASE_REF;
   } else {
-    coverageReference = '报告返回的覆盖估计；项目范围与计算口径需结合原文核对。';
+    coverageReference =
+      GENERIC_PHASE_REF +
+      '\n报告未标注本项是否按七环节口径统计，请结合原文核对。';
   }
 
   if (missingItems.length) {
-    coverageReference += '\n报告标记待补充：' + missingItems.join('、');
+    coverageReference +=
+      '\n报告标记待补充：' +
+      missingItems.join('、') +
+      (isGenericRuleCoverage ? '（未匹配到的通用环节）' : '');
   } else {
-    coverageReference += '\n未返回缺失列表，不等于全部内容已经讲透。';
+    coverageReference += '\n未返回缺失列表，不等于全部环节都已讲到。';
   }
 
   const cards = [
@@ -619,9 +800,9 @@ function renderAnalysis(report) {
       cls: 'neutral'
     },
     {
-      label: '真实提问等待',
+      label: isDemo ? '示例等待' : '真实提问等待',
       val: isDemo ? displayNumber(demoWait, 1) : '无法测量',
-      unit: isDemo && demoWait !== null ? '秒' : '',
+      unit: isDemo && demoWait !== null ? '秒（示例）' : '',
       ref: isDemo
         ? '固定示例等待值，非当前讲稿实测。'
         : '当前分析依据讲稿文本，没有可靠的等待时间戳。' +
@@ -651,7 +832,7 @@ function renderAnalysis(report) {
       cls: 'neutral'
     },
     {
-      label: isGenericRuleCoverage ? '通用环节线索' : '报告覆盖估计',
+      label: isDemo ? '示例环节线索' : '通用教学环节线索',
       val: displayNumber(coverage, 0),
       unit: coverage === null ? '' : '%',
       ref: coverageReference,
@@ -669,6 +850,17 @@ function renderAnalysis(report) {
         '</div>'
     )
     .join('');
+
+  // 指标卡是刚重建的，GlareHover 的类名要重新挂（聚光和磁吸走事件委托，不用管）
+  if (window.jtqRbFx && typeof window.jtqRbFx.refreshGlare === 'function') {
+    window.jtqRbFx.refreshGlare();
+  }
+
+  // 报告卡分批入场（react-bits AnimatedContent）。gsap 未加载时这个函数
+  // 直接返回 null，卡片保持默认可见 —— 不能让它变成「有动画才看得见」。
+  if (window.jtqRbFx && typeof window.jtqRbFx.enterMetrics === 'function') {
+    window.jtqRbFx.enterMetrics(metricsGrid);
+  }
 
   // 逐字稿高亮
   const words = Object.keys(f.detail || {});
@@ -689,6 +881,153 @@ function renderAnalysis(report) {
 
   // 名师点评库：按短板匹配评委典型点评
   renderMasterQuotes(report);
+
+  // 学科内容核对：模型提示，需人工确认（不是评分，也不是结论）
+  renderSubjectKnowledge(report);
+
+  // 通用教学环节线索：把七环节摊开，让「匹配到哪些 / 没匹配到哪些」看得见
+  renderPhaseCues(report);
+}
+
+/* 通用教学环节线索（七环节清单）
+   ------------------------------------------------------------------
+   把后端 knowledge.covered / knowledge.missing 摊开给用户看：
+   每个环节标「已出现线索」还是「未检测到线索」。
+
+   口径边界（必须写在界面上）：
+   - 命中与否**完全以后端返回的清单为准**，前端不做关键词匹配；
+   - 前端只提供「完整七个环节名」用于展示未命中的项（GENERIC_PHASE_NAMES）；
+   - 「未检测到线索」只代表逐字稿里没匹配到特征表达，
+     **不等于这节课没做这个环节** —— 这句话必须留给用户看到。 */
+function renderPhaseCues(report) {
+  const box = $('phaseCueBox');
+  if (!box) return;
+
+  const k = (report && report.knowledge) || null;
+
+  if (!k || (!Array.isArray(k.covered) && !Array.isArray(k.missing))) {
+    box.innerHTML =
+      '<p class="tip">本次分析没有返回通用教学环节线索（当前模式不提供这一项，或逐字稿里没匹配到任何环节）。</p>';
+    return;
+  }
+
+  const pick = (list) =>
+    (Array.isArray(list) ? list : [])
+      .filter((item) => typeof item === 'string' && item.trim())
+      .map((item) => item.trim());
+
+  const covered = pick(k.covered);
+  const missing = pick(k.missing);
+
+  if (!covered.length && !missing.length) {
+    box.innerHTML =
+      '<p class="tip">本次分析没有返回通用教学环节线索。</p>';
+    return;
+  }
+
+  const coveredSet = new Set(covered);
+  const missingSet = new Set(missing);
+
+  // 后端返回了、但不在前端展示清单里的环节名（两份定义漂移）：
+  // 不能悄悄丢掉，原样补在清单后面。
+  const extraNames = [];
+  covered.forEach((n) => {
+    if (!GENERIC_PHASE_NAMES.includes(n) && !extraNames.includes(n)) extraNames.push(n);
+  });
+  missing.forEach((n) => {
+    if (!GENERIC_PHASE_NAMES.includes(n) && !extraNames.includes(n)) extraNames.push(n);
+  });
+
+  const row = (name, hit) =>
+    '<li class="pc-item ' + (hit ? 'hit' : 'miss') + '">' +
+    '<span class="pc-name">' + escapeHtml(name) + '</span>' +
+    '<span class="pc-state">' + (hit ? '已出现线索' : '未检测到线索') + '</span>' +
+    '</li>';
+
+  const mainItems = GENERIC_PHASE_NAMES.map((name) => row(name, coveredSet.has(name)));
+  const extraItems = extraNames.map((name) => row(name, coveredSet.has(name)));
+
+  const total = coveredSet.size + missingSet.size;
+  const hitCount = coveredSet.size;
+
+  box.innerHTML =
+    '<p class="tip pc-intro">这是逐字稿中匹配到的通用教学环节线索比例，不是知识点掌握率。</p>' +
+    '<ul class="phase-cue-list">' +
+    mainItems.join('') +
+    extraItems.join('') +
+    '</ul>' +
+    (extraItems.length
+      ? '<p class="tip pc-note">后端另外返回了 ' +
+        extraNames.length +
+        ' 个不在页面清单里的环节名，已原样列出，请人工核对两处口径是否一致。</p>'
+      : '') +
+    '<p class="tip pc-summary">共 ' +
+    total +
+    ' 个环节，其中 ' +
+    hitCount +
+    ' 个在逐字稿里匹配到了线索。</p>' +
+    '<p class="tip pc-note">「未检测到线索」只说明逐字稿里没匹配到该环节的特征表达，不等于这节课没做这个环节。</p>';
+}
+
+/* 学科内容核对展示区
+   ------------------------------------------------------------------
+   subject_knowledge 是「模型提示」：它列出逐字稿里出现过的学科内容线索、
+   以及还需要人工核对的点。它不是评分、不是结论，也不能替代老师备课核对。
+   结构（后端 be4 冻结）：{ covered:[{point,evidence_quote}], needs_review:[{point,reason}], scope_note }
+   兼容：
+   - 整个字段都没有 → 一句说明，不渲染空白块；
+   - covered 为空数组 → 友好空态（后端在规则模式下就会这样返回：
+     没有教案分母就不编内容，只给 scope_note 说明为什么算不出来）。 */
+function renderSubjectKnowledge(report) {
+  const box = $('subjectKnowledgeBox');
+  if (!box) return;
+
+  const data = (report && report.subject_knowledge) || null;
+
+  if (!data || (!Array.isArray(data.covered) && !Array.isArray(data.needs_review))) {
+    box.innerHTML =
+      '<p class="tip">当前模式没有提供独立的学科内容核对结果。</p>';
+    return;
+  }
+
+  const covered = (data.covered || []).map(
+    (item) =>
+      '<li class="sk-covered"><b>已出现：</b>' +
+      escapeHtml((item && item.point) || '') +
+      '<br><span class="sk-evidence">' +
+      escapeHtml((item && item.evidence_quote) || '') +
+      '</span></li>'
+  ).join('');
+
+  const review = (data.needs_review || []).map(
+    (item) =>
+      '<li class="sk-review"><b>待核对：</b>' +
+      escapeHtml((item && item.point) || '') +
+      '<br><span class="sk-evidence">' +
+      escapeHtml((item && item.reason) || '') +
+      '</span></li>'
+  ).join('');
+
+  const scopeNote = data.scope_note
+    ? '<p class="tip">' + escapeHtml(data.scope_note) + '</p>'
+    : '';
+
+  // 两组都空 → 给友好空态，不留一个空的 <ul>。
+  if (!covered && !review) {
+    box.innerHTML =
+      '<p class="tip sk-hint">模型提示，需人工确认；不是评分，也不是结论。</p>' +
+      '<p class="tip">本次分析没有产出可核对的学科内容线索。</p>' +
+      scopeNote;
+    return;
+  }
+
+  box.innerHTML =
+    '<p class="tip sk-hint">模型提示，需人工确认；不是评分，也不是结论。</p>' +
+    '<ul class="subject-review-list">' +
+    covered +
+    review +
+    '</ul>' +
+    scopeNote;
 }
 
 async function runAnalyze() {
@@ -711,6 +1050,22 @@ async function runAnalyze() {
     lastScript = script;
     lastSubject = subjectInput.value.trim();
     lastAnalysis = data;
+
+    // 训练闭环钩子：通知「提问专项训练」模块本轮基线分析已完成。
+    // 只透传训练所需字段；演示场景（固定示例页 / 离线分析结果）会被专项模块拒绝写入真实记录。
+    document.dispatchEvent(
+      new CustomEvent('jtq:analysis-complete', {
+        detail: {
+          report: data,
+          transcript: script,
+          subject: subjectInput.value.trim(),
+          grade: gradeInput.value.trim(),
+          isDemo:
+            JTQ_DEMO_PAGE || Boolean(data && data.engine === 'offline-demo'),
+        },
+      })
+    );
+
     if (data && data.subject_label) {
       const tip = $('subjectDetectedTip');
       if (tip) tip.textContent = '已按「' + data.subject_label + '」学科标准评分';
@@ -1026,7 +1381,10 @@ function renderIfias(d) {
 
   box.innerHTML =
     (d.caveat ? '<div class="if-caveat">⚠️ 口径提示：' + escapeHtml(d.caveat) + '</div>' : '') +
-    '<div class="if-head"><span class="if-badge">' + (d.engine === 'llm' ? 'AI 逐句编码' : '规则编码') + '</span>' +
+    '<div class="if-head"><span class="if-badge">' +
+    (d.engine === 'llm'
+      ? 'AI 逐句编码'
+      : '规则编码' + degradedSuffix(d.fallback_reason)) + '</span>' +
     '共编码 <b>' + d.total_units + '</b> 句 · 片段 <b>' + eps.length + '</b> 个 · 噪声 <b>' +
     eps.filter((e) => e.cluster === -1).length + '</b> 个</div>' +
     '<div class="metrics if-metrics">' + cardsHtml + '</div>' +
@@ -1215,11 +1573,68 @@ async function runImprove() {
 /* ==================================================================
    👥 三学生课堂（多人同时在线 + 表情 + 举手 + 压力系统）
    ================================================================== */
-const CLASS_META = {
-  naughty: { name: '小皮', avatar: '😈', desc: '调皮型' },
-  geek: { name: '小霸', avatar: '🤓', desc: '学霸型' },
-  drift: { name: '小走', avatar: '😵', desc: '走神型' },
+/* ---------- 学生名册与学情数值 ----------
+ * 判定逻辑在 public/classroom-roster.js（纯函数，node:test 直接可测）。
+ * 下面这组 || 兜底只在该文件未加载时生效（旧缓存页面），正常路径一律以它为准；
+ * 单测也只锁那边，别两份各改一半。 */
+const CLASS_ROSTER = window.jtqClassRoster || null;
+const CLASS_META = CLASS_ROSTER
+  ? CLASS_ROSTER.CLASS_META
+  : {
+      naughty: { name: '小皮', avatar: '😈', desc: '调皮型' },
+      geek: { name: '小霸', avatar: '🤓', desc: '学霸型' },
+      drift: { name: '小走', avatar: '😵', desc: '走神型' },
+    };
+const CLASS_KEYS = CLASS_ROSTER ? CLASS_ROSTER.KEYS : ['naughty', 'geek', 'drift'];
+
+// 后端还没返回状态时的默认名册：三个「还没开口」的学生
+const idleRoster = CLASS_ROSTER ? CLASS_ROSTER.idleRoster : function () {
+  return CLASS_KEYS.map((k) => ({ key: k, mood: '😊', hand_raise: false }));
 };
+
+// 角色白名单：只认自有属性，避免 constructor / toString 被当成有效学生
+const hasClassKey = CLASS_ROSTER ? CLASS_ROSTER.hasKey : function (key) {
+  return typeof key === 'string' &&
+    Object.prototype.hasOwnProperty.call(CLASS_META, key);
+};
+
+// 学情数值：数字或非空数字串 → 0–100 整数；其余（空白串/数组/对象/布尔）→ null
+const scoreOf = CLASS_ROSTER ? CLASS_ROSTER.scoreOf : function (value) {
+  if (typeof value === 'number') {
+    return Number.isFinite(value) ? Math.max(0, Math.min(100, Math.round(value))) : null;
+  }
+  if (typeof value === 'string' && value.trim()) {
+    const n = Number(value);
+    return Number.isFinite(n) ? Math.max(0, Math.min(100, Math.round(n))) : null;
+  }
+  return null;
+};
+
+const stateColor = CLASS_ROSTER ? CLASS_ROSTER.colorOf : function (value) {
+  const n = scoreOf(value);
+  if (n === null) return '#94A3B8';
+  if (n >= 70) return '#16a34a';
+  if (n >= 45) return '#f59e0b';
+  return '#dc2626';
+};
+
+/* 场景几何：站位与命中盒子只在 classroom-roster.js 里算一份。
+ * 画布绘制和「点画布点名」都用它，避免两份坐标公式漂移成「看到小走、点中小霸」。 */
+const figSize = CLASS_ROSTER && CLASS_ROSTER.figSize
+  ? CLASS_ROSTER.figSize
+  : function (maxW, maxH, ratio) {
+      const r = ratio > 0 ? ratio : 0.78;
+      let h = maxH, w = h * r;
+      if (w > maxW) { w = maxW; h = w / r; }
+      return { w: w, h: h };
+    };
+const sceneLayout = CLASS_ROSTER && CLASS_ROSTER.sceneLayout
+  ? CLASS_ROSTER.sceneLayout
+  : function () { return []; };
+const sceneHitTest = CLASS_ROSTER && CLASS_ROSTER.hitTest
+  ? CLASS_ROSTER.hitTest
+  : function () { return null; };
+
 const chatModeBar = $('chatModeBar');
 const classMode = $('classMode');
 const soloMode = $('soloMode');
@@ -1239,6 +1654,11 @@ let classPressure = 20;
 let classMessages = []; // {role:'teacher'|'student', name, content}
 let classDoomed = false;
 
+/* ---------- 2D 教室场景（原生 Canvas，扩展自现有 classNextRound，不新建平行模块）---------- */
+const classSceneCanvas = $('classSceneCanvas');
+let classSceneCtx = null;
+let classSceneReady = false;
+
 if (chatModeBar) {
   chatModeBar.addEventListener('click', (e) => {
     const btn = e.target.closest('.msw');
@@ -1248,52 +1668,108 @@ if (chatModeBar) {
     const isClass = btn.getAttribute('data-mode') === 'class';
     classMode.hidden = !isClass;
     soloMode.hidden = isClass;
+    if (isClass) requestAnimationFrame(drawClassScene);
     if (isClass && !lastAnalysis && !lastScript) {
       setErr('建议先提交讲稿，三学生会基于你的讲课内容发问（当然也可以空手开局）');
     }
   });
 }
 
-let lastClassStates = []; // 最近一轮学生状态，供驾驶舱计算
+// 切回「AI 学生拆台」Tab 时重绘 2D 教室场景（画布在隐藏时尺寸为 0，需重新绘制）。
+// 切走时只摘掉「正在发言」标记：不删对话、不清业务数据，也不当成训练结束。
+document.addEventListener('jtq:tabchange', (e) => {
+  const name = e.detail && e.detail.name;
+  if (name === 'chat') {
+    requestAnimationFrame(drawClassScene);
+    return;
+  }
+  clearClassSpeaking();
+});
+document.addEventListener('visibilitychange', () => {
+  if (document.hidden) clearClassSpeaking();
+  else requestAnimationFrame(drawClassScene);
+});
 
-function stateColor(v) {
-  if (v >= 70) return '#16a34a';
-  if (v >= 45) return '#f59e0b';
-  return '#dc2626';
+let lastClassStates = []; // 最近一轮学生状态，供驾驶舱计算
+let lastClassSlots = []; // 最近一帧的站位盒子（画布点击命中用，与绘制同源）
+
+/**
+ * 学生卡头像：优先用课堂里同一个 SVG 立绘的头部裁切，emoji 只作降级。
+ *
+ * 为什么不再直接放 emoji：
+ *   立绘已经是这套产品识别学生的唯一视觉系统（2D 教室里画的就是它），
+ *   卡片上再放一个 😈🤓😵，等于同一个学生有两张脸；而且 emoji 在不同系统上
+ *   长相差异极大（Windows 的 🤓 和 macOS 的不是同一张脸）。
+ *
+ * 降级链：立绘地址拿不到 → emoji；img 加载失败 → onerror 删掉 img，露出底层 emoji。
+ * 两条路都不会留下破图标或空白。
+ */
+function classAvatarHtml(key, meta) {
+  const emoji = '<span class="cs-av-emoji">' + meta.avatar + '</span>';
+  const src = (key && window.jtqStudentArt && window.jtqStudentArt.srcOf)
+    ? window.jtqStudentArt.srcOf(key, 'closed')
+    : '';
+  if (!src) return '<span class="cs-av">' + emoji + '</span>';
+  return '<span class="cs-av" data-av="' + key + '">' + emoji +
+    '<img class="cs-av-img" src="' + src + '" alt="" decoding="async" onerror="this.remove()">' +
+    '</span>';
 }
 
 function renderClassStudents(states) {
-  const list = states && states.length
-    ? states
-    : Object.keys(CLASS_META).map((k) => ({ key: k, mood: '😊', hand_raise: false }));
+  const list = (states && states.length) ? states : idleRoster();
   lastClassStates = list;
   classStudentsBox.innerHTML = list.map((s) => {
-    const m = CLASS_META[s.key] || CLASS_META.naughty;
-    const has = s.attention != null && s.comprehension != null;
-    const reason = s.state_reason ? escapeHtml(s.state_reason) : '';
-    // 学情生效时，后端会给出本轮提问难度（basic / core / advanced）。
+    // 非法角色（含 constructor / toString 这类原型链属性）不渲染成有效学生
+    const key = hasClassKey(s && s.key) ? s.key : '';
+    const m = key ? CLASS_META[key] : CLASS_META.naughty;
+    // 先规整成 number|null：空白串 / 数组不再被当成 0 分渲染成红色告警条
+    const att = scoreOf(s && s.attention);
+    const comp = scoreOf(s && s.comprehension);
+    const has = att !== null && comp !== null;
+    const reason = s && s.state_reason ? escapeHtml(s.state_reason) : '';
+    // 学情生效时，后端会给出本轮提问难度（basic / core / advanced）。白名单外一律不显示。
     const diffLabel = { basic: '基础', core: '常规', advanced: '进阶' };
-    const diff = s.difficulty ? diffLabel[s.difficulty] || s.difficulty : '';
+    const diff = s && s.difficulty ? diffLabel[s.difficulty] || '' : '';
     const bars = has
       ? '<div class="cs-bars">' +
-        '<div class="cs-bar" title="专注度 ' + s.attention + (reason ? ' · ' + reason : '') + '">' +
-        '<span class="cs-bl">专注</span><div class="cs-bt"><i style="width:' + s.attention + '%;background:' + stateColor(s.attention) + '"></i></div>' +
-        '<b style="color:' + stateColor(s.attention) + '">' + s.attention + '</b></div>' +
-        '<div class="cs-bar" title="理解度 ' + s.comprehension + (reason ? ' · ' + reason : '') + '">' +
-        '<span class="cs-bl">理解</span><div class="cs-bt"><i style="width:' + s.comprehension + '%;background:' + stateColor(s.comprehension) + '"></i></div>' +
-        '<b style="color:' + stateColor(s.comprehension) + '">' + s.comprehension + '</b></div>' +
+        '<div class="cs-bar" title="专注度 ' + att + (reason ? ' · ' + reason : '') + '">' +
+        '<span class="cs-bl">专注</span><div class="cs-bt"><i style="width:' + att + '%;background:' + stateColor(att) + '"></i></div>' +
+        '<b style="color:' + stateColor(att) + '">' + att + '</b></div>' +
+        '<div class="cs-bar" title="理解度 ' + comp + (reason ? ' · ' + reason : '') + '">' +
+        '<span class="cs-bl">理解</span><div class="cs-bt"><i style="width:' + comp + '%;background:' + stateColor(comp) + '"></i></div>' +
+        '<b style="color:' + stateColor(comp) + '">' + comp + '</b></div>' +
         '</div>'
       : '';
-    return '<div class="cs-card' + (s.speaking ? ' speaking' : '') + '" data-k="' + s.key + '">' +
-      (s.hand_raise ? '<span class="cs-raise">🙋</span>' : '') +
-      '<div class="cs-av">' + m.avatar + '</div>' +
+    // 合法角色才可点（点名）。非法角色卡片没有 data-k，也就没有 role/tabindex，
+    // 键盘用户不会 tab 到一个点了没反应的元素上 —— 那是比不可点更差的可访问性。
+    const clickable = key
+      ? ' role="button" tabindex="0" data-k="' + key + '" aria-label="点名 ' + m.name + ' 回答"'
+      : '';
+    return '<div class="cs-card' + (s && s.speaking ? ' speaking' : '') + '"' + clickable + '>' +
+      (s && s.hand_raise ? '<span class="cs-raise">🙋</span>' : '') +
+      classAvatarHtml(key, m) +
       '<div class="cs-nm">' + m.name + '</div>' +
       (diff ? '<span class="difficulty-tag" title="本轮提问难度">' + escapeHtml(diff) + '</span>' : '') +
-      '<div class="cs-mood">' + (s.mood || '😊') + '</div>' +
+      '<div class="cs-mood">' + ((s && s.mood) || '😊') + '</div>' +
       bars +
       (reason ? '<div class="cs-why">' + reason + '</div>' : '') +
       '</div>';
   }).join('');
+  drawClassScene();
+}
+
+/* 离开课堂时摘掉「正在发言」的展示。
+ * 不删除对话、不清业务记录，也不把「切走 Tab」解释成训练结束。 */
+function clearClassSpeaking() {
+  if (!lastClassStates || !lastClassStates.length) return;
+  let changed = false;
+  lastClassStates.forEach((s) => {
+    if (s && s.speaking) {
+      s.speaking = false;
+      changed = true;
+    }
+  });
+  if (changed) renderClassStudents(lastClassStates);
 }
 
 /* ---------- 实时驾驶舱：节奏 / 张力 / 参与度 ---------- */
@@ -1324,7 +1800,9 @@ function renderCockpit() {
     classPressure >= 75 ? '用控场话术把节奏拉回来' : classPressure >= 50 ? '学生开始躁动' : '课堂在你手里', tColor);
 
   // 参与度：三名学生当前专注度均值
-  const atts = (lastClassStates || []).map((x) => x.attention).filter((v) => v != null);
+  const atts = (lastClassStates || [])
+    .map((x) => scoreOf(x && x.attention))
+    .filter((v) => v !== null);
   if (!atts.length) {
     setGauge('ckFocusBar', 'ckFocusV', 'ckFocusN', 0, '—', '等学生开口', '#64748B');
   } else {
@@ -1355,6 +1833,7 @@ function updatePressure(delta, reason) {
     pressureHint.style.color = '#64748B';
   }
   renderCockpit();
+  drawClassScene();
 }
 
 function showDoomed(reason) {
@@ -1362,6 +1841,284 @@ function showDoomed(reason) {
   doomedReason.textContent = reason || '模拟课堂压力已达到本轮上限。';
   doomedOverlay.style.display = 'flex';
   unlockBadge('doomed', '社死体验者', '💀', '在课堂压力爆表后依然站到了最后');
+}
+
+/* ---------- 2D 教室场景绘制（原生 Canvas，纯前端，无外部依赖）---------- */
+function getCssVar(name, fallback) {
+  try {
+    const v = getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+    return v || fallback;
+  } catch (_) {
+    return fallback;
+  }
+}
+
+function truncateStr(str, n) {
+  str = String(str || '');
+  return str.length > n ? str.slice(0, n) + '…' : str;
+}
+
+// 各角色场景配色（与 CLASS_META 对应，仅用于画布区分，不进逻辑）
+const CLASS_SCENE_COLOR = {
+  naughty: { body: '#197A63', skin: '#DCEFE8' },
+  geek: { body: '#5262A3', skin: '#E8EAF6' },
+  drift: { body: '#A66B16', skin: '#F7EBDD' },
+};
+
+function setupClassScene() {
+  if (classSceneReady || !classSceneCanvas) return;
+  classSceneCtx = classSceneCanvas.getContext('2d');
+  if (!classSceneCtx) return;
+  classSceneReady = true;
+  // 画布在隐藏 Tab / 隐藏模式内尺寸为 0，ResizeObserver 在显示后会触发重绘
+  if ('ResizeObserver' in window) {
+    new ResizeObserver(drawClassScene).observe(classSceneCanvas);
+  } else {
+    window.addEventListener('resize', drawClassScene);
+  }
+}
+
+function drawClassStudent(ctx, cx, baseY, s, maxW, maxH) {
+  const key = hasClassKey(s && s.key) ? s.key : 'naughty';
+  const c = CLASS_SCENE_COLOR[key] || CLASS_SCENE_COLOR.naughty;
+
+  // 立绘状态：举手 → raise；发言 → default（张嘴）；其余 → closed（闭嘴）。
+  // 三种状态共用同一裁切矩形，所以切换时人物不会跳动，只有手臂和嘴巴在动。
+  const artState = (s && s.hand_raise) ? 'raise' : (s && s.speaking) ? 'default' : 'closed';
+
+  // 立绘：用户提供的三张 SVG（透明背景、矢量、随 dpr 清晰）。
+  // 加载成功用立绘；失败则退回下面的简笔小人，课堂场景不会因素材缺失而空掉。
+  const art = window.jtqStudentArt ? window.jtqStudentArt.get(key, artState) : null;
+  const ratio = window.jtqStudentArt ? window.jtqStudentArt.ratioOf(key) : 0.78;
+
+  // 尺寸公式只在 classroom-roster.js 里有一份：命中盒子用的是同一个函数，
+  // 所以「画出来的框」和「能点中的框」永远一样大。
+  const size = figSize(maxW, maxH, ratio);
+  const figH = size.h;
+  const figW = size.w;
+  const left = cx - figW / 2;
+  const top = baseY - figH;
+
+  // 地面投影：让立绘「站」在教室地面上，而不是浮着
+  ctx.save();
+  ctx.globalAlpha = 0.12;
+  ctx.fillStyle = '#25312C';
+  ctx.beginPath();
+  ctx.ellipse(cx, baseY - 1, figW * 0.38, Math.max(2.5, figH * 0.03), 0, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.restore();
+
+  if (art) {
+    // art 已经是按内容包围盒烘焙好的位图（见 students-art.js 的 bake），
+    // 直接 4 参数绘制即可，三个人物天然等高
+    ctx.drawImage(art, left, top, figW, figH);
+  } else {
+    // 简笔兜底：总高约 60 单位，与旧版比例一致
+    const scale = figH / 60;
+    const headY = baseY - 42 * scale;
+    ctx.fillStyle = c.body;
+    roundRect(ctx, cx - 17 * scale, headY + 7 * scale, 34 * scale, 32 * scale, 10 * scale);
+    ctx.fill();
+    ctx.fillStyle = c.skin;
+    ctx.beginPath();
+    ctx.arc(cx, headY, 18 * scale, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = '#25312C';
+    ctx.beginPath();
+    ctx.arc(cx - 6 * scale, headY - 1 * scale, 1.6 * scale, 0, Math.PI * 2);
+    ctx.arc(cx + 6 * scale, headY - 1 * scale, 1.6 * scale, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  // 举手：立绘本身就有「raise」状态（真实举手），这里不再画 ✋ 符号。
+  // 符号只是占位，真正的举手动作由状态立绘表达（见上方 artState）。
+
+  // 发言高亮：头顶一枚带柔光的小圆点
+  if (s && s.speaking) {
+    ctx.save();
+    ctx.fillStyle = 'rgba(79,70,229,.16)';
+    ctx.beginPath();
+    ctx.arc(cx, top - 2, 8.5, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = getCssVar('--brand', '#4F46E5');
+    ctx.beginPath();
+    ctx.arc(cx, top - 2, 3.6, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+  }
+}
+
+/**
+ * 名牌 + 专注度条（画在课桌层之上，所以压在桌面上，像桌上立着的姓名牌）。
+ *
+ * 为什么单独成函数：课堂画面要分三层画 ——
+ *   背景（墙/黑板）→ 人物 → 课桌 → 名牌。
+ * 名牌顺序反了就会被课桌挡掉，名字读不出来。
+ */
+function drawClassOverlay(ctx, cx, baseY, s, maxW, maxH) {
+  const key = hasClassKey(s && s.key) ? s.key : 'naughty';
+  const meta = CLASS_META[key];
+  const ratio = window.jtqStudentArt ? window.jtqStudentArt.ratioOf(key) : 0.78;
+  const size = figSize(maxW, maxH, ratio);
+  const figW = size.w;
+  const figH = size.h;
+
+  const label = meta.name + ' · ' + String(meta.desc || '').replace('型', '');
+  ctx.font = '600 ' + Math.max(10, Math.round(figH * 0.075)) + 'px sans-serif';
+  ctx.textAlign = 'center';
+  const textW = ctx.measureText(label).width;
+
+  // 纸片名牌：小小一张卡片立在桌沿上
+  const cardW = textW + 20;
+  const cardH = Math.max(15, Math.round(figH * 0.095));
+  const cardX = cx - cardW / 2;
+  const cardY = baseY + 4;
+  ctx.save();
+  ctx.fillStyle = 'rgba(88,72,48,.18)';
+  roundRect(ctx, cardX, cardY + 2, cardW, cardH, 4);
+  ctx.fill();
+  ctx.fillStyle = 'rgba(250,246,237,.95)';
+  roundRect(ctx, cardX, cardY, cardW, cardH, 4);
+  ctx.fill();
+  ctx.strokeStyle = 'rgba(150,130,96,.5)';
+  ctx.lineWidth = 1;
+  roundRect(ctx, cardX + 0.5, cardY + 0.5, cardW - 1, cardH - 1, 4);
+  ctx.stroke();
+  ctx.fillStyle = '#3d3327';
+  ctx.fillText(label, cx, cardY + cardH * 0.7);
+  ctx.restore();
+
+  // 专注度：立绘本身不能染色，还是用脚下细条表达
+  const barW = figW * 0.6;
+  const barY = cardY + cardH + 5;
+  ctx.fillStyle = 'rgba(120,102,72,.22)';
+  roundRect(ctx, cx - barW / 2, barY, barW, 3, 1.5);
+  ctx.fill();
+  // scoreOf 保证非法值（空白串 / 数组）不会画成 0 长度的红色条
+  const attention = s ? scoreOf(s.attention) : null;
+  if (attention !== null) {
+    const pct = attention / 100;
+    ctx.fillStyle = stateColor(attention);
+    roundRect(ctx, cx - barW / 2, barY, barW * pct, 3, 1.5);
+    ctx.fill();
+  }
+}
+
+/**
+ * 画一张教室矢量图层（背景 / 课桌）。
+ * SVG 本身分辨率无关，不需要像立绘那样先烘焙成位图，
+ * 直接 drawImage 到目标尺寸即可。
+ */
+function drawClassroomLayer(ctx, W, H, name) {
+  const art = window.jtqClassroomArt ? window.jtqClassroomArt.get(name) : null;
+  if (!art) return false;
+  try {
+    ctx.drawImage(art, 0, 0, W, H);
+  } catch (_) {
+    return false;
+  }
+  return true;
+}
+
+/** 矢量课桌层缺失时的兜底：一条木色桌沿 + 前挡板，位置与 desks.svg 对齐。 */
+function drawDeskFallback(ctx, W, H) {
+  const topY = H * 0.7956;
+  const edgeY = H * 0.8244;
+  ctx.fillStyle = '#cbb189';
+  ctx.fillRect(0, topY, W, edgeY - topY);
+  ctx.fillStyle = '#e9d8ba';
+  ctx.fillRect(0, topY, W, 2);
+  ctx.fillStyle = '#b0926c';
+  ctx.fillRect(0, edgeY, W, H - edgeY);
+  ctx.fillStyle = 'rgba(120,102,72,.25)';
+  ctx.fillRect(0, edgeY - 2, W, 2);
+}
+
+function drawClassScene() {
+  if (!classSceneReady) setupClassScene();
+  if (!classSceneCtx || !classSceneCanvas || classMode.hidden) return;
+
+  const rect = classSceneCanvas.getBoundingClientRect();
+  if (!rect.width || !rect.height) return;
+
+  const dpr = Math.min(window.devicePixelRatio || 1, 2);
+  const w = Math.round(rect.width * dpr);
+  const h = Math.round(rect.height * dpr);
+  if (classSceneCanvas.width !== w || classSceneCanvas.height !== h) {
+    classSceneCanvas.width = w;
+    classSceneCanvas.height = h;
+  }
+
+  const ctx = classSceneCtx;
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  ctx.clearRect(0, 0, rect.width, rect.height);
+
+  const W = rect.width, H = rect.height;
+
+  // 教室背景：优先用矢量图层（assets/classroom/backdrop.svg）。
+  // 这张图是可编辑资产 —— Inkscape / Figma 改完直接替换文件即可，
+  // 不用动这里。加载失败才退回代码画的扁平背景。
+  const hasBackdrop = drawClassroomLayer(ctx, W, H, 'backdrop');
+  if (!hasBackdrop) {
+    ctx.fillStyle = getCssVar('--bg', '#F4F9FF');
+    ctx.fillRect(0, 0, W, H);
+    const boardX = W * 0.17, boardY = H * 0.035, boardW = W * 0.66, boardH = H * 0.185;
+    ctx.fillStyle = '#244C42';
+    roundRect(ctx, boardX, boardY, boardW, boardH, 10);
+    ctx.fill();
+  }
+
+  // 黑板上的课题文字留在画布上：它是动态的（跟着当前试讲内容变），
+  // 矢量图层里只放不变的美术部分。
+  const topic = (lastSubject || '').trim();
+  ctx.fillStyle = '#F1F5F2';
+  ctx.textAlign = 'center';
+  ctx.font = '600 ' + Math.round(H * 0.058) + 'px sans-serif';
+  ctx.fillText(topic ? ('课题：' + truncateStr(topic, 18)) : '课堂目标板', W * 0.5, H * 0.035 + H * 0.185 * 0.46);
+  ctx.font = Math.round(H * 0.042) + 'px sans-serif';
+  ctx.fillStyle = '#D6E7DF';
+  ctx.fillText('三学生课堂 · 模拟状态', W * 0.5, H * 0.035 + H * 0.185 * 0.82);
+
+  // 地面：不再画横线。横线正好压在立绘脚部，视觉上像人物被截断；
+  // 改为每个角色脚下的投影椭圆来锚定（在 drawClassStudent 里画）。
+  // 教师视角：教师本人不在画内（原讲台+圆点已撤，立绘放大后没有位置）。
+  const floorY = H * 0.845;
+
+  // 学生（复用 lastClassStates；为空时退化为默认三人）
+  const states = (lastClassStates && lastClassStates.length)
+    ? lastClassStates
+    : idleRoster();
+  // 按实际人数均分站位：非法角色被过滤后只剩两人时，不该继续挤在左半边
+  const seated = states.slice(0, 3);
+  const ratioOf = (k) => (window.jtqStudentArt ? window.jtqStudentArt.ratioOf(k) : 0.78);
+  // 站位算一次存下来：点击命中直接读这份，保证「画在哪」和「点得中哪」是同一份数据
+  const slots = sceneLayout(seated, W, H, ratioOf);
+  lastClassSlots = slots;
+  const baseY = floorY;
+  const maxH = H * 0.62;
+  const maxW = W * 0.27;
+  seated.forEach((s, i) => {
+    const cx = slots[i] ? slots[i].cx : W * 0.5;
+    drawClassStudent(ctx, cx, baseY, s, maxW, maxH);
+  });
+
+  // 课桌层画在人物之后：立绘是半身裁切，平底看着像被切断；
+  // 桌子一挡就自然变成「学生坐在桌后」。矢量层缺失时用代码兜底。
+  if (!drawClassroomLayer(ctx, W, H, 'desks')) {
+    drawDeskFallback(ctx, W, H);
+  }
+
+  // 名牌与专注度条压在桌面上（必须在课桌之后画，否则会被桌子挡住）
+  seated.forEach((s, i) => {
+    const cx = slots[i] ? slots[i].cx : W * 0.5;
+    drawClassOverlay(ctx, cx, baseY, s, maxW, maxH);
+  });
+
+  // 视角说明
+  ctx.fillStyle = 'rgba(58,46,30,.42)';
+  ctx.textAlign = 'left';
+  ctx.font = Math.round(H * 0.038) + 'px sans-serif';
+  ctx.fillText('教师视角', W * 0.05, H * 0.965);
 }
 
 function classBubble(name, text, kind) {
@@ -1383,6 +2140,8 @@ function classSysBubble(html) {
 
 async function classNextRound() {
   if (classDoomed) return;
+  // 点名还没回来时不推进整轮：否则两路请求会同时改写 lastClassStates
+  if (classCallBusy) return;
   classNextBtn.disabled = true;
   classNextBtn.textContent = '课堂进行中…';
   const lastTeacher = classMessages.filter((m) => m.role === 'teacher').slice(-1)[0];
@@ -1399,25 +2158,38 @@ async function classNextRound() {
     if (data.verdict) {
       classSysBubble('<b>🔍 课堂观察员：</b>' + escapeHtml(data.verdict));
     }
+    // 非法角色在源头就丢掉：不占卡片、不占站位、不产生气泡与朗读。
+    // 允许 renderClassStudents 里再兜一层，但入口必须先滤干净。
+    const incoming = (Array.isArray(data.students) ? data.students : [])
+      .filter((s) => s && typeof s === 'object' && hasClassKey(s.key));
     const states = [];
-    for (const s of data.students) {
-      const meta = CLASS_META[s.key] || CLASS_META.naughty;
+    for (const s of incoming) {
+      // 非法角色不顶替成小皮参与气泡与朗读：key 归空，卡片走兜底展示
+      const key = hasClassKey(s.key) ? s.key : '';
+      const meta = CLASS_META[key || 'naughty'];
       const nm = s.name || meta.name;
-      states.push({
-        key: s.key, mood: s.mood, hand_raise: s.hand_raise, speaking: true,
+      const card = {
+        key: key,
+        mood: s.mood, hand_raise: s.hand_raise, speaking: true,
         attention: s.attention, comprehension: s.comprehension, state_reason: s.state_reason,
         difficulty: s.difficulty,
-      });
+      };
+      states.push(card);
       renderClassStudents(states);
-      await new Promise((r) => setTimeout(r, 450)); // 依次发言，像真实课堂
-      const isBc = data.backchannel && data.backchannel.key === s.key;
-      classBubble(nm + ' ' + (s.mood || '') + (isBc ? ' · 附和' : ''), s.line, 'student');
-      speak(s.line, { scene: 'class', key: s.key });
-      classMessages.push({ role: 'student', name: nm, content: s.line });
-      states[states.length - 1].speaking = false;
-      renderClassStudents(states);
+      try {
+        await new Promise((r) => setTimeout(r, 450)); // 依次发言，像真实课堂
+        const isBc = data.backchannel && data.backchannel.key === s.key;
+        classBubble(nm + ' ' + (s.mood || '') + (isBc ? ' · 附和' : ''), s.line, 'student');
+        speak(s.line, { scene: 'class', key: card.key });
+        classMessages.push({ role: 'student', name: nm, content: s.line });
+      } finally {
+        // 必须写在 finally：中途任何异常都不能让角色永远停在「正在发言」，
+        // 否则头顶发言圆点和卡片高亮会一直亮着，直到下一次重开课堂。
+        card.speaking = false;
+        renderClassStudents(states);
+      }
     }
-    renderClassStudents(data.students.map((s) => ({
+    renderClassStudents(incoming.map((s) => ({
       key: s.key, mood: s.mood, hand_raise: s.hand_raise,
       attention: s.attention, comprehension: s.comprehension, state_reason: s.state_reason,
       difficulty: s.difficulty,
@@ -1425,7 +2197,7 @@ async function classNextRound() {
     updatePressure(data.pressure_delta, data.pressure_reason);
     cfgApplyBackendProfile({
       profile_applied: data.profile_applied,
-      difficulty: data.students && data.students[0] ? data.students[0].difficulty : '',
+      difficulty: incoming[0] ? incoming[0].difficulty : '',
       profile_effect: data.profile_effect,
     });
     renderCockpit();
@@ -1440,28 +2212,184 @@ async function classNextRound() {
   }
 }
 
+/* ---------- 课堂点名：点谁谁答 ----------
+ * 为什么值得单独做：一轮课堂是「三人一起反应」，老师只能接着话往下讲，
+ * 没有「我主动问某一个人」这个动作 —— 而这恰恰是试讲里最常被扣分的环节
+ * （点名对象是否明确、等待是否够、点了之后怎么接）。
+ *
+ * 三个约束，缺一不可：
+ *   1. 只能点「当前真的在座」的学生（后端可能只返回 2 人，第 3 个不该能点）；
+ *   2. 同一时刻只能有一次点名（连点会并发打出多条请求，学生自己跟自己抢话）；
+ *   3. 点名的结果必须进 classMessages，否则下一轮模型不知道这件事发生过。
+ */
+let classCallBusy = false;
+
+function callOnAllowedKey(key) {
+  if (!hasClassKey(key)) return false;
+  if (classDoomed) return false;
+  if (!lastClassStates || !lastClassStates.length) return false;
+  return lastClassStates.some((s) => s && s.key === key);
+}
+
+async function callOnStudent(key, instruction) {
+  if (classCallBusy) return;
+  if (!callOnAllowedKey(key)) return false;
+  // 上一轮课堂还在跑的时候不许插队：两边都会改 lastClassStates，同时进行会互相覆盖
+  if (classNextBtn && classNextBtn.disabled) return false;
+
+  const target = lastClassStates.find((s) => s && s.key === key);
+  if (!target) return false;
+  const meta = CLASS_META[key];
+  const said = String(instruction || '').trim();
+
+  classCallBusy = true;
+  target.speaking = true;
+  renderClassStudents(lastClassStates);
+
+  // 老师自己说的话也算数：先落到对话记录里，模型才知道「老师是怎么问的」。
+  // 只叫了名字没给任何提示时，不伪造老师台词。
+  if (said) {
+    classBubble('你（老师）', said, 'teacher');
+    classMessages.push({ role: 'teacher', content: said });
+  } else {
+    classSysBubble('📣 <b>点名</b>：' + escapeHtml(meta.name));
+  }
+
+  try {
+    const data = await post('/api/classroom/call-on', {
+      key: key,
+      topic: lastSubject || (subjectInput ? subjectInput.value.trim() : ''),
+      transcript: lastScript,
+      callInstruction: said,
+      pressure: classPressure,
+      history: classMessages,
+      profile: cfgCurrentProfilePayload(),
+    });
+    const line = String((data && data.line) || '').trim();
+    if (!line) throw new Error('点名没有得到回应');
+
+    classBubble(meta.name + ' ' + ((data && data.mood) || ''), line, 'student');
+    speak(line, { scene: 'class', key: key });
+    classMessages.push({ role: 'student', name: meta.name, content: line });
+
+    // 把回应带来的状态变化写回这名学生，而不是整班重排：
+    // 点名只影响被点的人，其他两位的分数不该凭空跳动。
+    target.mood = (data && data.mood) || target.mood;
+    if (scoreOf(data && data.attention) !== null) target.attention = scoreOf(data.attention);
+    if (scoreOf(data && data.comprehension) !== null) target.comprehension = scoreOf(data.comprehension);
+    if (data && data.state_reason) target.state_reason = data.state_reason;
+    if (data && data.difficulty) target.difficulty = data.difficulty;
+
+    updatePressure(Number(data && data.pressure_delta) || 0, (data && data.pressure_reason) || '');
+    if (data && data.engine === 'rule') {
+      // 引擎降级时说清楚，别让用户以为模型真的懂教学
+      classSysBubble('<span style="color:#64748B;font-size:12px">点名回应来自本地规则引擎（' +
+        escapeHtml(fallbackReasonText(data.fallback_reason)) + '）</span>');
+    }
+    return true;
+  } catch (e) {
+    setErr(e.message || '点名失败');
+    return false;
+  } finally {
+    // 必须写在 finally：请求异常时也要把「正在发言」摘掉，否则圆点会一直亮着
+    target.speaking = false;
+    classCallBusy = false;
+    renderClassStudents(lastClassStates);
+  }
+}
+
+/* 降级原因 → 人话（只覆盖此接口可能出现的三种，其余归为「模型调用失败」） */
+function fallbackReasonText(reason) {
+  if (reason === 'key-not-configured') return '未配置模型 Key';
+  if (reason === 'rate-limited') return '上游限流';
+  if (reason === 'insufficient-balance') return '模型余额不足';
+  if (reason === 'auth-failed') return '鉴权失败';
+  return '模型调用失败';
+}
+
+/* 卡片点击：事件委托在容器上。
+ * 不能用每张卡单独绑定 —— renderClassStudents 每轮 innerHTML 重建，
+ * 单独绑的监听器会随旧节点一起被丢掉，而且会越积越多。 */
+if (classStudentsBox) {
+  classStudentsBox.addEventListener('click', (e) => {
+    const card = e.target.closest ? e.target.closest('.cs-card') : null;
+    if (!card) return;
+    const key = card.getAttribute('data-k');
+    if (!key) return; // 非法角色的卡片没有 data-k，不可点
+    const said = classInput ? classInput.value.trim() : '';
+    if (said && classInput) classInput.value = '';
+    callOnStudent(key, said);
+  });
+  classStudentsBox.addEventListener('keydown', (e) => {
+    if (e.key !== 'Enter' && e.key !== ' ' && e.key !== 'Spacebar') return;
+    const card = e.target.closest ? e.target.closest('.cs-card') : null;
+    if (!card) return;
+    const key = card.getAttribute('data-k');
+    if (!key) return;
+    e.preventDefault();
+    const said = classInput ? classInput.value.trim() : '';
+    if (said && classInput) classInput.value = '';
+    callOnStudent(key, said);
+  });
+}
+
+/* 画布点击：点画上的学生也能点名。
+ * 命中盒子读的是 lastClassSlots（绘制时存下的同一份），不重新算坐标。 */
+if (classSceneCanvas) {
+  classSceneCanvas.addEventListener('click', (e) => {
+    if (classDoomed) return;
+    const rect = classSceneCanvas.getBoundingClientRect();
+    if (!rect.width || !rect.height) return;
+    const slot = sceneHitTest(lastClassSlots, e.clientX - rect.left, e.clientY - rect.top, 4);
+    if (!slot || !hasClassKey(slot.key)) return;
+    const said = classInput ? classInput.value.trim() : '';
+    if (said && classInput) classInput.value = '';
+    callOnStudent(slot.key, said);
+  });
+}
+
 function resetClass() {
+  // 重新开课时必须掐掉上一节课的朗读：speak() 是往浏览器全局 TTS 队列里塞，
+  // 不清就会出现「新课堂已经开局，耳边还在念上一轮台词」。
+  // stopSpeak() 之前只有定义没有调用点（死代码），这里把它接上。
+  stopSpeak();
   classPressure = 20;
   classMessages = [];
   classDoomed = false;
+  classCallBusy = false;
   doomedOverlay.style.display = 'none';
   updatePressure(0, '');
   pressureNum.textContent = '20';
   classLog.innerHTML = '<div class="msg sys">上课了。全班盯着你——小皮在转笔，小霸在预习，小走盯着窗外。<br>点「下一轮课堂」开始，或在输入框回应学生（也可以点 🎤 直接说）。</div>';
   renderClassStudents();
   renderCockpit(); // 清空后同步驾驶舱，避免残留上一轮数值
+  drawClassScene();
 }
 
-if (classNextBtn) classNextBtn.addEventListener('click', classNextRound);
+/* 老师这句话到底有没有被「听见」：
+ * 旧实现只有「回车提交」才会把老师的话写进 classMessages，
+ * 如果老师在输入框里打了字、却直接点「下一轮课堂」按钮，这段文字会被静默丢掉 ——
+ * 模型拿到的 teacherAnswer 是空的，于是学生像完全没听见一样继续自顾自发难。
+ * 收口成一个函数，按钮和回车走同一条路。 */
+function commitClassTeacherInput() {
+  if (!classInput) return false;
+  const text = classInput.value.trim();
+  if (!text) return false;
+  classInput.value = '';
+  classBubble('你（老师）', text, 'teacher');
+  classMessages.push({ role: 'teacher', content: text });
+  return true;
+}
+
+if (classNextBtn) classNextBtn.addEventListener('click', () => {
+  commitClassTeacherInput();
+  classNextRound();
+});
 if (classResetBtn) classResetBtn.addEventListener('click', resetClass);
 if ($('doomedRetry')) $('doomedRetry').addEventListener('click', resetClass);
 if (classForm) classForm.addEventListener('submit', (e) => {
   e.preventDefault();
-  const text = classInput.value.trim();
-  if (!text) return;
-  classInput.value = '';
-  classBubble('你（老师）', text, 'teacher');
-  classMessages.push({ role: 'teacher', content: text });
+  if (!commitClassTeacherInput()) return;
   classNextRound();
 });
 
@@ -1571,7 +2499,13 @@ async function callStudent() {
       profile_summary: data.profile_summary,
     });
     const cp = $('customPersona') ? $('customPersona').value.trim() : '';
-    addBubble('student', data.reply, (cp ? '定制学生' : (data.label || 'AI 学生')) + (data.engine === 'llm' ? '' : ' · 本地'));
+    // 学生对话的来源标记：模型调用失败降级时，用同一套降级原因措辞说明原因。
+    addBubble(
+      'student',
+      data.reply,
+      (cp ? '定制学生' : (data.label || 'AI 学生')) +
+        (data.engine === 'llm' ? '' : ' · 本地' + degradedSuffix(data.fallback_reason))
+    );
   } catch (e) {
     if (typing.parentNode) typing.parentNode.removeChild(typing);
     setErr(e.message || '学生提问失败');
@@ -1707,7 +2641,9 @@ if (blackboardBtn && blackboardFile) {
       if (!res.ok || !json.ok) throw new Error(json.error || '评分失败');
       const d = json.data;
       if (d.mode === 'image') {
+        const bbEngineTag = sourceTagSpan(d.engine, d.fallback_reason);
         blackboardResult.innerHTML =
+          (bbEngineTag ? '<div style="margin:0 0 8px">' + bbEngineTag + '</div>' : '') +
           '<b>板书综合得分 <span style="color:var(--brand,#4F46E5)">' + d.total_score + '</span></b>' +
           '<div style="display:flex;gap:8px;flex-wrap:wrap;margin:8px 0">' +
           [['结构', d.structure_score], ['工整', d.legibility_score], ['完整', d.completeness_score], ['版面', d.layout_score]]
@@ -1717,7 +2653,9 @@ if (blackboardBtn && blackboardFile) {
           '<p style="font-size:13px;color:#dc2626;margin:4px 0">− ' + escapeHtml((d.problems || []).join('；')) + '</p>' +
           (d.rewrite ? '<pre style="white-space:pre-wrap;background:var(--card,#f8fafc);border:1px solid var(--line,#e2e8f0);border-radius:8px;padding:10px;font-size:12px">' + escapeHtml(d.rewrite) + '</pre>' : '');
       } else {
+        const bbEngineTag = sourceTagSpan(d.engine, d.fallback_reason);
         blackboardResult.innerHTML =
+          (bbEngineTag ? '<div style="margin:0 0 8px">' + bbEngineTag + '</div>' : '') +
           '<b>板书自检清单</b><p style="font-size:12px;color:#64748B;margin:4px 0 8px">未配置视觉模型，已给出基于《' + escapeHtml(lastSubject || '本节课') + '》的自检清单与模板</p>' +
           '<ul style="margin:0 0 10px;padding-left:18px;font-size:13px">' +
           (d.checklist || []).map((c) => '<li>' + escapeHtml(c) + '</li>').join('') + '</ul>' +
@@ -1737,6 +2675,39 @@ if (blackboardBtn && blackboardFile) {
 
 /* ---------- 成长档案（本地历史 + 云端记录） ---------- */
 const HISTORY_KEY = 'jtq_local_history';
+
+/**
+ * 从报告对象里取一个「可缺省」的计数。
+ * 为什么不能写 `(obj || {}).field || 0`：
+ *   后端缺字段时它会静默变成 0，把「没有这个数据」显示成「这个值是 0」，
+ *   在成长档案里就是凭空多出一个「0 次提问 / 0 字每分」的假结论。
+ * 所以：字段存在且是有限数值才返回数字；否则返回 null（前端显示「未测量」）。
+ * @param {object} obj   报告里的子对象（如 report.questions）
+ * @param {string[]} keys 按优先级尝试的字段名
+ * @returns {number|null}
+ */
+function pickHistoryCount(obj, keys) {
+  const src = obj && typeof obj === 'object' ? obj : {};
+  for (const key of keys) {
+    const v = src[key];
+    if (v === null || v === undefined || v === '' || typeof v === 'boolean') continue;
+    const n = Number(v);
+    if (Number.isFinite(n)) return n;
+  }
+  return null;
+}
+
+/**
+ * 成长档案里「最近一次语速」的文案。
+ * 0 字/分不是有效测量值（真的讲了课就必然 > 0），显示成「0 字/分」
+ * 等于凭空造一个结论 —— 所以凡是不 > 0 的取值一律显示「语速 未测量」。
+ * 这样也顺带修正了修复前已经写进 localStorage 的那批假 0 记录。
+ */
+function describeHistoryRate(rate) {
+  const n = Number(rate);
+  return Number.isFinite(n) && n > 0 ? '语速 ' + n + ' 字/分' : '语速 未测量';
+}
+
 function saveToHistory(report, meta) {
   // 演示页面与演示结果都不进入个人成长档案
   if (
@@ -1754,8 +2725,17 @@ function saveToHistory(report, meta) {
       subject: meta.subject,
       score: report.overall_score,
       filler: (report.filler_words || {}).total || 0,
-      questions: (report.questions || {}).total || 0,
-      rate: (report.speech_rate || {}).chars_per_min || 0,
+      // 提问数：后端 questions 对象里只有 asked（没有 total），
+      // 原来读 .total 会恒得 0 —— 成长档案里每一次都显示「0 次提问」。
+      // 缺值一律存 null（未测量），不再用 0 冒充「零次提问」。
+      questions: pickHistoryCount(report.questions, ['asked', 'total']),
+      // 语速同理：chars_per_min 缺失时存 null，不存 0。
+      // （0 字/分在任何情况下都不是有效测量值）
+      rate: pickHistoryCount(report.speech_rate, ['chars_per_min']),
+      // 来源信息：新记录带上，老记录没有这个字段（显示时不编造来源）。
+      engine: typeof report.engine === 'string' ? report.engine : '',
+      fallback_reason:
+        typeof report.fallback_reason === 'string' ? report.fallback_reason : '',
     });
     localStorage.setItem(HISTORY_KEY, JSON.stringify(hist.slice(-50)));
   } catch (e) { /* 隐私模式下 localStorage 可能不可用 */ }
@@ -1800,12 +2780,24 @@ function renderGrowth() {
   const first = sorted[0], last = sorted[sorted.length - 1];
   const delta = (last.score || 0) - (first.score || 0);
   const deltaTxt = delta > 0 ? '↑ 提升 ' + delta + ' 分' : delta < 0 ? '↓ 下降 ' + Math.abs(delta) + ' 分' : '持平';
+
+  // 最近一次的来源标签：与主分析页同一套逻辑。
+  // 老记录没有 engine 字段 → 不显示来源标签（不编造来源），只显示已知信息。
+  const lastSource =
+    typeof last.engine === 'string' && last.engine
+      ? describeSourceLabel(last.engine, last.fallback_reason)
+      : null;
+  const lastSourceHtml = lastSource
+    ? '<span class="engine-tag' + (lastSource.className ? ' ' + lastSource.className : '') +
+      '" style="margin-left:8px;vertical-align:middle">' + escapeHtml(lastSource.text) + '</span>'
+    : '';
+
   if (listBox) {
     listBox.innerHTML =
       '<div class="pano-card" style="border:1px solid var(--line,#e2e8f0);border-radius:12px;padding:12px 16px;margin-top:10px">' +
       '<b>共 ' + sorted.length + ' 次复盘 · 首次 ' + (first.score || 0) + ' 分 → 最近 ' + (last.score || 0) + ' 分 <span style="color:' + (delta >= 0 ? '#16a34a' : '#dc2626') + '">' + deltaTxt + '</span></b>' +
       '<p style="margin:6px 0 0;font-size:13px;color:#64748b">最近一次：' + escapeHtml(last.subject || '未命名') +
-      ' · 语速 ' + (last.rate || 0) + ' 字/分 · 口头禅 ' + (last.filler || 0) + ' 处</p></div>';
+      ' · ' + describeHistoryRate(last.rate) + ' · 口头禅 ' + (last.filler || 0) + ' 处' + lastSourceHtml + '</p></div>';
   }
 }
 
@@ -2176,7 +3168,7 @@ function renderHollow() {
     return '<div class="hollow-post">' +
       '<div class="hp-meta">匿名' + school + ' · ' + escapeHtml(stamp) + mark + '</div>' +
       '<p class="hp-text">' + escapeHtml(p.text || '') + '</p>' +
-      (p.reply ? '<div class="hp-reply"><b>AI 树洞回信</b><p>' + escapeHtml(p.reply) + '</p></div>' : '') +
+      (p.reply ? '<div class="hp-reply"><b>AI 树洞回信</b>' + sourceTagSpan(p.engine, p.fallback_reason) + '<p>' + escapeHtml(p.reply) + '</p></div>' : '') +
       '<div class="hp-actions">' +
       '<button class="hp-report" data-k="' + escapeHtml(key) + '" type="button">举报</button>' +
       '<button class="hp-like' + (isLiked ? ' on' : '') + '" data-k="' + escapeHtml(key) + '" type="button">' +
@@ -2294,6 +3286,8 @@ async function submitHollow() {
       arr.push({
         text: text,
         reply: reply,
+        engine: data.engine,
+        fallback_reason: data.fallback_reason,
         at: d.toLocaleDateString('zh-CN') + ' ' + d.toTimeString().slice(0, 5),
         likes: 0,
       });
@@ -2574,7 +3568,7 @@ async function runDanger() {
     );
   }
 
-  function sourceLabel(engine) {
+  function sourceLabel(engine, fallbackReason) {
     if (engine === 'offline-demo') {
       return '固定示例 · 不代表当前讲稿的真实风险判断';
     }
@@ -2584,7 +3578,8 @@ async function runDanger() {
     }
 
     if (engine === 'rule' || engine === 'rules') {
-      return '规则识别 · 风险判断需要人工核对';
+      // 降级原因与主报告用同一套措辞：说清楚「规则计算」，再说明为什么降级。
+      return '规则识别 · 风险判断需要人工核对' + degradedSuffix(fallbackReason);
     }
 
     return '结果来源未明确 · 风险判断需要人工核对';
@@ -2610,7 +3605,7 @@ async function runDanger() {
 
     const source = document.createElement('p');
     source.className = 'tip evidence-source';
-    source.textContent = sourceLabel(data.engine);
+    source.textContent = sourceLabel(data.engine, data.fallback_reason);
     box.appendChild(source);
 
     const moments = Array.isArray(data.moments)
@@ -2738,20 +3733,96 @@ async function runDanger() {
 /* ==================================================================
    ⏱️ 课堂可视化三件套：等待热力图 + 时间分配饼图 + 分环节改进稿
    ================================================================== */
+/* ==================================================================
+   通用教学环节（七环节）—— 只用于「展示完整清单」
+   ------------------------------------------------------------------
+   ⚠️ 这一份常量**只负责展示**：让「未检测到线索」的环节也能被列出来。
+   匹配判断（哪些环节算命中）一律以后端返回的
+   knowledge.covered / knowledge.missing 为准，
+   前端不做任何关键词匹配 —— 避免与后端 app/lib/analyzer.js 的 ANCHORS
+   形成两处定义、两套判断、两处漂移。
+   顺序与后端 ANCHORS 对齐：情境引入 / 知识推导 / 公式结论 / 例题讲解 /
+   课堂互动 / 小结回顾 / 作业布置。
+   ================================================================== */
+const GENERIC_PHASE_NAMES = [
+  '情境引入',
+  '知识推导',
+  '公式结论',
+  '例题讲解',
+  '课堂互动',
+  '小结回顾',
+  '作业布置'
+];
+
 let lastHeatmap = null;
 
 function waitColor(sec) {
-  if (sec >= 2) return '#16a34a'; // 绿：≥2s 留白充分
-  if (sec >= 1) return '#ea580c'; // 橙：1-2s 偏短
-  return '#dc2626'; // 红：<1s 疑似自问自答
+  if (!Number.isFinite(sec)) return '#64748b'; // 灰：无法测量
+  if (sec >= 2) return '#16a34a';
+  if (sec >= 1) return '#ea580c';
+  return '#dc2626';
 }
 
-/* 15. 提问等待热力图：横轴=讲稿进度，每个提问一个色条 */
-function renderHeatmap(moments) {
+/* 等待来源标签（唯一事实来源：后端 wait_metrics.source）
+   颜色与秒数表达的是「文本推断」，不是真实课堂行为。
+   取值表与后端 app/lib/wait-metrics.js 严格一致，不要自行扩充：
+     text-heuristic  规则推断（规则分支）
+     model-inference 模型推断（LLM 分支）
+     unmeasured      无法测量
+   未列出的取值一律显示「来源未明确」，不猜。
+
+   注意：这里**故意不列 'timestamp'**。
+   本批明确不启用时间戳测量 —— 转写分段只有 start/end、没有说话人区分，
+   测到的只是「提问后的下一段语音间隔」，不能称为「学生思考等待时间」。
+   在真正接入带 speaker 的可靠时间戳之前，界面上不允许出现任何
+   让人以为「这是实测」的措辞；万一后端误产出该值，
+   落到兜底显示「来源未明确」——宁可说不清楚，也不要说错。 */
+const WAIT_SOURCE_LABELS = {
+  'text-heuristic': '文本推断',
+  'model-inference': '模型推断',
+  'unmeasured': '无法测量',
+  // 固定演示数据专用：显式标出「演示」，避免被读成对当前讲稿的推断。
+  // 后端不会产出这个取值，只有 demo-data.js 会用。
+  'offline-demo': '固定演示'
+};
+
+function waitSourceLabel(source) {
+  return WAIT_SOURCE_LABELS[source] || '来源未明确';
+}
+
+/* 15. 提问等待热力图：横轴=讲稿进度，每个提问一个色条
+   逐次秒数是「文本推断」，不是音频时间戳实测值：
+   - 有可推算值 → 正常配色 + 图例标注「文本推断」
+   - 无可推算值 → 中性灰 + 「?」，绝不画成红色「0 秒」
+   - 讲稿里根本没有提问（moments 为空数组）→ 走空态文案，
+     既不画空 svg，也不显示「0 秒」。 */
+function renderHeatmap(moments, meta = {}) {
   const box = $('heatmapBox');
   if (!box) return;
-  if (!moments || !moments.length) {
-    box.innerHTML = '<p class="tip">未检测到提问——整节课没有提问本身就是最大的风险。</p>';
+
+  const sourceLabel = waitSourceLabel(meta.source);
+  const note = meta.note || '等待来源未记录。';
+
+  // 来源说明固定排在最上面：读者先知道这是什么口径，再看图。
+  const sourceLine =
+    '<p class="tip hm-source">⚠ 等待来源：' +
+    escapeHtml(sourceLabel) +
+    '。' +
+    escapeHtml(note) +
+    '</p>';
+
+  // 整张图的分析引擎来源（LLM / 规则 / 演示），与上面的「等待来源」是两回事：
+  // 等待来源说明「秒数怎么来的」，这里说明「这份提问分析+时间分配+分段整体是 AI 还是规则算的」。
+  const engineLine = sourceTagSpan(meta.engine, meta.fallback_reason)
+    ? '<div style="margin:0 0 6px">' + sourceTagSpan(meta.engine, meta.fallback_reason) + '</div>'
+    : '';
+
+  if (!Array.isArray(moments) || !moments.length) {
+    box.innerHTML =
+      engineLine +
+      sourceLine +
+      '<p class="tip">本段讲稿未检测到提问，无法评估等待时长。' +
+      '整节课没有提问本身就是最大的风险。</p>';
     return;
   }
   const W = 640;
@@ -2761,14 +3832,67 @@ function renderHeatmap(moments) {
   let bars = '';
   moments.forEach((m, i) => {
     const x = 34 + (i * (W - 68)) / Math.max(1, n - 1) - 14;
-    const c = waitColor(m.wait_sec);
-    const label = m.wait_sec >= 2 ? '✓' : m.wait_sec >= 1 ? '!' : '✕';
+
+    // 缺值必须显式挡掉：Number(null) === 0、Number('') === 0，
+    // 直接 Number() 会把「模型没给秒数」变成「等了 0 秒」——
+    // 那正是后端 wait-metrics.js 反复强调不能犯的错，
+    // 表现到界面上就是一条红色「✕ 0s」，等于凭空造了一个结论。
+    const rawWait = m ? m.wait_sec : null;
+    const rawSec =
+      rawWait === null ||
+      rawWait === undefined ||
+      rawWait === '' ||
+      typeof rawWait === 'boolean'
+        ? NaN
+        : Number(rawWait);
+
+    const isNoQuestion =
+      String((m && m.quote) || '').includes('未检测到提问');
+
+    const hasWait =
+      !isNoQuestion &&
+      Number.isFinite(rawSec) &&
+      rawSec >= 0;
+
+    const sec = hasWait ? rawSec : null;
+    const c = waitColor(sec);
+    const label =
+      sec === null
+        ? '?'
+        : sec >= 2
+          ? '✓'
+          : sec >= 1
+            ? '!'
+            : '✕';
+
+    const waitText =
+      sec === null
+        ? '无法测量'
+        : sec + ' 秒';
+
+    // 每条自带来源（后端 moments[].source）：整段可能是规则推断，
+    // 也可能是模型推断；逐条标出来，读者才知道这一条的秒数是谁给的。
+    const itemSourceLabel = waitSourceLabel(m.source || meta.source);
+
     bars +=
       '<g>' +
       '<rect x="' + x + '" y="' + (axisY - barH) + '" width="28" height="' + barH + '" rx="6" fill="' + c + '" opacity="0.92">' +
-      '<title>' + escapeHtml(m.quote + '（等待 ' + m.wait_sec + ' 秒：' + (m.reaction || '') + '）') + '</title></rect>' +
+      '<title>' +
+        escapeHtml(
+          String(m.quote || '') +
+            '（' +
+            waitText +
+            '：' +
+            (m.reaction || '') +
+            '｜来源：' +
+            itemSourceLabel +
+            '）'
+        ) +
+      '</title></rect>' +
       '<text x="' + (x + 14) + '" y="' + (axisY - barH + 24) + '" text-anchor="middle" font-size="14" font-weight="800" fill="#fff">' + label + '</text>' +
-      '<text x="' + (x + 14) + '" y="' + (axisY + 18) + '" text-anchor="middle" font-size="10.5" fill="var(--text-3)">' + m.wait_sec + 's</text>' +
+      '<text x="' + (x + 14) + '" y="' + (axisY + 18) + '" text-anchor="middle" font-size="10.5" fill="var(--text-3)">' +
+        escapeHtml(sec === null ? '?' : sec + 's') +
+      '</text>' +
       '</g>';
   });
   const axis =
@@ -2777,13 +3901,16 @@ function renderHeatmap(moments) {
     '<text x="' + (W - 24) + '" y="' + (axisY + 34) + '" font-size="11" fill="var(--text-3)" text-anchor="end">结课</text>';
   const legend =
     '<div class="hm-legend">' +
-    '<span><i style="background:#dc2626"></i>&lt;1 秒 · 疑似自问自答</span>' +
-    '<span><i style="background:#ea580c"></i>1–2 秒 · 偏短</span>' +
-    '<span><i style="background:#16a34a"></i>≥2 秒 · 留白充分</span>' +
-    '<span class="hm-tip">师范 Tip：提问后沉默 3 秒，是把课堂还给学生。参考数据：50 段真实教育对话标注统计，停顿中位 0.97 秒、最长 5.67 秒——真实课堂是敢停的</span>' +
+    '<span><i style="background:#dc2626"></i>&lt;1 秒 · 文本推断偏短</span>' +
+    '<span><i style="background:#ea580c"></i>1–2 秒 · 文本推断中等</span>' +
+    '<span><i style="background:#16a34a"></i>≥2 秒 · 文本推断有留白</span>' +
+    '<span><i style="background:#64748b"></i>无法测量</span>' +
+    '<span class="hm-tip">师范 Tip（教学建议，与本图数值口径无关）：提问后沉默 3 秒，是把课堂还给学生。参考数据：50 段真实教育对话标注统计，停顿中位 0.97 秒、最长 5.67 秒——真实课堂是敢停的</span>' +
     '</div>' +
-    '<p class="tip" style="margin:6px 0 0;font-size:12px">⚠ 本图的等待秒数由讲稿文本推断（依据提问后是否立刻自答、是否点名学生），<b>不是音频时间戳实测值</b>，用于检查提问设计，不可当作课堂真实留白秒数。</p>';
+    '<p class="tip hm-explain">颜色表示的是文本推断，不是真实课堂行为：绿色 = 文本中存在较明显的思考留白线索。</p>';
   box.innerHTML =
+    engineLine +
+    sourceLine +
     '<svg viewBox="0 0 ' + W + ' 140" class="hm-svg" role="img" aria-label="提问等待热力图">' + axis + bars + '</svg>' + legend;
 }
 
@@ -2791,9 +3918,15 @@ function renderHeatmap(moments) {
 function renderPie(alloc) {
   const box = $('pieBox');
   if (!box) return;
-  const total = (alloc.teacher || 0) + (alloc.student || 0) + (alloc.interaction || 0) + (alloc.transition || 0);
+  // 未测量态：后端在无可靠计时数据时返回 time_allocation=null（不伪造「全算讲授」），
+  // 任何缺字段或全零的情况也统一按「未测量」处理——绝不画零值饼图或假分配。
+  const total = alloc && typeof alloc === 'object'
+    ? (Number(alloc.teacher) || 0) + (Number(alloc.student) || 0) + (Number(alloc.interaction) || 0) + (Number(alloc.transition) || 0)
+    : 0;
   if (!total) {
-    box.innerHTML = '<p class="tip">时间数据不足。</p>';
+    box.innerHTML =
+      '<p class="tip">⏱ 时间分配未测量（无可靠课堂计时数据），暂不展示饼图。' +
+      '接入真实音频/逐字稿时间戳后才会给出可靠的分钟分配。</p>';
     return;
   }
   const items = [
@@ -2831,7 +3964,15 @@ function renderPie(alloc) {
       );
     })
     .join('');
+  // 来源必须写在图上：这四个分钟数是按逐字稿关键词推断的（source=text-heuristic），
+  // 不是课堂实测计时。不标出来，读者会把「教师 26 分钟」当成真实数据。
+  const allocHeuristic = !alloc.source || alloc.source === 'text-heuristic';
+  const allocSourceLine = allocHeuristic
+    ? '<p class="tip pie-source">⏱ 按逐字稿文本推断的分钟数（非实测课堂计时），只用来看节奏比例，不能当作真实课时数据。</p>'
+    : '';
+
   box.innerHTML =
+    allocSourceLine +
     '<div class="pie-wrap">' +
     '<svg viewBox="0 0 200 200" class="pie-svg" role="img" aria-label="时间分配环形图">' + arcs +
     '<text x="100" y="96" text-anchor="middle" font-size="26" font-weight="800" fill="var(--text)">' + total + '</text>' +
@@ -2909,7 +4050,31 @@ async function runHeatmap() {
   try {
     const data = await post('/api/heatmap', { transcript: lastScript, subject: lastSubject });
     lastHeatmap = data;
-    renderHeatmap(data.wait_moments);
+
+    // 等待指标统一读 wait_metrics（新契约）。
+    // 兼容回退：旧数据 / 旧演示数据没有 wait_metrics 时，
+    // 退回 wait_moments / wait_source / wait_note，不能报错。
+    // 后端已把兼容字段 wait_source 对齐成 wait_metrics.source
+    // （text-heuristic / model-inference），所以这里直接透传即可；
+    // 万一取不到，用 'unknown' → 界面显示「来源未明确」，不硬猜口径。
+    const rawMetrics = data.wait_metrics || {};
+    const waitMetrics = {
+      moments: Array.isArray(rawMetrics.moments)
+        ? rawMetrics.moments
+        : Array.isArray(data.wait_moments)
+          ? data.wait_moments
+          : [],
+      source: rawMetrics.source || data.wait_source || 'unknown',
+      note: rawMetrics.note || data.wait_note || '等待来源未记录。'
+    };
+
+    renderHeatmap(
+      waitMetrics.moments,
+      Object.assign({}, waitMetrics, {
+        engine: data.engine,
+        fallback_reason: data.fallback_reason,
+      })
+    );
     renderPie(data.time_allocation);
     renderSegScript(data.segments);
   } catch (e) {
@@ -2979,8 +4144,33 @@ function weakestDims(report) {
   if (r.chars_per_min > 160 || (f.total || 0) >= 8) {
     dims.push({ dim: '语言', gap: Math.max(0, (r.chars_per_min || 0) - 140) + (f.total || 0) * 2 });
   }
-  if ((q.avg_wait_sec || 0) < 2.5 || (q.genuine_questions || 0) === 0) {
-    dims.push({ dim: '互动', gap: 40 - (q.avg_wait_sec || 0) * 6 + ((q.genuine_questions || 0) === 0 ? 10 : 0) });
+  // 「互动」维度不再用推断秒数打分，只看提问设计本身：
+  // 有没有文本问题 / 有没有需要思考的问题候选 / 有没有确认式提问。
+  const askedCount = Number(q.asked);
+  const genuineCount = Number(q.genuine_questions);
+  const fakeCount = Number(q.fake_questions);
+
+  const noQuestionDesign =
+    !Number.isFinite(askedCount) ||
+    askedCount === 0;
+
+  const noOpenPrompt =
+    Number.isFinite(genuineCount) &&
+    genuineCount === 0;
+
+  const hasFakePrompt =
+    Number.isFinite(fakeCount) &&
+    fakeCount > 0;
+
+  if (noQuestionDesign || noOpenPrompt || hasFakePrompt) {
+    dims.push({
+      dim: '互动',
+      gap:
+        40 +
+        (noQuestionDesign ? 18 : 0) +
+        (noOpenPrompt ? 10 : 0) +
+        (hasFakePrompt ? 8 : 0),
+    });
   }
   if ((k.cover_percent || 0) < 75) dims.push({ dim: '设计', gap: 90 - (k.cover_percent || 0) });
   if (!p.count_gt_2s) dims.push({ dim: '教态', gap: 22 });
@@ -3032,6 +4222,20 @@ function roundRect(ctx, x, y, w, h, r) {
   ctx.arcTo(x, y + h, x, y, r);
   ctx.arcTo(x, y, x + w, y, r);
   ctx.closePath();
+}
+
+/* 海报文字防溢出：按 canvas 实测宽度逐级收字号。
+   只缩字号、不截断文本，保证信息不失真、也不出现半个字。 */
+function fitCanvasFont(ctx, text, maxWidth, baseSize, minSize, weight) {
+  const str = String(text == null ? '' : text);
+  if (!str) return baseSize;
+
+  for (let size = baseSize; size > minSize; size -= 1) {
+    ctx.font = (weight || '400') + ' ' + size + 'px ' + POSTER_FONT;
+    if (ctx.measureText(str).width <= maxWidth) return size;
+  }
+
+  return minSize;
 }
 
 /* CDN 不可用时画一个装饰性码形图案（带定位角，视觉等价） */
@@ -3178,25 +4382,82 @@ async function renderPoster() {
   ctx.fillText('《' + subject + '》试讲复盘', 270, 478);
 
   // 关键数据三卡
+  // 普通分析不再显示「平均等待 N 秒」：没有音频时间戳，等待时间不可测量。
+  // 改成展示「提问设计」（文本提问数 + 候选思考题数）；
+  // 固定演示允许展示示例秒数，但必须标注「示例」。
+  const posterIsDemo =
+    lastAnalysis &&
+    lastAnalysis.engine === 'offline-demo';
+
+  const posterAsked =
+    q.asked != null
+      ? q.asked
+      : q.total != null
+        ? q.total
+        : null;
+
+  const posterGenuine =
+    q.genuine_questions != null
+      ? q.genuine_questions
+      : q.authentic != null
+        ? q.authentic
+        : null;
+
+  const posterWait = posterIsDemo ? waitSecondsForDisplay(q, posterIsDemo) : null;
+
   const stats = [
-    { label: '语速', val: (r.chars_per_min || 0) + ' 字/分' },
-    { label: '提问等待', val: (q.avg_wait_sec || 0) + ' 秒' },
-    { label: '口头禅', val: (f.total || 0) + ' 次' },
+    {
+      label: '语速',
+      val: r.chars_per_min == null ? '未提供' : r.chars_per_min + ' 字/分',
+      sub: ''
+    },
+    posterIsDemo
+      ? {
+          label: '示例等待',
+          val: posterWait == null ? '未提供' : posterWait + ' 秒',
+          sub: '固定示例 · 非实测'
+        }
+      : {
+          label: '提问设计',
+          val: posterAsked == null ? '未提供' : posterAsked + ' 次',
+          sub:
+            posterGenuine == null
+              ? '候选思考题未提供'
+              : '候选思考题 ' + posterGenuine + ' 次'
+        },
+    {
+      label: '口头禅',
+      val: f.total == null ? '未提供' : f.total + ' 次',
+      sub: ''
+    }
   ];
   const cw = 148;
   const gap = 14;
   const startX = (540 - cw * 3 - gap * 2) / 2;
+  // 卡片左右各留 10px 安全边距，文字宽度按实测值收敛，绝不出框。
+  const cardInner = cw - 20;
   stats.forEach((s, i) => {
     const x = startX + i * (cw + gap);
     ctx.fillStyle = 'rgba(255,255,255,.10)';
     roundRect(ctx, x, 506, cw, 86, 14);
     ctx.fill();
-    ctx.font = '700 23px ' + POSTER_FONT;
+
     ctx.fillStyle = '#ffffff';
-    ctx.fillText(s.val, x + cw / 2, 544);
-    ctx.font = '400 13px ' + POSTER_FONT;
+    const valSize = fitCanvasFont(ctx, s.val, cardInner, 23, 13, '700');
+    ctx.font = '700 ' + valSize + 'px ' + POSTER_FONT;
+    ctx.fillText(s.val, x + cw / 2, 540);
+
     ctx.fillStyle = 'rgba(255,255,255,.62)';
-    ctx.fillText(s.label, x + cw / 2, 572);
+    const labelSize = fitCanvasFont(ctx, s.label, cardInner, 13, 10, '400');
+    ctx.font = '400 ' + labelSize + 'px ' + POSTER_FONT;
+    ctx.fillText(s.label, x + cw / 2, 562);
+
+    if (s.sub) {
+      ctx.fillStyle = 'rgba(255,255,255,.55)';
+      const subSize = fitCanvasFont(ctx, s.sub, cardInner, 11, 9, '400');
+      ctx.font = '400 ' + subSize + 'px ' + POSTER_FONT;
+      ctx.fillText(s.sub, x + cw / 2, 580);
+    }
   });
 
   // 徽章行
@@ -3314,7 +4575,8 @@ function renderPlanCover(data) {
     '<span style="color:var(--danger)">漏讲 ' + missCount + '</span>' +
     (data.engine === 'llm'
       ? '<span class="engine-tag llm" style="margin-left:auto">AI 逐条比对</span>'
-      : '<span class="engine-tag rule" style="margin-left:auto">离线字面匹配</span>') +
+      : '<span class="engine-tag ' + sourceTagClassName(data.engine, data.fallback_reason) +
+        '" style="margin-left:auto">离线字面匹配' + degradedSuffix(data.fallback_reason) + '</span>') +
     '</div>';
   if (data.verdict) html += '<p class="tip" style="margin:2px 0 6px">' + escapeHtml(data.verdict) + '</p>';
   html += cov
@@ -3377,7 +4639,9 @@ function renderCurriculum(data) {
   const cls = { 达成: 'ok', 部分达成: 'partial', 未达成: 'miss' };
   let html =
     '<p class="tip" style="margin:0 0 6px;font-weight:700">' + escapeHtml(data.label || '课标对照') +
-    (data.engine === 'llm' ? ' · AI 逐条判定' : ' · 离线关键词粗判') + '</p>';
+    (data.engine === 'llm'
+      ? ' · AI 逐条判定'
+      : ' · 离线关键词粗判' + degradedSuffix(data.fallback_reason)) + '</p>';
   if (data.summary) html += '<p class="tip" style="margin:0 0 10px;font-weight:600">' + escapeHtml(data.summary) + '</p>';
   html += (data.standards || [])
     .map(
@@ -3814,7 +5078,10 @@ async function runPanorama() {
     renderRadar(data.views);
     const avg = data.average;
     panoAvg.textContent = '六视角平均分：' + avg + ' 分（' + (avg >= 80 ? '整体优秀' : avg >= 65 ? '整体合格' : '分歧较大，重点看低分视角') + '）';
-    panoViews.innerHTML = data.views.map((v) => {
+    const panoEngineTag = sourceTagSpan(data.engine, data.fallback_reason);
+    panoViews.innerHTML =
+      (panoEngineTag ? '<div style="margin:0 0 8px">' + panoEngineTag + '</div>' : '') +
+      data.views.map((v) => {
       const color = v.score >= 80 ? '#16a34a' : v.score >= 65 ? '#d97706' : '#dc2626';
       return '<div class="pano-card" style="border:1px solid var(--line,#e2e8f0);border-radius:12px;padding:14px 16px;margin-bottom:10px">' +
         '<div style="display:flex;align-items:center;gap:10px;margin-bottom:6px">' +
@@ -4516,6 +5783,73 @@ if (heroDemoBtn) {
 /* ---------- 启动 ---------- */
 let lastSegments = [];
 
+/* 顶栏「⋯ 更多」抽屉：模型名、主题、介绍、Codex、路演全收在这里。
+ * 首屏第一行只留给「这是什么」——「模型: deepseek-chat」是诊断信息，
+ * 不该占据陌生人对这个产品的第一印象。 */
+(function initTopMore() {
+  const btn = $('topMoreBtn');
+  const panel = $('topMorePanel');
+  if (!btn || !panel) return;
+
+  const close = () => {
+    if (panel.hidden) return;
+    panel.hidden = true;
+    btn.setAttribute('aria-expanded', 'false');
+  };
+  const open = () => {
+    panel.hidden = false;
+    btn.setAttribute('aria-expanded', 'true');
+  };
+
+  btn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    if (panel.hidden) open();
+    else close();
+  });
+
+  // 抽屉里点按钮（主题 / 路演）→ 执行完就收起；点链接 → 跳走，不用管
+  panel.addEventListener('click', (e) => {
+    const hit = e.target && e.target.closest ? e.target.closest('button') : null;
+    if (hit) close();
+  });
+
+  document.addEventListener('click', (e) => {
+    if (panel.hidden) return;
+    if (panel.contains(e.target) || btn.contains(e.target)) return;
+    close();
+  });
+
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') close();
+  });
+})();
+
+/* 首屏课堂片段里的人物：跟课堂用同一份立绘。
+ * HTML 里刻意不写立绘的相对路径 —— build-standalone.js 会断言产物中
+ * 不含该前缀（离线版必须走 data URI），写死路径会直接把构建卡住。
+ * 所以路径只有一个来源：jtqStudentArt.srcOf()。 */
+(function hydrateArtImages() {
+  const nodes = document.querySelectorAll('[data-art-key]');
+  for (let i = 0; i < nodes.length; i++) {
+    const node = nodes[i];
+    const key = node.getAttribute('data-art-key');
+    if (!hasClassKey(key)) continue;
+    const src = (window.jtqStudentArt && window.jtqStudentArt.srcOf)
+      ? window.jtqStudentArt.srcOf(key, node.getAttribute('data-art-state') || 'default')
+      : '';
+    if (!src) continue;
+    // 已经有占位 img 的（首屏片段）直接填 src，不再插第二个；
+    // 没有的（其他位置）补一个。
+    const slot = node.querySelector('img[data-fill]');
+    const img = slot || document.createElement('img');
+    img.alt = '';
+    img.decoding = 'async';
+    img.onerror = function () { this.remove(); };
+    img.src = src;
+    if (!slot) node.insertBefore(img, node.firstChild);
+  }
+})();
+
 (function initTheme() {
   let saved = 'light';
   try { saved = localStorage.getItem(THEME_KEY) || ''; } catch (e) { /* ignore */ }
@@ -5062,7 +6396,7 @@ const DRILL_FALLBACK_SKILLS = {
     {
       key: 'intro_design',
       label: '导入设计',
-      focus: '前 15% 讲稿完成情境/冲突/复习衔接',
+      focus: '用情境/冲突/复习衔接开场，再自然进入新课（按语义切分导入段）',
       brief: '开头能不能把学生拽进来。',
       checklist: ['开头有具体情境', '先问后给概念', '衔接上节课'],
       starter: '先看一个例子，再问你们一个问题。',
@@ -5327,10 +6661,11 @@ async function drillLoadSkills() {
 
 /* ---------- B：结果渲染 ---------- */
 
-function drillEngineTagText(engine) {
+function drillEngineTagText(engine, fallbackReason) {
   if (engine === 'llm') return 'LLM 实时分析';
   if (engine === 'offline-demo') return '演示数据';
-  return '本地规则判定';
+  // 降级原因与主报告用同一套措辞：说清楚是规则判定，再说明为什么降级。
+  return '本地规则判定' + degradedSuffix(fallbackReason);
 }
 
 function drillRenderResult(data) {
@@ -5354,8 +6689,9 @@ function drillRenderResult(data) {
   const tagEl = $('drillEngineTag');
   if (tagEl) {
     const engine = data.engine || 'rule';
-    tagEl.textContent = drillEngineTagText(engine);
-    tagEl.className = 'engine-tag ' + (engine === 'llm' ? 'llm' : 'rule');
+    tagEl.textContent = drillEngineTagText(engine, data.fallback_reason);
+    tagEl.className =
+      'engine-tag ' + sourceTagClassName(engine, data.fallback_reason);
   }
 
   const sumEl = $('drillSummary');

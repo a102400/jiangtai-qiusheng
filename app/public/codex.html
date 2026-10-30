@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>讲台求生 · Codex 教学教练助手</title>
+  <style>
+    :root { --bg:#0f1220; --panel:#171b2e; --line:#2a3050; --txt:#e8ecf8; --muted:#9aa3c7; --accent:#6c8cff; --ok:#39d98a; --warn:#ffb454; }
+    * { box-sizing: border-box; }
+    body { margin:0; font-family: -apple-system, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif; background:var(--bg); color:var(--txt); }
+    .wrap { max-width: 920px; margin: 0 auto; padding: 24px 18px 60px; }
+    h1 { font-size: 20px; margin: 0 0 4px; }
+    .sub { color: var(--muted); font-size: 13px; margin-bottom: 18px; }
+    .card { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 14px; margin-bottom: 14px; }
+    label { display:block; font-size: 12px; color: var(--muted); margin-bottom: 6px; }
+    textarea, input[type=text] { width: 100%; background:#0c0f1c; color:var(--txt); border:1px solid var(--line); border-radius:8px; padding:10px; font-size:14px; font-family: inherit; resize: vertical; }
+    textarea { min-height: 90px; }
+    .row { display:flex; gap:10px; align-items:flex-end; }
+    .row > div { flex:1; }
+    .opt { flex: 0 0 200px; }
+    button { background: var(--accent); color:#fff; border:0; border-radius:8px; padding:11px 18px; font-size:14px; cursor:pointer; margin-top:10px; }
+    button:disabled { opacity:.5; cursor:not-allowed; }
+    .badges { display:flex; gap:8px; flex-wrap:wrap; margin-bottom:10px; }
+    .badge { font-size:12px; padding:3px 9px; border-radius:999px; border:1px solid var(--line); color:var(--muted); }
+    .badge.codex { color:var(--ok); border-color:var(--ok); }
+    .badge.fb { color:var(--warn); border-color:var(--warn); }
+    #codex-out { white-space: pre-wrap; line-height: 1.6; font-size:14px; min-height: 80px; }
+    .hint { font-size:12px; color:var(--muted); margin-top:6px; }
+    .quick { display:flex; gap:8px; flex-wrap:wrap; margin-top:8px; }
+    .quick button { background:transparent; border:1px solid var(--line); color:var(--muted); padding:6px 10px; font-size:12px; margin:0; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <h1>Codex 教学教练助手</h1>
+    <div class="sub">形态 B · 应用内 AI 教练面板（先用 DeepSeek 兜底，配置 CODEX_* 后自动切 Codex / Azure OpenAI）</div>
+
+    <div class="card">
+      <div class="row">
+        <div>
+          <label for="codex-ctx">参考上下文（讲稿 / 复盘 / 学情，可留空）</label>
+          <textarea id="codex-ctx" placeholder="例如：本节课讲《牛吃草》，学生常把“草生长速度”当成已知条件……"></textarea>
+        </div>
+      </div>
+      <div class="row" style="margin-top:12px;">
+        <div>
+          <label for="codex-prompt">你的需求 / 提问</label>
+          <textarea id="codex-prompt" placeholder="例如：给我一版改进逐字稿，重点突破草生长速度的建模，并设计 3 个分层追问。"></textarea>
+        </div>
+      </div>
+      <div class="quick codex-quick">
+        <button type="button" data-q="生成改进版逐字稿">改进逐字稿</button>
+        <button type="button" data-q="给 3 个分层追问话术">分层追问</button>
+        <button type="button" data-q="给板书结构建议">板书建议</button>
+        <button type="button" data-q="设计一道当堂检测题">当堂检测</button>
+      </div>
+      <div class="row" style="margin-top:12px;">
+        <div class="opt">
+          <label for="codex-sc">Sharecode（部署环境需填，本地可空；也可带 ?sharecode=）</label>
+          <input type="text" id="codex-sc" placeholder="留空=本地或从 URL 读取" />
+        </div>
+      </div>
+      <button type="button" id="codex-send">发送</button>
+      <div class="hint">保留文字输入，不依赖语音识别；后端密钥只在服务端，前端只发 prompt。</div>
+    </div>
+
+    <div class="card">
+      <div class="badges" id="codex-badges"><span class="badge">待命</span></div>
+      <div id="codex-out">结果会显示在这里…</div>
+    </div>
+  </div>
+
+  <script src="codex-panel.js?v=20261030"></script>
+</body>
+</html>

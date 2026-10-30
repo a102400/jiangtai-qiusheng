@@ -1,0 +1,236 @@
+/* ============================================================
+   讲台求生 · 材质层 material.css
+   ------------------------------------------------------------
+   目的：给页面一层「手感」，但不下重手。
+   取舍依据（可辩护）：taste-skill 的 measured 结论是——
+   满屏渐变（低分页 52% vs 高分页 22%）、满屏阴影（48% vs 24%）、
+   毛玻璃与发光是「AI 生成感」最强的三个痕迹。
+   所以这里的剂量都是「能感觉到、但说不出是哪来的」：
+     · 渐变网格 alpha ≤ .09，只当纸的纹理，不当装饰
+     · 颗粒 alpha .05，可一键关闭
+     · 阴影分三级，静止卡片几乎无影，只有真正浮起的层才有影子
+     · 毛玻璃只给 4 类浮层（顶栏 / 弹窗 / 下拉 / Toast），不给正文卡片
+   ============================================================ */
+
+:root{
+  /* ---------- 圆角：把原来 8 种收敛成 4 种 ----------
+     旧账：12px×25、10px×19、999px×12、99px×11、6px×10、9px×8、8px×4
+     同一套界面 8 种圆角，是「拼凑感」最直接的来源，比缺材质严重得多。 */
+  --r-xs:8px;      /* 徽章、小标签、代码块 */
+  --r-sm:10px;     /* 按钮、输入框、单元格 */
+  --r:12px;        /* 卡片、面板 —— 继承原有 --r */
+  --r-lg:16px;     /* 大面板、弹窗 */
+  --r-pill:999px;  /* 药丸按钮、进度条 */
+
+  /* ---------- 高程：三级阴影，只有第三级是真影子 ---------- */
+  --elv-1:0 1px 2px rgba(15,23,42,.04);                                  /* 静止卡片：几乎看不见 */
+  --elv-2:0 2px 6px rgba(15,23,42,.07), 0 10px 24px rgba(15,23,42,.06);  /* hover / 浮起 */
+  --elv-3:0 4px 10px rgba(15,23,42,.10), 0 18px 44px rgba(15,23,42,.12); /* 弹窗 / 下拉 */
+
+  /* ---------- 动效 token：取自 motion.md（Awwwards 99 站点实测） ---------- */
+  --ease-out:cubic-bezier(.22,1,.36,1);        /* 600ms 以内的入场与位移 hover */
+  --ease-expo:cubic-bezier(.16,1,.3,1);        /* 800ms 以上的显现、行升起 */
+  --ease-in-out:cubic-bezier(.76,0,.24,1);     /* 擦拭、面板、可见状态下移动 */
+  --ease-exit:cubic-bezier(.55,.055,.675,.19); /* 只用于「一去不回」的离开 */
+  --t-press:140ms;
+  --t-hover:180ms;
+  --t-ui:240ms;
+  --t-reveal:800ms;
+  --stagger-line:90ms;
+  --stagger-item:70ms;
+
+  /* ---------- 材质强度：集中在这里，方便整体调浓淡 ---------- */
+  --mesh-a:.075;      /* 网格渐变最浓的一层 */
+  --mesh-b:.055;
+  --grain-a:.05;      /* 颗粒纹理不透明度 */
+  --blur:14px;        /* 浮层毛玻璃半径 */
+}
+
+/* ============================================================
+   1. 纸的纹理：渐变网格 + 颗粒
+   ------------------------------------------------------------
+   挂成 body 的 background-image，而不是叠一个 div：
+   这样它永远在内容之下、粒子层之上，不需要任何 z-index，
+   也不会重演「body 底色遮住负层级图层」那个坑。
+   特异性写成 html body 是为了盖过 landing.html 里
+   `html, body { background-image: none !important }` 那条。
+   ============================================================ */
+
+/* 只叠「色团 + 颗粒」，不写底色 ——
+   底色留给各页面自己的 background-color（index 是 #DBEAFE、workbench 是
+   #F3F7F5 微绿），这样三个页面各自的配色不被抹平，只多一层统一的纸感。
+   加 !important 是为了盖过 landing.html 里 `background-image:none!important`。 */
+
+html body{
+  background-image:
+    /* 颗粒（SVG 噪声，无外部文件，断网也在） */
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.8' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)' opacity='.05'/%3E%3C/svg%3E"),
+    /* 网格渐变：三团极淡的色，像纸纤维，不像装饰 */
+    radial-gradient(58% 44% at 12% 0%, rgba(79,70,229,var(--mesh-a)), transparent 62%),
+    radial-gradient(46% 38% at 92% 8%, rgba(13,148,136,var(--mesh-b)), transparent 64%),
+    radial-gradient(64% 50% at 50% 104%, rgba(59,130,246,var(--mesh-b)), transparent 66%) !important;
+  background-attachment:fixed !important;
+  background-repeat:repeat, no-repeat, no-repeat, no-repeat !important;
+  background-color:inherit;
+}
+
+/* 深色主题：颗粒留着（深底更需要质感），色团换成冷光，不写底色 */
+html[data-theme="dark"] body,
+html body[data-theme="dark"]{
+  background-image:
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.8' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)' opacity='.035'/%3E%3C/svg%3E"),
+    radial-gradient(54% 40% at 10% 0%, rgba(99,102,241,.13), transparent 62%),
+    radial-gradient(44% 36% at 90% 6%, rgba(13,148,136,.10), transparent 64%) !important;
+}
+
+/* 关掉纹理的总开关：给 body 或 html 加 .no-texture 即可（演示/打印/低端机） */
+html.no-texture body,
+body.no-texture,
+html.no-texture body[data-theme="dark"]{
+  background-image:none !important;
+}
+
+/* ============================================================
+   2. 柔阴影：只给会浮起来的东西
+   ------------------------------------------------------------
+   静止卡片用 --elv-1（几乎无声），hover 才升到 --elv-2。
+   不给「每张卡片都 hover 抬起 4px」那种全局效果 —— 那是模板感。
+   ============================================================ */
+
+.card,
+.card.sm,
+.pano-card,
+.rs-card,
+.hollow-card{
+  box-shadow:var(--elv-1);
+  transition:box-shadow var(--t-ui) var(--ease-out), border-color var(--t-hover) ease;
+}
+
+@media (hover:hover) and (pointer:fine){
+  .card:hover,
+  .card.sm:hover,
+  .pano-card:hover{
+    box-shadow:var(--elv-2);
+  }
+}
+
+/* 真正浮起的层：弹窗、下拉、Toaster、抽屉 */
+[role="dialog"],
+.modal,
+.modal-card,
+.drawer,
+.dropdown,
+.popover,
+.toast,
+.menu-panel{
+  box-shadow:var(--elv-3);
+}
+
+/* ============================================================
+   3. 毛玻璃：只给浮层，不给正文
+   ------------------------------------------------------------
+   正文卡片一旦半透明，背后文字会透出来，长段落直接不可读。
+   所以只允许四类：吸顶栏、弹窗遮罩内的面板、下拉、Toast。
+   ============================================================ */
+
+.topbar,
+[role="dialog"] .modal-card,
+.modal-card,
+.dropdown,
+.popover,
+.menu-panel,
+.toast{
+  -webkit-backdrop-filter:saturate(180%) blur(var(--blur));
+  backdrop-filter:saturate(180%) blur(var(--blur));
+  background-color:rgba(255,255,255,.72);
+}
+
+html[data-theme="dark"] .topbar,
+html[data-theme="dark"] .modal-card,
+html[data-theme="dark"] .dropdown,
+html[data-theme="dark"] .popover,
+html[data-theme="dark"] .menu-panel,
+html[data-theme="dark"] .toast{
+  background-color:rgba(15,23,42,.72);
+}
+
+/* 浏览器不支持 backdrop-filter 时给不透明底，避免「透出糊字」 */
+@supports not ((backdrop-filter:blur(1px)) or (-webkit-backdrop-filter:blur(1px))){
+  .topbar,
+  .modal-card,
+  .dropdown,
+  .popover,
+  .menu-panel,
+  .toast{
+    background-color:var(--card);
+  }
+}
+
+/* ============================================================
+   4. 圆角归一：把高频类的 8 种规格收敛掉
+   ============================================================ */
+
+.ghost-btn,
+.icon-btn,
+input,
+select,
+textarea,
+button{ border-radius:var(--r-sm); }
+
+.card.sm,
+.card,
+.pano-card,
+.rs-card,
+.hollow-card,
+.modal-card,
+.dropdown,
+.popover,
+.menu-panel{ border-radius:var(--r); }
+
+.modal-card,
+.drawer{ border-radius:var(--r-lg); }
+
+.badge,
+.tag,
+.chip,
+.rule,
+.kbd,
+code{ border-radius:var(--r-xs); }
+
+/* ============================================================
+   5. 关闭开关：三种情况一律回退到「无材质」
+   ------------------------------------------------------------
+   · prefers-reduced-motion：颗粒与网格是静态的，可留；但毛玻璃视觉负担大，退成实色
+   · 打印：全部退掉
+   · html.no-texture / body.no-texture：手动关闭颗粒与网格
+   ============================================================ */
+
+@media (prefers-reduced-motion: reduce){
+  .topbar,
+  .modal-card,
+  .dropdown,
+  .popover,
+  .menu-panel,
+  .toast{
+    -webkit-backdrop-filter:none;
+    backdrop-filter:none;
+    background-color:var(--card);
+  }
+}
+
+@media print{
+  html body{
+    background-image:none !important;
+  }
+  .topbar,
+  .modal-card,
+  .dropdown,
+  .popover,
+  .menu-panel,
+  .toast{
+    -webkit-backdrop-filter:none;
+    backdrop-filter:none;
+    box-shadow:none;
+    background-color:var(--card);
+  }
+}

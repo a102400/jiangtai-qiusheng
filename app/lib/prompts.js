@@ -82,8 +82,12 @@ function analyzePrompt(v) {
   "speech_rate": { "chars_per_min": <整数>, "judge": "偏快 / 适中 / 偏慢" },
   "pauses": { "count_gt_2s": <整数>, "longest_sec": <数字> },
   "filler_words": { "total": <整数>, "detail": { "那个": <次数>, "然后": <次数>, "就是": <次数> } },
-  "questions": { "asked": <整数>, "avg_wait_sec": <数字>, "genuine_questions": <整数> },
-  "knowledge": { "covered": ["..."], "missing": ["..."], "cover_percent": <0-100 整数> },
+  "questions": { "asked": <整数>, "genuine_questions": <整数> },
+  "subject_knowledge": {
+    "covered": [ { "point": "<本课涉及的学科知识点，≤12字>", "evidence_quote": "<原文中的连续完整句子>" } ],
+    "needs_review": [ { "point": "<本课涉及的学科知识点，≤12字>", "reason": "<当前讲稿没有足够证据确认是否讲解>" } ],
+    "scope_note": "<一句话说明本次学科判断的局限，≤40字>"
+  },
   "interaction": { "teacher_talk_sec": <数字>, "student_talk_sec": <数字>, "silence_sec": <数字> },
   "suggestions": [
     { "title": "<≤12字>", "detail": "<具体可执行的一句话改法，≤60字>" }
@@ -92,10 +96,18 @@ function analyzePrompt(v) {
 
 评分标准（务必遵守）：
 - 语速 120~150 字/分钟为适中，超过 160 判"偏快"并扣分。
-- 提问后有效等待应 ≥3 秒，不足 2 秒属于"伪提问"，重点扣分。
+- 仅凭逐字稿不能测量真实等待时间。请根据提问是否明确、是否点名、是否给出思考任务来评价提问设计，不要把推断秒数当作实测数据，也不要仅因缺少时间戳而扣分。
 - 口头禅每出现 10 次扣 3 分，上限扣 15 分。
-- 只给结论不给推导的讲解，cover_percent 最高 75。
+- 只给结论不给推导的讲解，要在意"推导过程缺失"这件事（可在 suggestions 里指出），但不得因此下调任何覆盖率数字（你没有做覆盖率计算）。
+- 不要因为讲稿没覆盖全部学科内容而扣分。学科内容只作提示线索，由人工核对。
 - suggestions 必须 4 到 5 条，每条都要给出能立刻执行的动作。${subj.dims}
+
+【关于学科知识（subject_knowledge）的硬性要求】
+1. 不要返回 "knowledge" 字段。教学环节覆盖（情境引入/知识推导/公式结论/例题讲解/课堂互动/小结回顾/作业布置）由程序按关键词规则计算，不需要你给，你给的也会被丢弃。
+2. 不要生成任何"学科知识覆盖率"百分比。你手上只有一段逐字稿，没有完整教案、没有知识点清单，学科知识覆盖率在数学上就算不出来 —— 不要编造数字。
+3. 不要把"没有出现在本段讲稿"直接判定为"漏讲"。你不知道本课该讲哪些知识点，所以证据不足的知识点一律放进 needs_review，并写明"当前讲稿没有足够证据确认是否讲解"。
+4. covered 里的每一条都必须给出 evidence_quote，且它必须是逐字稿中一字不差的连续完整句子 —— 逐字核对，不要改写、不要拼接、不要翻译。写不出原句支撑的，就放进 needs_review。
+5. scope_note 必须诚实说明局限，例如"没有完整教案或知识点清单，不能计算学科知识覆盖率"。
 
 【学科】${subj.label}
 【课题】${v.subject || '本节课'}（${v.grade || '未填年级'}）
@@ -207,6 +219,93 @@ ${pblock}【老师刚才讲的内容】
 ${v.recentChunk || ''}`;
 }
 
+/* ---------------- 模块二·专项：提问与追问训练 ---------------- */
+const QUESTION_DRILL_MISCONCEPTIONS = Object.freeze({
+  fixed_formula: {
+    label: '把结论当成无条件适用的规则',
+    misconception: '我觉得这个结论不管什么情况都能用',
+    firstReply: '我觉得这个结论不管什么情况都能用，对吧？',
+  },
+  memorized_answer: {
+    label: '会记结论，但说不清理由',
+    misconception: '我记得答案，但不知道为什么',
+    firstReply: '我记得这个答案，可我说不清为什么。',
+  },
+  answer_dependency: {
+    label: '倾向于直接要答案',
+    misconception: '遇到不会的题，直接看答案最快',
+    firstReply: '我还是不会，老师能直接告诉我答案吗？',
+  },
+});
+
+function questionDrillStudentSystem(v) {
+  const profile =
+    QUESTION_DRILL_MISCONCEPTIONS[v.misconceptionKey] ||
+    QUESTION_DRILL_MISCONCEPTIONS.fixed_formula;
+
+  return `你是师范生"提问与追问"专项训练中的模拟学生。
+这是一个明确标注的 AI 模拟练习，不要声称自己是真实学生。
+
+课题：${String(v.topic || '本节课').slice(0, 120)}
+待练原句：${String(v.quote || '').slice(0, 500)}
+你的固定误区：${profile.misconception}
+
+行为要求：
+1. 每轮只对教师刚才的话作出学生式回应，最多两句，使用自然口语。
+2. 始终保留固定误区。教师追问后，可以表现出部分思考，但不能突然宣称已经完全理解。
+3. 回应应贴合教师的具体问题；没有足够信息时，诚实表达不确定。
+4. 不替教师讲解，不主动公布正确答案，不改变训练主题。
+5. 不嘲笑、不羞辱，不制造与教学无关的冲突。
+6. 只输出模拟学生说的话，不输出分析、评分、动作或括号说明。`;
+}
+
+function questionDrillEvaluationPrompt(v) {
+  const conversation = Array.isArray(v.messages) ? v.messages : [];
+
+  return `你是师范生"提问与追问"专项训练的评价员。只依据对话中的教师发言，用固定量规评价三个可观察行为。
+
+严格限制：
+- 只评价教师是否提出明确问题或任务、是否留下表达空间、是否根据学生回应继续追问或调整解释。
+- 不评价教师人格、情绪或职业适配性。
+- 不推断模拟学生或真实学生是否真正理解。
+- 不将提问数量、问题类别或等待秒数当作学习效果。
+- 每项按 0、1、2 分：0=没有观察到；1=部分或不清楚；2=有明确文本证据。
+- 每项 evidence_quote 必须是教师实际说过的连续原句；没有证据就返回空字符串。
+- 反馈简洁、具体、可执行。
+- 只输出 JSON，不要 Markdown。
+
+训练目标：${String(v.goal || '完成一次提问与追问专项练习').slice(0, 300)}
+待练原句：${String(v.quote || '').slice(0, 500)}
+对话记录：
+${JSON.stringify(conversation).slice(0, 12000)}
+
+输出格式：
+{
+  "dimensions": [
+    {
+      "key": "clear_question_task",
+      "score": 0,
+      "evidence_quote": "",
+      "feedback": ""
+    },
+    {
+      "key": "expression_space",
+      "score": 0,
+      "evidence_quote": "",
+      "feedback": ""
+    },
+    {
+      "key": "follow_up_adaptation",
+      "score": 0,
+      "evidence_quote": "",
+      "feedback": ""
+    }
+  ],
+  "summary": "",
+  "boundary_note": "以上仅为文本和对话行为指标，不代表已经测得学生的真实理解。"
+}`;
+}
+
 /* ---------------- 模块七：三学生课堂（多人同时在线） ---------------- */
 const CLASS_STUDENTS = [
   { key: 'naughty', name: '小皮', avatar: '😈', desc: '调皮型：专问刁钻问题，爱抬杠' },
@@ -274,6 +373,58 @@ ${pblock}【老师刚才讲的内容】
 ${v.recentChunk || ''}`;
 }
 
+/* ---------------- 课堂点名：点谁谁答 ---------------- */
+/**
+ * 与 classroomRound 的区别（这是设计要点，不要合并成同一个 prompt）：
+ *   classroomRound 是「老师讲完一段，三人一起反应」——学生主动发难，老师被动接。
+ *   callOn 是「老师主动点某一个人」——老师掌握发问权，学生被迫应答。
+ * 这两种权力关系在真实课堂里完全不同，学生的语言（慌张 / 敷衍 / 硬撑）也不一样，
+ * 所以必须单独写提示词，而不是复用 round 再挑一个人出来。
+ */
+function classroomCallOnPrompt(v) {
+  const pblock = profileContextBlock(v);
+  const st = CLASS_STUDENTS.find((x) => x.key === v.key) || CLASS_STUDENTS[0];
+  const asked = String(v.callInstruction || '').trim();
+  return `你正在模拟一节真实的中学课堂。实习老师现在**点名**让 ${st.name} 回答问题。
+${st.name}的人设：${st.desc}。
+
+${v.topic ? `本节课题：《${v.topic}》。` : ''}
+${v.roundNo ? `这是本课的第 ${v.roundNo} 轮互动。` : ''}
+${v.pressure != null ? `当前老师的压力值：${v.pressure}/100（越高越接近失控）。` : ''}
+${v.recentDialogue ? `【前面几轮的真实对话】
+${v.recentDialogue}
+` : ''}
+${asked ? `老师点名时说的话：「${asked}」` : '老师只是叫了名字，没有给任何提示。'}
+
+请生成 ${st.name} 被点名后的**当场反应**。只输出 JSON，不要任何解释：
+{
+  "key": "${st.key}",
+  "mood": "<从 😊🤔😴😤😲🙄 中选一个>",
+  "line": "<${st.name}第一人称说出的话，≤40字，口语，可以有停顿和语气词>",
+  "answer_quality": "<good|partial|poor|offtopic 四选一>",
+  "attention": <0-100 整数，此刻专注度>,
+  "comprehension": <0-100 整数，此刻听懂程度>,
+  "state_reason": "<≤16字，为什么是这两个分>",
+  "pressure_delta": <-20~20 的整数：答得好让课堂稳下来的给负值，答崩/答非所问给正值>,
+  "pressure_reason": "<≤30字，为什么涨/降>"
+}
+
+应答规则（必须遵守，否则三个学生听起来会是同一个人）：
+1. **小皮**：被点到先讨价还价或抬杠（"凭什么是我""我能不能先问一个"），再勉强给一个不完整的答案；
+   若老师给了明确提示，他会顺着提示蒙一个，但大概率半对。
+2. **小霸**：认真作答，答完通常会追问一句更深的（"那如果……是不是就不成立了"）。
+   answer_quality 多数为 good，但不许每次都完美——偶尔也会说"这个我没想清楚"。
+3. **小走**：第一反应是慌（"啊？我？"），然后答非所问或直接承认没跟上。
+   answer_quality 多数为 poor 或 offtopic；若老师刚给过很具体的提示，可以勉强到 partial。
+4. answer_quality 必须和 line 的实际内容一致：说"不会"就是 poor，答得离谱就是 offtopic，
+   绝对不能写"我不会"却标 good。
+5. 必须基于【老师刚才讲的内容】作答，禁止凭空编造知识点；答错也要错得像学生，不要错成教科书反面案例。
+6. 一次只输出一个学生，不要输出数组。
+
+${pblock}【老师刚才讲的内容】
+${String(v.recentChunk || '').slice(0, 1200)}`;
+}
+
 /* ---------------- 模块八：危险瞬间摘录 ---------------- */
 function dangerPrompt(v) {
   return `你是微格教学分析师。请从下面这段师范生试讲逐字稿中，摘出「危险瞬间」——那些最可能出问题的片段。
@@ -281,7 +432,7 @@ function dangerPrompt(v) {
 {
   "moments": [
     {
-      "type": "<卡壳/冷场/逻辑跳跃/伪提问/口头禅扎堆/时间失控 六类之一>",
+      "type": "<卡壳/冷场/逻辑跳跃/确认式提问/口头禅扎堆/时间失控 六类之一>",
       "quote": "<原稿中的原句，≤40字，必须是从逐字稿里原样摘出的>",
       "reason": "<为什么会成为问题，≤40字>",
       "fix": "<改成什么，≤50字>"
@@ -289,6 +440,7 @@ function dangerPrompt(v) {
   ]
 }
 要求：摘 3 到 6 个最有代表性的，按严重程度排序；如果逐字稿太短或没明显问题，就指出最接近问题的片段。
+「确认式提问」指"明白吗""对不对"这类封闭式提问——只凭逐字稿无法判断真实等待时间，不要给出任何等待秒数。
 
 【逐字稿】
 ${v.transcript}`;
@@ -343,7 +495,11 @@ module.exports = {
   PERSONAS,
   CLASS_STUDENTS,
   classroomRoundPrompt,
+  classroomCallOnPrompt,
   dangerPrompt,
   profileContextBlock,
   drillPrompt,
+  QUESTION_DRILL_MISCONCEPTIONS,
+  questionDrillStudentSystem,
+  questionDrillEvaluationPrompt,
 };

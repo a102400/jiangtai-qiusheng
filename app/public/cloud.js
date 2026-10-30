@@ -26,8 +26,35 @@
     pendingOtp: null,
   };
 
+  /**
+   * 与 app.js 的 pickHistoryCount 同一口径（本文件与 app.js 解耦，不共享函数）：
+   * 字段存在且是有限数值才返回数字，否则 null —— 不用 0 冒充「未测量」。
+   * 后端 questions 里只有 asked（没有 total），原来读 .total 会恒得 0。
+   */
+  function pickCloudCount(obj, keys) {
+    const src = obj && typeof obj === 'object' ? obj : {};
+    for (const key of keys) {
+      const v = src[key];
+      if (v === null || v === undefined || v === '' || typeof v === 'boolean') continue;
+      const n = Number(v);
+      if (Number.isFinite(n)) return n;
+    }
+    return null;
+  }
+
   function esc(s) {
     return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  }
+
+  /* 结果来源标签：与 app.js 用同一套 fallback_reason 逻辑。
+     app.js 在本文件之后加载，所以这里是运行时取值；
+     万一 app.js 没加载（旧缓存），退回到「结果来源未明确」，不能显示 undefined。 */
+  function sourceLabelOf(report) {
+    const api = window.JTQSourceLabel;
+    if (api && typeof api.describe === 'function') {
+      return api.describe(report && report.engine, report && report.fallback_reason);
+    }
+    return { className: '', text: '结果来源未明确 · 请先核对分析配置' };
   }
 
   /* ---------- UI：账户按钮 + 弹层 ---------- */
@@ -357,7 +384,25 @@
       sr.chars_per_min != null ? metric('语速', sr.chars_per_min + ' 字/分', sr.judge || '') : '',
       pw.count_gt_2s != null ? metric('长停顿', pw.count_gt_2s + ' 次', '最长 ' + (pw.longest_sec || 0) + 's') : '',
       fw.total != null ? metric('口头禅', fw.total + ' 处', '') : '',
-      q.total != null ? metric('提问', (q.total || 0) + ' 次', '真提问 ' + (q.authentic || 0) + ' 次') : '',
+      (
+        q.asked != null || q.total != null
+      )
+        ? metric(
+            '文本提问',
+            (
+              q.asked != null
+                ? q.asked
+                : q.total
+            ) + ' 次',
+            (
+              q.genuine_questions != null
+                ? '候选思考题 ' + q.genuine_questions + ' 次'
+                : q.authentic != null
+                  ? '候选思考题 ' + q.authentic + ' 次'
+                  : '来源未记录'
+            )
+          )
+        : '',
     ].join('');
     const sugs = (r.suggestions || []).map((s) => {
       const t = typeof s === 'string' ? s : (s.title || '');
@@ -365,6 +410,10 @@
       return '<li style="margin-bottom:6px"><b>' + esc(t) + '</b>' +
         (d ? '<span style="display:block;color:#64748b;font-size:13px">' + esc(d) + '</span>' : '') + '</li>';
     }).join('');
+
+    // 来源标签：与主分析页同一套逻辑。
+    // 旧报告（存档时还没有 fallback_reason 字段）走兜底分支，不显示 undefined。
+    const srcTag = sourceLabelOf(r);
 
     m.innerHTML =
       '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">' +
@@ -377,6 +426,7 @@
       '<p style="margin:0;font-size:13px;color:#475569;flex:1">' + esc(rec.summary || '') + '</p>' +
       '<button type="button" id="cloudExportBtn" style="padding:8px 14px;border:none;border-radius:8px;background:var(--brand,#4F46E5);color:#fff;cursor:pointer;font-size:13px;white-space:nowrap">导出 PDF</button>' +
       '</div>' +
+      '<div style="margin:0 0 12px"><span class="engine-tag' + (srcTag.className ? ' ' + srcTag.className : '') + '">' + esc(srcTag.text) + '</span></div>' +
       (cards ? '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px">' + cards + '</div>' : '') +
       (sugs ? '<h4 style="margin:14px 0 8px;font-size:14px">行动建议</h4><ul style="margin:0;padding-left:18px;font-size:13px">' + sugs + '</ul>' : '') +
       (rec.transcript ? '<h4 style="margin:14px 0 8px;font-size:14px">逐字稿</h4>' +
@@ -466,8 +516,16 @@
           subject: rec.subject,
           score: rec.overall_score,
           filler: (report && report.filler_words || {}).total || 0,
-          questions: (report && report.questions || {}).total || 0,
-          rate: (report && report.speech_rate || {}).chars_per_min || 0,
+          // 与 app.js 的 saveToHistory 同一口径：缺字段存 null，不用 0 冒充。
+          // 后端 questions 里只有 asked（没有 total），原读数恒为 0。
+          questions: pickCloudCount(report && report.questions, ['asked', 'total']),
+          rate: pickCloudCount(report && report.speech_rate, ['chars_per_min']),
+          // 来源信息：成长档案列表据此显示来源标签（旧记录没有这个字段）。
+          engine: report && typeof report.engine === 'string' ? report.engine : '',
+          fallback_reason:
+            report && typeof report.fallback_reason === 'string'
+              ? report.fallback_reason
+              : '',
         });
       }
       return { saved: arr.length > 0, id: rec && rec.id };

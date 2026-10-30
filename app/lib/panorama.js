@@ -10,6 +10,7 @@
  */
 
 const ai = require('./deepseek');
+const { withFallback, FALLBACK_REASON } = require('./fallback-reason');
 
 const VIEWS = [
   {
@@ -108,6 +109,8 @@ async function panorama(input = {}) {
   };
 
   const jobs = VIEWS.map(async (view) => {
+    // 每个视角独立降级：捕获真实错误，用于标注该视角的降级原因
+    let viewError = null;
     if (ai.hasKey()) {
       try {
         const raw = await ai.chat(
@@ -116,30 +119,50 @@ async function panorama(input = {}) {
         );
         const json = ai.extractJson(raw);
         if (json && typeof json.score !== 'undefined') {
-          return {
-            key: view.key, label: view.label, icon: view.icon,
-            score: Math.max(0, Math.min(100, Number(json.score) || 0)),
-            comment: String(json.comment || ''),
-            advice: String(json.advice || ''),
-            engine: 'llm',
-          };
+          return withFallback(
+            {
+              key: view.key, label: view.label, icon: view.icon,
+              score: Math.max(0, Math.min(100, Number(json.score) || 0)),
+              comment: String(json.comment || ''),
+              advice: String(json.advice || ''),
+              engine: 'llm',
+            },
+            null,
+            true
+          );
         }
         throw new Error('bad json');
       } catch (e) {
-        // 单视角失败不影响整体，降级该视角
+        // 单视角失败不影响整体，降级该视角（原因记录下来，供返回值标注）
+        viewError = e;
       }
     }
     const fb = view.fallback(ctx);
-    return {
-      key: view.key, label: view.label, icon: view.icon,
-      score: fb.score, comment: fb.comment, advice: fb.advice,
-      engine: 'rule',
-    };
+    return withFallback(
+      {
+        key: view.key, label: view.label, icon: view.icon,
+        score: fb.score, comment: fb.comment, advice: fb.advice,
+        engine: 'rule',
+      },
+      viewError,
+      ai.hasKey()
+    );
   });
 
   const results = await Promise.all(jobs);
   const avg = Math.round(results.reduce((s, r) => s + r.score, 0) / results.length);
-  return { views: results, average: avg };
+  // 汇总降级原因：六视角全部由模型给出 → 'none'；否则取第一个真正的降级原因。
+  // 这里不用 withFallback —— 它只看单个 engine 字段，而本层是 6 个视角的聚合。
+  const degraded = results.find(
+    (r) => r.fallback_reason && r.fallback_reason !== FALLBACK_REASON.NONE
+  );
+  return {
+    views: results,
+    average: avg,
+    // 汇总层的来源：只要有一个视角降级，整体就不能自称「模型生成」。
+    engine: degraded ? 'rule' : 'llm',
+    fallback_reason: degraded ? degraded.fallback_reason : FALLBACK_REASON.NONE,
+  };
 }
 
 module.exports = { panorama, VIEWS };

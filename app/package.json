@@ -7,7 +7,9 @@
   "scripts": {
     "start": "node server.js",
     "dev": "node --watch server.js",
-    "test": "node --test tests/*.test.js"
+    "test": "node --test tests/*.test.js",
+    "assets:students": "node scripts/build-student-assets.js && node scripts/optimize-student-assets.js",
+    "assets:students:optimize": "node scripts/optimize-student-assets.js"
   },
   "engines": {
     "node": ">=18"

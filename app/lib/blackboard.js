@@ -10,6 +10,7 @@
 
 const fs = require('fs');
 const ai = require('./deepseek');
+const { withFallback } = require('./fallback-reason');
 
 function visionConfig() {
   return {
@@ -74,14 +75,21 @@ const VISION_PROMPT = `你是一位中学教研组长，正在给一块课堂板
 async function scoreBlackboard(imagePath, meta = {}) {
   const fileBuffer = await fs.promises.readFile(imagePath);
 
+  // 捕获真实错误：视觉模型与文本模型各自失败时，据此判定降级原因
+  let visionError = null;
+  let textError = null;
+
   if (hasVision()) {
     try {
       const raw = await chatVision(fileBuffer.toString('base64'), VISION_PROMPT);
       const json = ai.extractJson(raw);
       if (json && typeof json.total_score !== 'undefined') {
-        return { ...json, engine: 'vision', mode: 'image' };
+        // 视觉模型成功：不是降级。engine='vision' 不在 withFallback 的处理范围内
+        // （它只认 'llm'），故此处显式标注。
+        return { ...json, engine: 'vision', mode: 'image', fallback_reason: 'none' };
       }
     } catch (e) {
+      visionError = e;
       console.warn('[blackboard] 视觉模型失败，降级：', e.message);
     }
   }
@@ -99,11 +107,11 @@ async function scoreBlackboard(imagePath, meta = {}) {
     if (ai.hasKey()) {
       const raw = await ai.chat([{ role: 'user', content: fallbackPrompt }], { temperature: 0.4, maxTokens: 900 });
       const json = ai.extractJson(raw);
-      if (json) return { ...json, engine: 'llm', mode: 'checklist' };
+      if (json) return withFallback({ ...json, engine: 'llm', mode: 'checklist' }, null, true);
     }
-  } catch (e) { /* 继续降级 */ }
+  } catch (e) { textError = e; }
 
-  return {
+  return withFallback({
     mode: 'checklist',
     engine: 'rule',
     checklist: [
@@ -117,7 +125,7 @@ async function scoreBlackboard(imagePath, meta = {}) {
     layout_template: '左侧 2/3 主板书：课题 → 推导步骤 → 结论框；右侧 1/3 副板书：临时演算、学生回答、易错点。',
     key_points: ['课题标题', '核心概念定义', '推导关键步骤', '结论/公式', '典型例题'],
     common_mistakes: ['边讲边擦，下课前黑板空了', '主副板书混在一起', '字太小，后排看不清'],
-  };
+  }, textError || visionError, ai.hasKey() || hasVision());
 }
 
 module.exports = { scoreBlackboard, hasVision };

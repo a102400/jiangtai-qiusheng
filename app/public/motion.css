@@ -1,0 +1,237 @@
+/* ============================================================
+   讲台求生 · 动效层 motion.css
+   ------------------------------------------------------------
+   曲线与时长取自 motion.md（Awwwards 99 个获奖站实测）：
+     · 入场 800ms 用 expo-out，600ms 以内用 quint-out
+     · 按压 140ms、hover 变色 180ms、界面位移 240ms
+     · 行间错峰 90ms、列表项 70ms
+     · 不用弹跳/回弹 —— 实测 99 个站里 overshoot 只跑了 2 个，
+       且是「生成感」的典型痕迹。要的「弹性」用 expo 的急停感实现，
+       视觉上同样利落，但不会冲过头。
+   铁律：所有隐藏态都在 html.js 之下，脚本没跑内容也不会消失。
+   ============================================================ */
+
+/* ---------- 1. 入场：标题行从遮罩后升起 ---------- */
+
+/* 注意：这里不写 [data-lines]{display:block}。landing.html 的语言切换靠
+   .i18n-en / .i18n-zh 的 display 控制，同特异性的属性选择器会在 motion.css
+   后加载时把隐藏的语言顶出来 —— 只给本来就是 block 的标题用 data-lines。 */
+
+[data-lines] .line{
+  display:block;
+  overflow:clip;
+  padding-bottom:.12em;
+  margin-bottom:-.12em;
+}
+[data-lines] .line > span{ display:block; }
+
+@media (prefers-reduced-motion: no-preference){
+  html.js [data-lines].is-split .line > span{
+    transform:translateY(110%);
+  }
+  html.js [data-lines].is-split.is-in .line > span{
+    transform:none;
+    transition:transform var(--t-reveal) var(--ease-expo) calc(var(--i, 0) * var(--stagger-line));
+  }
+}
+
+/* ---------- 2. 滚动渐入：只对区块做，一次，不重播 ---------- */
+
+@media (prefers-reduced-motion: no-preference){
+  html.js [data-reveal]{
+    opacity:0;
+    transform:translateY(20px);
+    /* --rv 由 motion.js 写入：同一批出现的元素依次晚 50ms，最多 8 档。
+       50ms 取自 React Bits AnimatedList 的 stagger 默认值（0.05s），
+       与消息入场的错峰保持一致 —— 报告卡片和对话气泡的节奏感是同一套。
+       没有它的话，报告区一次冒出十几张卡片会像「闪一下全到」。 */
+    transition:
+      opacity 620ms var(--ease-out) calc(var(--rv, 0) * 50ms),
+      transform 820ms var(--ease-out) calc(var(--rv, 0) * 50ms);
+  }
+  html.js [data-reveal].is-in{
+    opacity:1;
+    transform:none;
+  }
+  /* 区块内子元素错峰：只对显式标了 data-stagger 的区块生效。
+     自动扫描出来的区块不做子元素延迟 —— 否则一张卡片里几十个元素
+     各自隐藏各自延迟，既慢又容易和业务自己的渲染打架。 */
+  html.js [data-reveal][data-stagger] > *{
+    opacity:0;
+    transform:translateY(14px);
+    transition:
+      opacity 520ms var(--ease-out),
+      transform 700ms var(--ease-out);
+  }
+  html.js [data-reveal][data-stagger] > *:nth-child(1){ transition-delay:0ms; }
+  html.js [data-reveal][data-stagger] > *:nth-child(2){ transition-delay:70ms; }
+  html.js [data-reveal][data-stagger] > *:nth-child(3){ transition-delay:140ms; }
+  html.js [data-reveal][data-stagger] > *:nth-child(4){ transition-delay:210ms; }
+  html.js [data-reveal][data-stagger] > *:nth-child(n+5){ transition-delay:250ms; }
+  html.js [data-reveal][data-stagger].is-in > *{
+    opacity:1;
+    transform:none;
+  }
+}
+
+/* ---------- 3. 按压与悬停反馈：每个控件都要有回应 ---------- */
+
+.ghost-btn,
+.icon-btn,
+button,
+[role="button"],
+.btn{
+  transition:
+    transform var(--t-press) var(--ease-out),
+    background-color var(--t-hover) ease,
+    border-color var(--t-hover) ease,
+    color var(--t-hover) ease,
+    box-shadow var(--t-ui) var(--ease-out);
+}
+.ghost-btn:active,
+.icon-btn:active,
+button:active,
+[role="button"]:active{
+  transform:scale(.975);
+}
+.ghost-btn:disabled,
+.icon-btn:disabled,
+button:disabled{
+  transform:none;
+}
+
+/* hover 只在真有指针的设备上生效，避免触屏点一下留个粘住的状态 */
+@media (hover:hover) and (pointer:fine){
+  .ghost-btn:hover,
+  .icon-btn:hover{
+    box-shadow:var(--elv-1);
+  }
+}
+
+/* 焦点环：键盘用户能看见自己在哪 */
+:focus-visible{
+  outline:2px solid var(--brand);
+  outline-offset:2px;
+}
+
+/* ---------- 4. 数字滚动：报告总分用机械数字列，指标卡用文本插值 ---------- */
+
+/* 结构照 React Bits CountUp：一格 = 1.2em，列内 4 个数字格（-1/0/1/2 偏移），
+   外层 overflow:clip 当窗口，内层靠 translateY 滚动。
+   选择器加 `html .cu` 两层：styles.css 里的 `.ring span{line-height:1}`
+   会盖掉单元格的行高（它比特异性更高），那会让数字贴顶、滚动时上下跳动。 */
+html .cu{
+  display:inline-flex;
+  align-items:baseline;
+  font-variant-numeric:tabular-nums;
+  white-space:pre;
+}
+html .cu .cu__mark{
+  display:inline-block;
+  height:1.2em;
+  line-height:1.2em;
+}
+html .cu .cu__col{
+  display:inline-block;
+  position:relative;
+  height:1.2em;
+  line-height:1.2em;
+  overflow:clip;
+  vertical-align:top;
+}
+html .cu .cu__strip{
+  display:flex;
+  flex-direction:column;
+  will-change:transform;
+}
+html .cu .cu__cell{
+  display:block;
+  height:1.2em;
+  line-height:1.2em;
+  text-align:center;
+}
+html .cu.is-settled .cu__strip{ will-change:auto; }
+
+/* ---------- 4b. 结论句模糊渐入（BlurText 的 blur 档） ---------- */
+
+/* 关键帧就是模板 blur 效果的三帧：10px/0/50px → 5px/.5/-5px → 0/1/0，
+   这一档模板用的就是 linear（不是缓动），所以这里也写 linear。 */
+@keyframes bt-in{
+  0%{ filter:blur(10px); opacity:0; transform:translate3d(0,50px,0); }
+  50%{ filter:blur(5px); opacity:.5; transform:translate3d(0,-5px,0); }
+  100%{ filter:blur(0); opacity:1; transform:none; }
+}
+html.js .bt-piece{
+  display:inline-block;
+  animation:bt-in 700ms linear both;
+  animation-delay:calc(var(--i, 0) * var(--bt-stagger, 200ms));
+  will-change:transform, filter, opacity;
+}
+html.js .is-bt-settled .bt-piece{ will-change:auto; }
+
+/* ---------- 5. 内容落位时的呼吸：新内容淡入，不闪 ---------- */
+
+@keyframes mv-enter{
+  from{ opacity:0; transform:translateY(8px); }
+  to{ opacity:1; transform:none; }
+}
+.mv-enter{
+  animation:mv-enter 420ms var(--ease-out) both;
+}
+
+/* ---------- 6. 加载与空态：不要空白，给形状 ---------- */
+
+@keyframes mv-shimmer{
+  from{ background-position:-160% 0; }
+  to{ background-position:260% 0; }
+}
+.skeleton{
+  border-radius:var(--r-xs);
+  background:
+    linear-gradient(100deg,
+      rgba(148,163,184,.14) 20%,
+      rgba(148,163,184,.26) 40%,
+      rgba(148,163,184,.14) 60%);
+  background-size:200% 100%;
+  animation:mv-shimmer 1.35s linear infinite;
+  color:transparent;
+  user-select:none;
+}
+
+/* ---------- 7. 一律退掉：减少动效 / 打印 ---------- */
+
+@media (prefers-reduced-motion: reduce){
+  html.js [data-reveal],
+  html.js [data-reveal][data-stagger] > *,
+  html.js [data-lines].is-split .line > span{
+    opacity:1 !important;
+    transform:none !important;
+    transition:none !important;
+  }
+  /* 减少动效：数字列直接落终值（countup.js 在这种情况下根本不会建列），
+     模糊渐入整体退掉，文字始终可见 */
+  html .cu .cu__strip{ transition:none; }
+  html.js .bt-piece{
+    animation:none;
+    filter:none;
+    transform:none;
+    opacity:1;
+  }
+  .ghost-btn, .icon-btn, button, [role="button"], .btn{
+    transition:none;
+  }
+  .ghost-btn:active, .icon-btn:active, button:active, [role="button"]:active{
+    transform:none;
+  }
+  .skeleton{ animation:none; }
+  .mv-enter{ animation:none; }
+}
+
+@media print{
+  html.js [data-reveal],
+  html.js [data-reveal][data-stagger] > *{
+    opacity:1 !important;
+    transform:none !important;
+  }
+  .skeleton{ animation:none; }
+}

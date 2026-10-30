@@ -16,6 +16,7 @@
 const http = require('http');
 const fs = require('fs');
 const path = require('path');
+const crypto = require('crypto');
 
 /* ---------------- 极简 .env 加载（不装 dotenv） ---------------- */
 function loadEnv(file) {
@@ -43,6 +44,7 @@ loadEnv(path.join(__dirname, '.env'));
 const engine = require('./lib/engine');
 const transcribe = require('./lib/transcribe');
 const exporter = require('./lib/export');
+const quota = require('./lib/quota');
 
 const PORT = Number(process.env.PORT) || 3000;
 const PUBLIC_DIR = path.join(__dirname, 'public');
@@ -56,6 +58,37 @@ const TRANSCRIPT_MAX_CHARS = Number(process.env.TRANSCRIPT_MAX_CHARS) || 20000; 
 
 // 开放端点：不校验 sharecode（只读、无 LLM 成本）
 const OPEN_ENDPOINTS = new Set(['/api/health', '/api/drill/skills']);
+
+/* 会真正请求大模型（也就是真正产生费用）的端点。
+   每日配额只对这批端点计数 —— 导出、iFIAS 矩阵等纯计算接口不花钱，不该占额度。
+   ⚠️ 维护约定：今后新增任何「在 lib/engine.js 里调 ai.chat()」的接口，必须加进这个集合，
+      否则该接口将不受配额约束，成为绕过限额的缺口。 */
+const LLM_ENDPOINTS = new Set([
+  '/api/analyze',
+  '/api/improve',
+  '/api/student/chat',
+  '/api/question-drill/student',
+  '/api/question-drill/evaluate',
+  '/api/crisis/start',
+  '/api/crisis/respond',
+  '/api/classroom/round',
+  '/api/classroom/call-on',
+  '/api/danger',
+  '/api/drill',
+  '/api/curriculum',
+  '/api/lesson-plan',
+  '/api/panorama',
+  '/api/compare',
+  '/api/codex',
+  '/api/hollow',
+  '/api/heatmap',
+  '/api/blackboard',
+  '/api/transcribe',
+  // 2026-10-30 补：ifias 在 lib/ifias.js:596 调 llmCode() → ai.chat()，是真实计费调用，
+  // 此前漏登记，任何人反复打 /api/ifias 都能绕过每日额度而不计数。
+  // /api/ifias-batch 纯本地计算（batchTrajectory 内 0 处 ai.*），故不入白名单。
+  '/api/ifias',
+]);
 
 // sharecode 读取：查询参数或自定义请求头（前端 post/上传走头，导出表单走查询）
 function getShareCode(req, url) {
@@ -213,6 +246,30 @@ function readJsonBody(req, limitBytes) {
   });
 }
 
+/* ---------------- 密钥安全：错误脱敏 + 统一出口 ---------------- */
+// 所有要写进日志或回给客户端的文本，先过一遍脱敏。
+// 理由：上游报错有时会把 Authorization 头或密钥片段回显出来，一旦进日志/进响应就等于二次泄露。
+const SECRET_PATTERNS = [
+  /sk-[A-Za-z0-9_-]{8,}/g,                          // OpenAI / DeepSeek 风格
+  /Bearer\s+[A-Za-z0-9._-]{8,}/gi,                  // 带 Bearer 前缀的
+  /eyJ[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}/g,     // JWT（云端 anon key 等）
+  /(AI_API_KEY|DEEPSEEK_API_KEY|CODEX_API_KEY)\s*[:=]\s*\S+/gi,
+];
+function redact(v) {
+  let s = String(v == null ? '' : v);
+  for (const re of SECRET_PATTERNS) s = s.replace(re, '[REDACTED]');
+  return s;
+}
+
+// 统一 5xx 出口：对外只说一句话 + traceId，细节与堆栈只进服务端日志。
+// 这样做既避免把上游报错/内部路径泄露给攻击者，又保留可追查性。
+function serverError(res, scope, err) {
+  const traceId = Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 8);
+  console.error('[' + scope + '] trace=' + traceId, redact(err && err.stack ? err.stack : err));
+  if (res.headersSent) return;
+  sendJson(res, 500, { ok: false, error: '服务暂时不可用，请稍后重试', traceId });
+}
+
 async function handleUpload(req, res) {
   const ct = String(req.headers['content-type'] || '');
   const bm = ct.match(/boundary=(?:"([^"]+)"|([^;]+))/);
@@ -256,7 +313,7 @@ async function handleUpload(req, res) {
       reason: (result && (result.reason || result.error)) || '转写环境不可用',
     });
   } catch (e) {
-    return sendJson(res, 500, { ok: false, error: e.message || '处理上传失败' });
+    return serverError(res, 'upload', e);
   } finally {
     if (filePath) fs.promises.unlink(filePath).catch(() => {});
   }
@@ -287,7 +344,7 @@ async function handleBlackboard(req, res, bodyMeta) {
     const data = await engine.blackboard({ imagePath: filePath, subject: meta.subject, grade: meta.grade });
     return sendJson(res, 200, { ok: true, data });
   } catch (e) {
-    return sendJson(res, 500, { ok: false, error: e.message || '板书评分失败' });
+    return serverError(res, 'blackboard', e);
   } finally {
     if (filePath) fs.promises.unlink(filePath).catch(() => {});
   }
@@ -295,8 +352,24 @@ async function handleBlackboard(req, res, bodyMeta) {
 
 /* ---------------- 静态文件 ---------------- */
 async function serveStatic(req, res, pathname) {
-  let rel = decodeURIComponent(pathname);
+  let rel;
+  try {
+    rel = decodeURIComponent(pathname);
+  } catch (e) {
+    // 畸形百分号编码：规范上属客户端错误，不该落到 500
+    return sendJson(res, 400, { ok: false, error: '请求路径不合法' });
+  }
   if (rel === '/' || rel === '') rel = '/index.html';
+
+  // 纵深防御：以下路径在静态目录里本来就不存在，也不允许存在。
+  // 即便将来有人误把 .env / .bak / 备份文件放进 public/，这里会先一步挡住。
+  if (
+    /(^|\/)\./.test(rel) ||
+    /\.env(\.|$)/i.test(rel) ||
+    /\.(bak|log|pem|key|sql|zip|tar|gz)(\.|$)/i.test(rel)
+  ) {
+    return sendJson(res, 404, { ok: false, error: '页面不存在' });
+  }
 
   // 防目录穿越：规范化后必须仍位于 PUBLIC_DIR 内（覆盖 Windows 大小写/符号链接/.. 等）
   const resolved = path.resolve(PUBLIC_DIR, rel.replace(/^\/+/, ''));
@@ -341,6 +414,20 @@ async function handleApi(req, res, pathname) {
     return sendJson(res, 403, { ok: false, error: '缺少或错误的 sharecode' });
   }
 
+  // 每日模型调用配额：把「密钥若被滥用」的损失钉死在可控上限内。
+  // 放在 sharecode 之后、进业务之前 —— 被拒绝的请求不消耗并发闸，也不产生任何费用。
+  if (LLM_ENDPOINTS.has(pathname)) {
+    const q = quota.status();
+    if (q.limit > 0 && q.left <= 0) {
+      return sendJson(res, 429, {
+        ok: false,
+        error: '今日 AI 体验额度已用完，明天自动恢复；本地规则引擎功能不受影响。',
+        quota: q,
+      });
+    }
+    quota.consume();
+  }
+
   const needsHeavy = !OPEN_ENDPOINTS.has(pathname);
   if (needsHeavy) await acquireHeavy();
   // 外层 try/finally：保证 releaseHeavy() 在任何路径（早退 return、异常抛出）下都被调用。
@@ -348,12 +435,18 @@ async function handleApi(req, res, pathname) {
   try {
     if (req.method === 'GET' && pathname === '/api/health') {
     const mode = engine.mode();
+    // 只暴露「有没有接真实模型」这一条必要信息。
+    // 不下发 baseUrl：那等于把上游供应商与接口地址直接告诉攻击者，便于针对性刷额度。
     return sendJson(res, 200, {
       ok: true,
-      ...mode,
+      aiMode: mode.aiMode,
+      model: mode.model,
+      hasKey: !!mode.hasKey,
       tip: mode.hasKey
         ? `已接入真实大模型（${mode.model}）`
         : '未检测到 API Key，当前使用本地规则引擎（演示模式，仍会给出基于真实计算的报告）',
+      // 今日用量：用于自查是否被异常刷量（正常路演一天远低于上限）
+      quota: quota.status(),
     });
   }
 
@@ -383,7 +476,7 @@ async function handleApi(req, res, pathname) {
   try {
     body = await readJsonBody(req);
   } catch (e) {
-    return sendJson(res, 400, { ok: false, error: e.message });
+    return sendJson(res, 400, { ok: false, error: redact(e.message) || '请求格式有误' });
   }
 
   // 讲稿长度上限：遏制 LLM 成本与异常输入
@@ -428,6 +521,25 @@ async function handleApi(req, res, pathname) {
         topic: body.topic,
         transcript: body.transcript,
         profile: body.profile, // 新增可选字段：学情快照；缺失时行为与改造前完全一致
+      });
+      return sendJson(res, 200, { ok: true, data });
+    }
+
+    if (pathname === '/api/question-drill/student') {
+      const data = await engine.questionDrillStudent({
+        messages: body.messages,
+        topic: body.topic,
+        quote: body.quote,
+        misconceptionKey: body.misconceptionKey,
+      });
+      return sendJson(res, 200, { ok: true, data });
+    }
+
+    if (pathname === '/api/question-drill/evaluate') {
+      const data = await engine.questionDrillEvaluate({
+        goal: body.goal,
+        quote: body.quote,
+        messages: body.messages,
       });
       return sendJson(res, 200, { ok: true, data });
     }
@@ -486,6 +598,23 @@ async function handleApi(req, res, pathname) {
         pressure: body.pressure,
         history: body.history,
         profile: body.profile, // 新增可选字段：学情快照；缺失时行为与改造前完全一致
+      });
+      return sendJson(res, 200, { ok: true, data });
+    }
+
+    // ---- 课堂点名（点谁谁答）：与 round 分开计费、分开降级 ----
+    if (pathname === '/api/classroom/call-on') {
+      if (!body.key || !String(body.key).trim()) {
+        return sendJson(res, 400, { ok: false, error: '缺少 key 字段（要点哪一位学生）' });
+      }
+      const data = await engine.classroomCallOn({
+        key: String(body.key).trim(),
+        topic: body.topic,
+        transcript: body.transcript,
+        callInstruction: body.callInstruction,
+        pressure: body.pressure,
+        history: body.history,
+        profile: body.profile,
       });
       return sendJson(res, 200, { ok: true, data });
     }
@@ -599,21 +728,30 @@ async function handleApi(req, res, pathname) {
       return sendJson(res, 200, { ok: true, data });
     }
 
+    // ---- Codex 教学教练助手（形态 B：先用 DeepSeek 兜底，配了 CODEX_* 走 Codex） ----
+    if (pathname === '/api/codex') {
+      const data = await engine.codex({
+        prompt: body.prompt,
+        context: body.context,
+        history: body.history,
+      });
+      return sendJson(res, 200, { ok: true, data });
+    }
+
     return sendJson(res, 404, { ok: false, error: '接口不存在' });
   } catch (e) {
-    console.error('[api error]', pathname, e);
-    // 响应已发出时不能再写头，否则抛 ERR_HTTP_HEADERS_SENT
-    if (!res.headersSent) {
-      return sendJson(res, 500, { ok: false, error: e.message || '服务器内部错误' });
+    // 业务校验错误（用户能自己修的，如"讲稿太短""请先选原句"）：
+    // 回 400 并带上原始文案 —— 这类提示必须让用户看到，否则他无从下手。
+    // 判据是错误对象上的 expose 标记（默认不暴露），不是去猜 message 内容。
+    if (e && e.expose === true) {
+      return sendJson(res, e.status || 400, { ok: false, error: redact(e.message) });
     }
-    return;
+    // 统一出口：对外匿名化，堆栈与上游报错只进服务端日志
+    return serverError(res, pathname, e);
   }
   } catch (e) {
     // 外层兜底：早退路径（上传 / 读体 / 未捕获异常）出错时也要给出响应
-    console.error('[api error]', pathname, e);
-    if (!res.headersSent) {
-      sendJson(res, 500, { ok: false, error: e.message || '服务器内部错误' });
-    }
+    serverError(res, pathname, e);
   } finally {
     // 并发闸门释放：必须在此层，任何路径都会执行
     if (needsHeavy) releaseHeavy();
@@ -641,10 +779,52 @@ const server = http.createServer(async (req, res) => {
       await serveStatic(req, res, pathname);
     }
   } catch (e) {
-    console.error('[server error]', e);
-    if (!res.headersSent) sendJson(res, 500, { ok: false, error: String(e.message || e) });
+    serverError(res, 'server', e);
   }
 });
+
+/* ---------------- 启动自检：静态目录不得出现密钥明文 ---------------- */
+// public/ 下的文件会被原样下发给浏览器，密钥一旦混进去就等于对全网公开。
+// 因此在进程启动时扫一遍，命中即拒绝启动 —— 宁可服务起不来，也不要带着明文密钥上线。
+function auditPublicForSecrets(dir) {
+  const hits = [];
+  const walk = (d) => {
+    let entries = [];
+    try { entries = fs.readdirSync(d, { withFileTypes: true }); } catch (e) { return; }
+    for (const ent of entries) {
+      const p = path.join(d, ent.name);
+      if (ent.isDirectory()) { walk(p); continue; }
+      if (!/\.(html?|js|mjs|cjs|css|json|txt|md|svg|map)$/i.test(ent.name)) continue;
+      let text = '';
+      try { text = fs.readFileSync(p, 'utf8'); } catch (e) { continue; }
+      // 只匹配真实密钥形态（sk-xxx）。此处刻意不写 service_role 之类的字面量：
+      // 一是真实的高权限 key 一定以 JWT（eyJ...）形态出现，已被提交前钩子覆盖；
+      // 二是把该字面量写进源码，反而会让提交前检查把本文件误判为泄露。
+      if (/sk-[A-Za-z0-9]{20,}/.test(text)) {
+        hits.push(path.relative(__dirname, p));
+      }
+    }
+  };
+  walk(dir);
+  return hits;
+}
+
+const leakedInPublic = auditPublicForSecrets(PUBLIC_DIR);
+if (leakedInPublic.length) {
+  console.error('');
+  console.error('  [SECURITY] 静态目录（会原样下发给浏览器）中检测到疑似密钥明文：');
+  leakedInPublic.forEach((p) => console.error('    - ' + p));
+  console.error('  已拒绝启动。密钥绝不能出现在 public/ 下 —— 请删除该文件，并立即轮换密钥。');
+  console.error('');
+  process.exit(1);
+}
+
+/* 密钥指纹：只打印不可逆哈希前 8 位，用于核对「线上跑的是哪把 key」。
+   轮换后指纹必然变化 —— 这比打印末四位更安全，因为无法从指纹反推任何字符。 */
+function keyFingerprint(k) {
+  if (!k) return '未配置（演示模式）';
+  return crypto.createHash('sha256').update(String(k)).digest('hex').slice(0, 8);
+}
 
 // 绑定 0.0.0.0：本地可用 localhost 访问，云端部署时也能被外部正确访问
 server.listen(PORT, '0.0.0.0', () => {
@@ -654,6 +834,7 @@ server.listen(PORT, '0.0.0.0', () => {
   console.log('');
   console.log(`  本地访问：  http://localhost:${PORT}`);
   console.log(`  AI 模式：   ${mode.hasKey ? '● 真实大模型（' + mode.model + '）' : '○ 演示模式（本地规则引擎）'}`);
+  console.log(`  密钥指纹：  ${keyFingerprint(process.env.AI_API_KEY)}`);
   if (!mode.hasKey) {
     console.log('             提示：复制 .env.example 为 .env 并填入 AI_API_KEY，即可切换为真实模型');
   }

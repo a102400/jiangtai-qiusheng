@@ -7,6 +7,7 @@
  */
 
 const ai = require('./deepseek');
+const { withFallback } = require('./fallback-reason');
 
 /* ---------------- 精简课标库 ----------------
  * 表述依据义务教育课程课程标准（2022 年版）的核心条目做教学化转写，
@@ -148,6 +149,8 @@ async function curriculumCheck(input = {}) {
   const subjectKey = input.subjectKey || 'generic';
   const matched = matchStandards(subjectKey, input.subject, transcript);
 
+  // 捕获真实错误：模型失败时据此判定降级原因（不许笼统报成一种）
+  let modelError = null;
   if (ai.hasKey()) {
     try {
       console.log('[curriculum] 调用大模型做课标对照…');
@@ -169,28 +172,33 @@ async function curriculumCheck(input = {}) {
       if (json && Array.isArray(json.standards)) {
         const byCode = {};
         json.standards.forEach((s) => { byCode[String(s.code || '')] = s; });
-        return {
-          label: matched.label,
-          standards: matched.standards.map((s) => {
-            const r = byCode[s.code] || {};
-            return {
-              code: s.code,
-              desc: s.desc,
-              dim: s.dim,
-              achieved: ['达成', '部分达成', '未达成'].indexOf(r.achieved) !== -1 ? r.achieved : '未达成',
-              evidence: String(r.evidence || '（AI 未给出判定依据）').slice(0, 60),
-            };
-          }),
-          summary: String(json.summary || '').slice(0, 80),
-          engine: 'llm',
-        };
+        return withFallback(
+          {
+            label: matched.label,
+            standards: matched.standards.map((s) => {
+              const r = byCode[s.code] || {};
+              return {
+                code: s.code,
+                desc: s.desc,
+                dim: s.dim,
+                achieved: ['达成', '部分达成', '未达成'].indexOf(r.achieved) !== -1 ? r.achieved : '未达成',
+                evidence: String(r.evidence || '（AI 未给出判定依据）').slice(0, 60),
+              };
+            }),
+            summary: String(json.summary || '').slice(0, 80),
+            engine: 'llm',
+          },
+          null,
+          true
+        );
       }
       throw new Error('模型未返回合法 JSON');
     } catch (e) {
+      modelError = e;
       console.warn('[curriculum] 降级本地规则 ->', e && e.message ? e.message : e);
     }
   }
-  return ruleCheck(matched.standards, transcript);
+  return withFallback(ruleCheck(matched.standards, transcript), modelError, ai.hasKey());
 }
 
 module.exports = { curriculumCheck, CURRICULUM, matchStandards };

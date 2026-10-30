@@ -7,6 +7,7 @@
  */
 
 const ai = require('./deepseek');
+const { withFallback } = require('./fallback-reason');
 
 function hollowPrompt(text) {
   return `你是一位带过很多届师范生的资深教研员，也是个很会安慰人的前辈。一位实习老师刚在试讲里翻车，来树洞倾诉。
@@ -79,6 +80,8 @@ async function hollowComfort(input = {}) {
   if (text.length < 6) throw new Error('再多说两句吧，树洞在听');
   if (text.length > 800) throw new Error('太长了，先说最扎心的那一段就好');
 
+  // 捕获真实错误：模型失败时据此判定降级原因（不许笼统报成一种）
+  let modelError = null;
   if (ai.hasKey()) {
     try {
       console.log('[hollow] 调用大模型写回信…');
@@ -87,13 +90,14 @@ async function hollowComfort(input = {}) {
         maxTokens: 500,
       });
       const reply = String(raw || '').replace(/```/g, '').trim();
-      if (reply.length >= 40) return { reply, engine: 'llm' };
+      if (reply.length >= 40) return withFallback({ reply, engine: 'llm' }, null, true);
       throw new Error('回复过短');
     } catch (e) {
+      modelError = e;
       console.warn('[hollow] 降级本地规则 ->', e && e.message ? e.message : e);
     }
   }
-  return { reply: ruleReply(text), engine: 'rule' };
+  return withFallback({ reply: ruleReply(text), engine: 'rule' }, modelError, ai.hasKey());
 }
 
 module.exports = { hollowComfort };

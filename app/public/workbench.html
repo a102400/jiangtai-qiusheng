@@ -1,0 +1,1284 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>微格教学训练工作台 · 讲台求生</title>
+<meta name="description" content="把一次试讲拆成定标、备课、试讲、复盘四步。每一步留下可核对的证据：目标条目、预设提问、AI 学生互动、量规与前后对照。">
+<script>document.documentElement.classList.add('js');</script>
+<style>
+/* ═══════════════════════════════════════════
+   Tokens —— 一份调色板，六个字号，别无其它
+   ═══════════════════════════════════════════ */
+:root{
+  --ground:#F3F7F5;
+  --surface:#FFFFFF;
+  --surface-2:#FAFCFB;
+  --ink:#1C2925;
+  --muted:#53615B;
+  --faint:#5C6B65;
+  --brand:#197A63;
+  --coral:#C85D49;
+  --amber:#8F5E12;
+  --line:#D9E4DE;
+  --line-soft:#E7EFEA;
+
+  --brand-soft:#E4F0EB;
+  --coral-soft:#FAE9E5;
+  --amber-soft:#F7EEDC;
+
+  --deep:#16211D;
+  --deep-ink:#F3F7F5;
+  --deep-muted:#A8BAB2;
+  --deep-line:#2F3B35;
+
+  --r-card:14px;
+  --r-panel:18px;
+  --r-ctrl:10px;
+  --r-chip:6px;
+
+  --pad:clamp(20px,4vw,56px);
+  --gap:16px;
+
+  --font:"PingFang SC","HarmonyOS Sans SC","Source Han Sans SC","Noto Sans CJK SC","Microsoft YaHei",system-ui,-apple-system,sans-serif;
+
+  --fs-xs:13px;
+  --fs-body:16px;
+  --fs-h3:18px;
+  --fs-num:24px;
+  --fs-h2:32px;
+  --fs-h1:40px;
+
+  --ease-out:cubic-bezier(.16,.84,.44,1);
+  --ease-spring:cubic-bezier(.22,1.4,.36,1);
+
+  --noise:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.82' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)' opacity='.038'/%3E%3C/svg%3E");
+}
+
+*,*::before,*::after{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%;scrollbar-gutter:stable}
+body{
+  margin:0;
+  background-color:var(--ground);
+  background-image:var(--noise);
+  background-repeat:repeat;
+  background-attachment:fixed;
+  color:var(--ink);
+  font-family:var(--font);
+  font-size:var(--fs-body);
+  line-height:1.65;
+  -webkit-font-smoothing:antialiased;
+}
+h1,h2,h3,h4,p,figure,blockquote,ol,ul,dl,dd{margin:0}
+ol,ul{padding:0;list-style:none}
+img{max-width:100%;display:block}
+button{font:inherit;color:inherit;cursor:pointer}
+a{color:inherit}
+.num{font-variant-numeric:tabular-nums}
+
+:focus-visible{outline:2px solid var(--brand);outline-offset:3px;border-radius:4px}
+::selection{background:var(--brand-soft);color:var(--ink)}
+
+/* ── 顶栏 ── */
+.topbar{
+  position:sticky;top:0;z-index:50;
+  padding:0 var(--pad);
+  background:rgba(255,255,255,.86);
+  backdrop-filter:saturate(1.05) blur(10px);
+  transition:box-shadow .25s var(--ease-out);
+}
+@supports not (backdrop-filter:blur(10px)){.topbar{background:#fff}}
+.topbar.stuck{box-shadow:0 1px 0 rgba(28,41,37,.07)}
+.topbar-in{
+  max-width:1280px;margin:0 auto;
+  height:62px;display:flex;align-items:center;gap:24px;
+}
+.brand{display:flex;align-items:center;gap:11px;text-decoration:none;flex-shrink:0}
+.mark{
+  width:28px;height:28px;border-radius:7px;
+  background:var(--brand);color:#fff;
+  display:grid;place-items:center;
+  font-size:14px;font-weight:600;letter-spacing:.02em;
+  flex-shrink:0;
+}
+.brand-txt b{display:block;font-size:15px;font-weight:600;line-height:1.2;letter-spacing:.01em}
+.brand-txt span{display:block;font-size:var(--fs-xs);color:var(--muted);line-height:1.3;margin-top:1px}
+.nav{display:flex;gap:2px;margin-left:auto;align-items:center}
+.nav a{
+  padding:6px 11px;border-radius:var(--r-ctrl);
+  font-size:13px;color:var(--muted);text-decoration:none;
+  transition:color .18s var(--ease-out),background .18s var(--ease-out);
+}
+.nav a:hover{color:var(--ink);background:var(--brand-soft)}
+.nav a.btn,.nav a.btn:hover{color:#fff;background:var(--brand)}
+.nav a.btn:hover{background:#146853}
+
+/* ── 按钮 ── */
+.btn{
+  display:inline-flex;align-items:center;justify-content:center;gap:7px;
+  height:42px;padding:0 20px;border-radius:var(--r-ctrl);
+  border:1px solid transparent;background:var(--ink);color:#fff;
+  font-size:14px;font-weight:500;letter-spacing:.01em;
+  text-decoration:none;white-space:nowrap;
+  transition:transform .16s var(--ease-out),background .18s var(--ease-out),border-color .18s var(--ease-out);
+}
+.btn:hover{background:#0F1A16}
+.btn:active{transform:scale(.975)}
+.btn-sm{height:33px;padding:0 13px;font-size:13px}
+.btn-ghost{background:transparent;color:var(--ink);border-color:#C9D8D2}
+.btn-ghost:hover{background:var(--brand-soft);border-color:#AFCCC1}
+.btn-brand{background:var(--brand);color:#fff}
+.btn-brand:hover{background:#146853}
+.btn-onDark{background:var(--deep-ink);color:var(--deep)}
+.btn-onDark:hover{background:#fff}
+
+/* ── 布局 ── */
+.wrap{max-width:1280px;margin:0 auto;padding:0 var(--pad)}
+
+/* ── 首屏 ── */
+.hero{
+  position:relative;overflow:hidden;
+  padding:clamp(36px,4.4vw,56px) 0 clamp(28px,3.2vw,40px);
+}
+.hero::before{
+  content:"";position:absolute;inset:-40% -10% auto -10%;height:160%;
+  background:
+    radial-gradient(38% 46% at 12% 6%,rgba(25,122,99,.085),transparent 70%),
+    radial-gradient(30% 40% at 84% 20%,rgba(200,93,73,.055),transparent 72%),
+    radial-gradient(34% 44% at 56% -4%,rgba(166,107,22,.04),transparent 74%);
+  pointer-events:none;
+}
+.hero-in{position:relative;display:grid;grid-template-columns:1.08fr .92fr;gap:clamp(28px,4.4vw,64px);align-items:start}
+.hero h1{
+  font-size:var(--fs-h1);font-weight:600;line-height:1.16;letter-spacing:-.022em;
+  margin-bottom:18px;
+}
+.hero-sub{
+  font-size:var(--fs-body);color:var(--ink);
+  max-width:30em;line-height:1.75;margin-bottom:26px;
+}
+.hero-actions{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.hero-note{
+  margin-top:24px;font-size:var(--fs-xs);color:var(--faint);
+  display:flex;gap:16px;flex-wrap:wrap;
+}
+.hero-note span{display:flex;align-items:center;gap:6px}
+.dot{width:4px;height:4px;border-radius:50%;background:var(--brand);flex-shrink:0}
+
+/* ── 界面片段 ── */
+.ui{
+  background:var(--surface);
+  border:1px solid var(--line);
+  border-radius:var(--r-panel);
+  padding:18px;
+}
+.ui-title{font-size:var(--fs-h3);font-weight:600;line-height:1.4;letter-spacing:-.01em}
+.ui-meta{font-size:var(--fs-xs);color:var(--muted);line-height:1.5}
+.ui-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:14px}
+.ui-k{font-size:var(--fs-xs);color:var(--faint);margin-bottom:3px}
+.ui-v{font-size:var(--fs-body);font-weight:500;line-height:1.45;letter-spacing:-.005em}
+
+.pill{
+  display:inline-flex;align-items:center;gap:5px;
+  height:21px;padding:0 7px;border-radius:var(--r-chip);
+  font-size:13px;font-weight:500;line-height:1;white-space:nowrap;
+}
+.pill-live{background:var(--brand-soft);color:#0E5A48}
+.pill-warn{background:var(--amber-soft);color:#7A4E0F}
+.pill-alert{background:var(--coral-soft);color:#8F3C2C}
+.pill-idle{background:#EDF2EF;color:var(--muted)}
+
+/* 步骤条 */
+.flowbar{display:flex;margin:14px 0 16px}
+.flowbar li{flex:1;position:relative;font-size:var(--fs-xs);color:var(--faint);padding-top:12px}
+.flowbar li::before{
+  content:"";position:absolute;top:0;left:0;right:0;height:3px;border-radius:2px;
+  background:var(--line);
+}
+.flowbar li.done::before{background:#A9CBBF}
+.flowbar li.now::before{background:var(--brand)}
+.flowbar li.now{color:var(--ink);font-weight:500}
+.flowbar li + li{padding-left:7px}
+
+.nextstep{
+  display:flex;align-items:center;justify-content:space-between;gap:12px;
+  margin-top:16px;padding-top:14px;border-top:1px solid var(--line-soft);
+  font-size:14px;
+}
+.nextstep b{font-weight:600}
+
+/* 首屏数字条 */
+.statstrip{
+  display:grid;grid-template-columns:repeat(3,1fr);
+  margin-top:12px;background:var(--surface);
+  border:1px solid var(--line);border-radius:var(--r-panel);
+  overflow:hidden;
+}
+.statstrip div{padding:14px 16px;border-right:1px solid var(--line-soft)}
+.statstrip div:last-child{border-right:0}
+.statstrip dt{font-size:var(--fs-xs);color:var(--muted);margin-bottom:4px;line-height:1.4}
+.statstrip dd{font-size:var(--fs-num);font-weight:500;line-height:1.15;letter-spacing:-.015em}
+.statstrip dd small{font-size:var(--fs-xs);font-weight:400;color:var(--muted);margin-left:3px}
+
+/* ── section ── */
+.sec{padding:clamp(48px,5.4vw,84px) 0}
+.sec-head{max-width:42em;margin-bottom:clamp(28px,3.4vw,44px)}
+.sec-head h2{
+  font-size:var(--fs-h2);font-weight:600;line-height:1.28;letter-spacing:-.018em;
+  margin-bottom:14px;
+}
+.sec-head p{color:var(--ink);font-size:var(--fs-body);line-height:1.75;max-width:60ch}
+
+/* ── 对照 ── */
+.compare{display:grid;grid-template-columns:1fr 1fr;gap:clamp(20px,3vw,40px)}
+.compare-col h3{font-size:var(--fs-h3);font-weight:600;margin-bottom:5px}
+.compare-col > p{font-size:14px;color:var(--muted);margin-bottom:16px;line-height:1.6}
+.tabs-old{display:grid;grid-template-columns:repeat(2,1fr);gap:9px}
+.tabs-old li{
+  height:46px;border:1px solid var(--line);border-radius:var(--r-ctrl);
+  display:grid;place-items:center;font-size:var(--fs-xs);color:var(--faint);
+  background:var(--surface);
+}
+.flow-new li{
+  display:grid;grid-template-columns:10px 1fr;gap:12px;align-items:center;
+  padding:11px 0;
+}
+.flow-new li:not(:last-child){border-bottom:1px solid var(--line-soft)}
+.flow-new .bar{width:3px;height:15px;border-radius:2px;background:#C9D8D2}
+.flow-new li:first-child .bar{background:var(--brand)}
+.flow-new b{font-size:14px;font-weight:600;margin-right:10px}
+.flow-new .sub{font-size:14px;color:var(--muted)}
+
+/* ── 四步产出 ── */
+.steps-panel{
+  background:var(--surface);border:1px solid var(--line);
+  border-radius:var(--r-panel);overflow:hidden;
+}
+.step-row{
+  display:grid;grid-template-columns:150px 1fr 210px;gap:clamp(16px,2.6vw,32px);
+  padding:clamp(18px,2.2vw,26px) clamp(18px,2.4vw,28px);
+  align-items:start;
+}
+.step-row:not(:last-child){border-bottom:1px solid var(--line-soft)}
+.step-row h3{font-size:var(--fs-h3);font-weight:600;display:flex;align-items:center;gap:8px}
+.step-row h3 i{width:5px;height:5px;border-radius:50%;background:var(--brand);flex-shrink:0}
+.step-row p{font-size:var(--fs-body);color:var(--ink);line-height:1.7}
+.step-out{font-size:13px;color:var(--faint);line-height:1.6}
+.step-out b{display:block;color:var(--ink);font-size:13px;font-weight:600;margin-bottom:3px}
+
+/* ═══════════════════════════════════════════
+   试讲室 —— 全页唯一有"材质"的地方
+   ═══════════════════════════════════════════ */
+.room{
+  background-color:var(--deep);
+  background-image:var(--noise);
+  color:var(--deep-ink);
+  padding:clamp(56px,6.4vw,96px) 0;
+  position:relative;overflow:hidden;
+}
+.room::before{
+  content:"";position:absolute;inset:0;
+  background:
+    radial-gradient(42% 50% at 20% 16%,rgba(25,122,99,.30),transparent 72%),
+    radial-gradient(36% 46% at 78% 84%,rgba(25,122,99,.17),transparent 74%),
+    radial-gradient(30% 40% at 94% 10%,rgba(200,93,73,.11),transparent 76%);
+  pointer-events:none;
+}
+.room-in{position:relative}
+.room-head{max-width:42em;margin-bottom:clamp(28px,3.4vw,44px)}
+.room-head h2{
+  font-size:var(--fs-h2);font-weight:600;line-height:1.28;letter-spacing:-.018em;
+  margin-bottom:14px;
+}
+.room-head p{color:var(--deep-muted);font-size:var(--fs-body);line-height:1.75;max-width:60ch}
+
+/* 液态玻璃 —— 只给浮层，不给静止卡片 */
+.glass{
+  background:rgba(243,247,245,.062);
+  border:1px solid var(--deep-line);
+  border-radius:var(--r-panel);
+  backdrop-filter:blur(18px) saturate(1.35);
+}
+@supports not (backdrop-filter:blur(18px)){
+  .glass{background:rgba(243,247,245,.075);border-color:rgba(217,228,222,.13)}
+}
+
+.room-grid{display:grid;grid-template-columns:1.08fr .92fr;gap:clamp(14px,2vw,20px)}
+.room-main{display:flex;flex-direction:column;gap:14px}
+
+/* 课堂状态 */
+.lesson-bar{display:flex;flex-wrap:wrap;overflow:hidden}
+.lesson-bar > div{
+  flex:1 1 110px;padding:15px 17px;
+  border-right:1px solid var(--deep-line);
+}
+.lesson-bar > div:last-child{border-right:0}
+.lesson-bar dt{font-size:var(--fs-xs);color:var(--deep-muted);margin-bottom:4px;line-height:1.4}
+.lesson-bar dd{font-size:var(--fs-num);font-weight:500;line-height:1.15;letter-spacing:-.015em}
+.lesson-bar dd small{font-size:var(--fs-xs);font-weight:400;color:var(--deep-muted);margin-left:4px}
+.lesson-bar .flag{color:#E8A08F}
+
+/* AI 学生：一块面板三行，不是三张一样的卡 */
+.students{display:block;overflow:hidden}
+.student{
+  display:grid;grid-template-columns:132px 1fr;
+  gap:14px;align-items:start;
+  padding:14px 17px;
+  transition:background .3s var(--ease-out);
+}
+.student + .student{border-top:1px solid var(--deep-line)}
+.student.speaking{background:rgba(25,122,99,.13)}
+.student-top{display:flex;align-items:center;gap:9px}
+.avatar{
+  width:24px;height:24px;border-radius:50%;display:grid;place-items:center;
+  font-size:var(--fs-xs);font-weight:600;flex-shrink:0;
+  background:rgba(243,247,245,.13);color:var(--deep-ink);
+  transition:background .3s var(--ease-out),color .3s var(--ease-out);
+}
+.student.speaking .avatar{background:var(--brand);color:#fff}
+.student-name{font-size:13px;font-weight:500;line-height:1.3;display:block}
+.student-role{font-size:var(--fs-xs);color:var(--deep-muted);line-height:1.3;display:block}
+.student-say{font-size:14px;line-height:1.65;color:rgba(243,247,245,.82);transition:color .3s var(--ease-out)}
+.student.speaking .student-say{color:#fff}
+.wave{display:flex;align-items:center;gap:2px;height:13px;margin-top:7px;opacity:0;transition:opacity .3s}
+.student.speaking .wave{opacity:1}
+.wave i{width:2px;border-radius:1px;background:#67C4A5;height:5px;animation:breathe 1.05s ease-in-out infinite}
+.wave i:nth-child(2){animation-delay:.14s}
+.wave i:nth-child(3){animation-delay:.28s}
+.wave i:nth-child(4){animation-delay:.42s}
+.wave i:nth-child(5){animation-delay:.56s}
+@keyframes breathe{0%,100%{height:4px;opacity:.6}50%{height:12px;opacity:1}}
+
+/* 教师回应 */
+.teacher{padding:16px 18px;display:flex;flex-direction:column}
+.teacher-label{
+  font-size:var(--fs-xs);color:var(--deep-muted);margin-bottom:10px;
+  display:flex;align-items:center;justify-content:space-between;gap:12px;
+}
+.teacher-say{font-size:var(--fs-body);line-height:1.7;color:var(--deep-ink);flex:1}
+.teacher-say .tail{color:rgba(243,247,245,.45)}
+
+/* 候答计时器 —— 页面上唯一能动手的东西 */
+.wait{
+  margin-top:14px;padding-top:14px;
+  border-top:1px solid var(--deep-line);
+  display:flex;align-items:center;gap:14px;flex-wrap:wrap;
+}
+.wait-read{display:flex;align-items:baseline;gap:5px}
+.wait-read b{font-size:var(--fs-num);font-weight:500;line-height:1;letter-spacing:-.02em;color:#E8A08F;transition:color .3s}
+.wait-read span{font-size:var(--fs-xs);color:var(--deep-muted)}
+.wait-read.ok b{color:#67C4A5}
+.wait-hint{font-size:13px;color:var(--deep-muted);line-height:1.5;flex:1;min-width:150px}
+.wait .btn{flex-shrink:0}
+
+.room-side{display:flex;flex-direction:column;gap:14px;align-content:start}
+.hint{padding:16px 18px;display:flex;flex-direction:column}
+.hint h3{font-size:14px;font-weight:600;margin-bottom:10px;color:var(--deep-ink)}
+.hint ol{display:grid;gap:8px;align-content:start}
+.hint li{font-size:13px;line-height:1.6;color:rgba(243,247,245,.76);padding-left:13px;position:relative}
+.hint li::before{
+  content:"";position:absolute;left:0;top:.62em;width:4px;height:4px;border-radius:50%;
+  background:#67C4A5;
+}
+
+/* ── 复盘 ── */
+.review-grid{display:grid;grid-template-columns:1.12fr .88fr;gap:clamp(20px,2.8vw,32px)}
+
+table.rubric{width:100%;border-collapse:collapse;font-size:14px}
+table.rubric caption{text-align:left;font-size:var(--fs-h3);font-weight:600;padding-bottom:12px}
+table.rubric th{
+  text-align:left;font-weight:500;font-size:var(--fs-xs);color:var(--muted);
+  padding:0 0 9px;border-bottom:1px solid var(--line);
+}
+table.rubric th.num,table.rubric td.num{text-align:right}
+table.rubric td{padding:10px 0;border-bottom:1px solid var(--line-soft);vertical-align:top;line-height:1.55}
+table.rubric td:first-child{font-weight:500;padding-right:14px}
+table.rubric td.dim{color:var(--muted);font-size:13px;padding-right:14px}
+table.rubric tr:last-child td{border-bottom:0}
+.score{font-size:var(--fs-h3);font-weight:600}
+.score.low{color:var(--coral)}
+.score.mid{color:var(--amber)}
+.score.ok{color:var(--brand)}
+.rubric-foot{
+  display:flex;justify-content:space-between;align-items:baseline;gap:12px;
+  margin-top:14px;padding-top:13px;border-top:1px solid var(--line);font-size:14px;
+}
+.rubric-foot b{font-size:var(--fs-num);font-weight:600;letter-spacing:-.01em}
+
+.delta-panel{
+  background:var(--surface);border:1px solid var(--line);
+  border-radius:var(--r-card);padding:18px;
+  display:flex;flex-direction:column;height:100%;
+}
+.delta-panel h3{font-size:var(--fs-h3);font-weight:600;margin-bottom:14px}
+.delta{display:grid;align-content:start;flex:1}
+.delta-row{
+  display:grid;grid-template-columns:1fr auto;gap:12px;align-items:baseline;
+  padding:11px 0;border-bottom:1px solid var(--line-soft);
+}
+.delta-row:last-child{border-bottom:0}
+.delta-row dt{font-size:14px;color:var(--muted)}
+.delta-row dd{font-size:14px;font-weight:500;display:flex;align-items:baseline;gap:8px;justify-content:flex-end}
+.delta-row .from{color:var(--faint);font-weight:400;text-decoration:line-through;text-decoration-thickness:1px}
+.delta-row .to{color:var(--brand);font-weight:600}
+.delta-row .flat{color:var(--amber)}
+.delta-panel .rubric-foot{margin-top:auto}
+
+/* 证据墙 —— 瀑布流 */
+.wall-head{
+  display:flex;align-items:baseline;justify-content:space-between;gap:16px;flex-wrap:wrap;
+  margin-top:clamp(32px,4vw,52px);
+}
+.wall-head h3{font-size:var(--fs-h3);font-weight:600}
+.wall{columns:3;column-gap:14px;margin-top:clamp(16px,2vw,22px)}
+.wall-card{
+  break-inside:avoid;margin-bottom:14px;
+  background:var(--surface);border:1px solid var(--line);border-radius:var(--r-card);
+  padding:16px;display:block;width:100%;text-align:left;
+  transition:transform .28s var(--ease-out),box-shadow .28s var(--ease-out),border-color .28s var(--ease-out);
+}
+.wall-card:hover{
+  transform:translateY(-3px);
+  box-shadow:0 9px 22px -12px rgba(28,41,37,.24),0 2px 5px -2px rgba(28,41,37,.07);
+  border-color:#AFCCC1;
+}
+.wall-card:active{transform:translateY(-1px)}
+.wall-k{font-size:var(--fs-xs);color:var(--faint);margin-bottom:7px;display:flex;justify-content:space-between;gap:8px}
+.wall-v{display:block;font-size:var(--fs-num);font-weight:500;letter-spacing:-.018em;line-height:1.15;margin-bottom:7px}
+.wall-v small{font-size:13px;font-weight:400;color:var(--muted);margin-left:3px}
+.wall-card p{font-size:14px;color:var(--ink);line-height:1.62}
+.wall-quote{
+  font-size:13px;line-height:1.65;color:var(--muted);
+  padding-left:11px;border-left:2px solid var(--amber-soft);margin-top:9px;
+}
+.wall-quote em{font-style:normal;background:var(--amber-soft);color:#6B4409;padding:1px 3px;border-radius:3px}
+.spark{display:flex;align-items:flex-end;gap:3px;height:32px;margin-top:10px}
+.spark i{flex:1;background:#CFE3DA;border-radius:1px 1px 0 0;min-height:3px}
+.spark i.hot{background:#7FB6A3}
+
+/* 骨架屏 */
+.skel-card{
+  margin-bottom:14px;break-inside:avoid;background:var(--surface);
+  border:1px solid var(--line);border-radius:var(--r-card);padding:16px;
+}
+.sk{background:linear-gradient(100deg,var(--line-soft) 30%,#F2F7F4 50%,var(--line-soft) 70%);background-size:220% 100%;border-radius:4px;animation:shimmer 1.25s linear infinite}
+.sk + .sk{margin-top:8px}
+@keyframes shimmer{to{background-position:-220% 0}}
+.sk-k{height:9px;width:40%}
+.sk-v{height:19px;width:58%}
+.sk-p{height:10px;width:100%}
+.sk-p2{height:10px;width:76%}
+
+/* 空状态 */
+.empty{
+  border:1px dashed #C9D8D2;border-radius:var(--r-panel);
+  padding:clamp(32px,4vw,52px) clamp(22px,3.4vw,40px);
+  background:var(--surface-2);
+}
+.empty h3{font-size:var(--fs-h3);font-weight:600;margin-bottom:9px}
+.empty p{font-size:14px;color:var(--muted);max-width:36em;line-height:1.7;margin-bottom:16px}
+.empty-rule{width:40px;height:2px;background:#C9D8D2;margin-bottom:16px;border-radius:1px}
+
+/* 深度分析 */
+.deep{
+  margin-top:clamp(24px,3vw,36px);
+  border:1px solid var(--line);border-radius:var(--r-panel);background:var(--surface);
+  overflow:hidden;
+}
+.deep summary{
+  cursor:pointer;list-style:none;padding:16px 20px;
+  display:flex;align-items:center;justify-content:space-between;gap:16px;
+  font-size:14px;font-weight:500;
+  transition:background .18s var(--ease-out);
+}
+.deep summary::-webkit-details-marker{display:none}
+.deep summary:hover{background:var(--surface-2)}
+.deep summary .s{font-size:var(--fs-xs);color:var(--muted);font-weight:400;margin-left:9px}
+.deep .chev{transition:transform .25s var(--ease-out);flex-shrink:0;color:var(--faint)}
+.deep[open] .chev{transform:rotate(180deg)}
+.deep-body{padding:0 20px 20px;font-size:14px;color:var(--ink);line-height:1.72}
+.deep-body .grid2{display:grid;grid-template-columns:1fr 1fr;gap:24px;margin-top:6px}
+.deep-body h4{font-size:13px;font-weight:600;color:var(--ink);margin-bottom:6px}
+.deep-body p{color:var(--muted)}
+
+/* ── 辅助 ── */
+.aside-panel{
+  background:var(--surface);border:1px solid var(--line);
+  border-radius:var(--r-panel);overflow:hidden;
+}
+.aside-item{
+  display:grid;grid-template-columns:1fr auto;gap:18px;align-items:center;
+  padding:17px clamp(18px,2.4vw,26px);text-decoration:none;
+  transition:background .2s var(--ease-out);
+}
+.aside-item + .aside-item{border-top:1px solid var(--line-soft)}
+.aside-item:hover{background:var(--surface-2)}
+.aside-item h3{font-size:14px;font-weight:600;margin-bottom:3px}
+.aside-item p{font-size:13px;color:var(--muted);line-height:1.6;max-width:52em}
+.aside-item .go{
+  color:var(--faint);font-size:15px;
+  transition:transform .22s var(--ease-out),color .22s var(--ease-out);
+}
+.aside-item:hover .go{transform:translateX(3px);color:var(--brand)}
+
+/* ── Footer ── */
+footer{padding:clamp(40px,5vw,64px) 0 32px;background:var(--surface-2)}
+.foot-name{font-size:var(--fs-h2);font-weight:600;letter-spacing:-.02em;line-height:1.2;margin-bottom:12px}
+.foot-desc{color:var(--muted);max-width:36em;font-size:var(--fs-body);line-height:1.7;margin-bottom:clamp(24px,3.4vw,36px)}
+.foot-meta{
+  display:flex;justify-content:space-between;gap:24px;flex-wrap:wrap;
+  font-size:var(--fs-xs);color:var(--muted);padding-top:16px;border-top:1px solid var(--line);
+}
+
+/* ── 进场 ── */
+.js .reveal{opacity:0;transform:translateY(18px);transition:opacity .65s var(--ease-out),transform .65s var(--ease-out)}
+.js .reveal.in{opacity:1;transform:none}
+.js .reveal.d1{transition-delay:.06s}
+.js .reveal.d2{transition-delay:.12s}
+.js .reveal.d3{transition-delay:.18s}
+
+/* ── 响应式 ── */
+@media (max-width:1080px){
+  .hero-in{grid-template-columns:1fr;gap:32px}
+  .room-grid{grid-template-columns:1fr}
+  .review-grid{grid-template-columns:1fr}
+  .wall{columns:2}
+  .compare{grid-template-columns:1fr;gap:28px}
+  .step-row{grid-template-columns:1fr;gap:8px}
+  .step-out{padding-top:6px}
+  :root{--fs-h1:34px;--fs-h2:28px}
+}
+@media (max-width:820px){
+  .nav a:not(.nav-keep){display:none}
+  .student{grid-template-columns:1fr;gap:8px}
+  .student-top{gap:8px}
+  .lesson-bar > div{flex-basis:50%;border-bottom:1px solid var(--deep-line)}
+  .lesson-bar > div:nth-child(2n){border-right:0}
+  .deep-body .grid2{grid-template-columns:1fr;gap:16px}
+  :root{--fs-h1:31px;--fs-h2:24px}
+}
+@media (max-width:600px){
+  .wall{columns:1}
+  .brand-txt span{display:none}
+  .topbar-in{height:56px;gap:10px}
+  .hero-note{gap:8px;flex-direction:column;align-items:flex-start}
+  .rubric td.dim{display:none}
+  table.rubric th:nth-child(2){display:none}
+  .statstrip{grid-template-columns:1fr}
+  .statstrip div{border-right:0;border-bottom:1px solid var(--line-soft)}
+  .statstrip div:last-child{border-bottom:0}
+  .foot-meta{flex-direction:column;gap:6px}
+}
+
+@media (prefers-reduced-motion:reduce){
+  *,*::before,*::after{animation-duration:.01ms !important;animation-iteration-count:1 !important;transition-duration:.01ms !important;scroll-behavior:auto !important}
+  .js .reveal{opacity:1;transform:none}
+}
+</style>
+<link rel="stylesheet" href="fx.css?v=20261030-hero1">
+<link rel="stylesheet" href="material.css?v=20261030-m5">
+<link rel="stylesheet" href="motion.css?v=20261030-m5">
+<link rel="stylesheet" href="ui.css?v=20261030-m5">
+</head>
+<body>
+
+<header class="topbar" id="topbar">
+  <div class="topbar-in">
+    <a class="brand" href="#top">
+      <span class="mark" aria-hidden="true">讲</span>
+      <span class="brand-txt">
+        <b>讲台求生</b>
+        <span>微格教学训练工作台</span>
+      </span>
+    </a>
+    <nav class="nav" aria-label="主导航">
+      <a href="#flow" class="nav-keep">训练流程</a>
+      <a href="#room">试讲室</a>
+      <a href="#review">复盘</a>
+      <a href="#more">更多</a>
+      <a href="#codex" class="nav-keep">Codex 教练</a>
+      <a class="btn btn-sm btn-brand" href="#flow">开始训练</a>
+    </nav>
+  </div>
+</header>
+
+<main id="top">
+
+  <!-- ══════ 首屏 ══════ -->
+  <section class="hero">
+    <div class="wrap hero-in">
+      <div>
+        <h1 data-lines>微格教学训练工作台</h1>
+        <p class="hero-sub">
+          一次试讲拆成定标、备课、试讲、复盘四步。每一步都留下可以拿给指导教师看的记录，
+          不用回头猜自己当时哪里没做好。
+        </p>
+        <div class="hero-actions">
+          <a class="btn btn-brand" href="#flow">开始训练</a>
+          <a class="btn btn-ghost" href="#review">看一份完整复盘</a>
+        </div>
+        <div class="hero-note">
+          <span><i class="dot"></i>面向师范生微格训练</span>
+          <span><i class="dot"></i>断网可练</span>
+          <span><i class="dot"></i>证据可导出</span>
+        </div>
+      </div>
+
+      <div class="reveal">
+        <div class="ui" data-ui>
+          <div class="ui-head">
+            <div>
+              <div class="ui-title">初中语文《背影》</div>
+              <div class="ui-meta">八年级 · 45 分钟 · 第 3 轮训练</div>
+            </div>
+            <span class="pill pill-live">进行中</span>
+          </div>
+          <ol class="flowbar" aria-label="训练进度">
+            <li class="done">定标</li>
+            <li class="done">备课</li>
+            <li class="now" aria-current="step">试讲</li>
+            <li>复盘</li>
+          </ol>
+          <div class="ui-k">当前任务</div>
+          <div class="ui-v">第三环节 · 引导学生发现"买橘子"的动作细节</div>
+          <div class="ui-meta" style="margin-top:3px">预设候答 3 秒，至少 2 名 AI 学生发言</div>
+          <div class="nextstep">
+            <span>下一步 <b>进入试讲室</b></span>
+            <a class="btn btn-sm btn-ghost" href="#room">继续</a>
+          </div>
+        </div>
+        <dl class="statstrip reveal d1">
+          <div><dt>本周完成</dt><dd class="num">4<small>轮</small></dd></div>
+          <div><dt>候答均值</dt><dd class="num">1.4<small>秒</small></dd></div>
+          <div><dt>量规总分</dt><dd class="num">20<small>/ 30</small></dd></div>
+        </dl>
+      </div>
+    </div>
+  </section>
+
+  <!-- ══════ 为什么是四步 ══════ -->
+  <section class="sec" id="why">
+    <div class="wrap">
+      <div class="sec-head reveal">
+        <h2>训练不是查报表</h2>
+        <p>
+          原来六个平级标签页，每次打开都要先想"我今天该去哪个"。四步流程只回答一个问题：
+          下一步是什么。顺序本身就是优先级。
+        </p>
+      </div>
+      <div class="compare">
+        <div class="compare-col reveal d1">
+          <h3>平级标签</h3>
+          <p>六个入口同等重要，先做导航决策，再做教学决策。</p>
+          <ul class="tabs-old">
+            <li>教案</li><li>试讲</li><li>复盘</li>
+            <li>数据</li><li>排行</li><li>海报</li>
+          </ul>
+        </div>
+        <div class="compare-col reveal d2">
+          <h3>流程导航</h3>
+          <p>每一环的出口，就是下一环的入口。</p>
+          <ol class="flow-new">
+            <li><i class="bar" aria-hidden="true"></i><span><b>定标</b><span class="sub">这一课学生要能做什么</span></span></li>
+            <li><i class="bar" aria-hidden="true"></i><span><b>备课</b><span class="sub">为这个目标写哪几个提问</span></span></li>
+            <li><i class="bar" aria-hidden="true"></i><span><b>试讲</b><span class="sub">三个人在场，真实被追问</span></span></li>
+            <li><i class="bar" aria-hidden="true"></i><span><b>复盘</b><span class="sub">证据、量规、下一轮改什么</span></span></li>
+          </ol>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ══════ 四步产出 ══════ -->
+  <section class="sec" id="flow">
+    <div class="wrap">
+      <div class="sec-head reveal">
+        <h2>每一步都要交出东西</h2>
+        <p>
+          没有产出的环节就是装饰。四个环节各自留下一份记录，最后拼成一份能拿给指导教师看的完整档案。
+        </p>
+      </div>
+      <div class="steps-panel reveal d1">
+        <div class="step-row">
+          <h3><i aria-hidden="true"></i>定标</h3>
+          <p>从课标条目里选出这一课真正要落实的两到三条，改写成学生能表现出来的行为。目标写不清，后面的量规就没有依据，评分只能凭感觉。</p>
+          <div class="step-out"><b>产出</b>3 条可观测目标 + 对应量规条目</div>
+        </div>
+        <div class="step-row">
+          <h3><i aria-hidden="true"></i>备课</h3>
+          <p>为每条目标配一组提问，标出哪些是开放性问题、每个问题打算等多久。教案不是流程表，是"打算怎么问"的清单。</p>
+          <div class="step-out"><b>产出</b>9 个预设提问（开放 3 / 封闭 6）+ 候答脚本</div>
+        </div>
+        <div class="step-row">
+          <h3><i aria-hidden="true"></i>试讲</h3>
+          <p>三位 AI 学生同时在场：追问的、走神的、沉默的。它们的反应由你的提问触发，不是提前写好的台词，跑题的方向每一轮都不一样。</p>
+          <div class="step-out"><b>产出</b>课堂录像、逐字转写、互动时间线</div>
+        </div>
+        <div class="step-row">
+          <h3><i aria-hidden="true"></i>复盘</h3>
+          <p>先给证据再给结论。每条评分都能点回到具体那一句转写，否则这个分数不算数。前后对照只保留三个改进点，多了一轮改不完。</p>
+          <div class="step-out"><b>产出</b>量规评分、证据墙、前后对照</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ══════ 试讲室 ══════ -->
+  <section class="room" id="room">
+    <div class="wrap room-in">
+      <div class="room-head reveal">
+        <h2>三个人同时在场</h2>
+        <p>
+          试讲时屏幕只剩课堂。学生先后发言、计时在走、候答时间被实时量出来。
+          这一区是全页唯一需要临场感的地方，其余部分保持安静。
+        </p>
+      </div>
+
+      <div class="room-grid">
+        <div class="room-main">
+
+          <dl class="glass lesson-bar reveal">
+            <div><dt>已进行</dt><dd class="num">03:42<small>/ 45:00</small></dd></div>
+            <div><dt>当前语速</dt><dd class="num">172<small>字/分</small></dd></div>
+            <div><dt>学生发言</dt><dd class="num">2<small>/ 3 人</small></dd></div>
+            <div><dt>候答均值</dt><dd class="num flag">1.4<small>秒</small></dd></div>
+          </dl>
+
+          <div class="glass students reveal d1" id="students">
+            <article class="student">
+              <div class="student-top">
+                <span class="avatar" aria-hidden="true">林</span>
+                <span>
+                  <span class="student-name">林小满</span>
+                  <span class="student-role">追问型</span>
+                </span>
+              </div>
+              <div>
+                <p class="student-say">老师，作者写父亲爬月台的时候，为什么把动作拆得那么细？</p>
+                <div class="wave" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></div>
+              </div>
+            </article>
+
+            <article class="student speaking">
+              <div class="student-top">
+                <span class="avatar" aria-hidden="true">陈</span>
+                <span>
+                  <span class="student-name">陈亦然</span>
+                  <span class="student-role">走神型</span>
+                </span>
+              </div>
+              <div>
+                <p class="student-say">那我们为什么还要读这篇？我爷爷也有点胖，他上公交车也很慢……</p>
+                <div class="wave" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></div>
+              </div>
+            </article>
+
+            <article class="student">
+              <div class="student-top">
+                <span class="avatar" aria-hidden="true">苏</span>
+                <span>
+                  <span class="student-name">苏芮</span>
+                  <span class="student-role">沉默型</span>
+                </span>
+              </div>
+              <div>
+                <p class="student-say">还没有发言。被点名后通常只说半句，需要比别人更长的候答时间。</p>
+                <div class="wave" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></div>
+              </div>
+            </article>
+          </div>
+
+          <div class="glass teacher reveal d2">
+            <div class="teacher-label">
+              <span>你的回应</span>
+              <span class="pill pill-warn">候答偏短</span>
+            </div>
+            <p class="teacher-say">
+              刚才我们说到父亲爬月台……<span class="tail">（停顿 0.8 秒即接话，陈亦然的后半句被截断）</span>
+            </p>
+            <div class="wait">
+              <div class="wait-read" id="waitRead">
+                <b class="num" id="waitNum">0.0</b><span>秒</span>
+              </div>
+              <p class="wait-hint" id="waitHint">候答满 3 秒，追问型学生才会给出第二层回答。</p>
+              <button class="btn btn-sm btn-onDark" id="waitBtn" type="button">开始候答</button>
+            </div>
+          </div>
+        </div>
+
+        <aside class="room-side">
+          <div class="glass hint reveal d1">
+            <h3>此刻的三个提醒</h3>
+            <ol>
+              <li>陈亦然在跑题。先把他的问题和"动作细节"接上，再回到原文，不要直接否掉。</li>
+              <li>苏芮全程没开口。本轮至少要主动点她一次，问一个封闭问题降低她的开口成本。</li>
+              <li>候答 1.4 秒，低于预设的 3 秒——你自己的追问正在挤掉学生的思考时间。</li>
+            </ol>
+          </div>
+          <div class="glass hint reveal d2">
+            <h3>这一轮结束后</h3>
+            <ol>
+              <li>生成逐字转写，标出每一次提问和对应的候答时长。</li>
+              <li>按六维量规打分，每条评分可点回原句核对。</li>
+              <li>与第 2 轮做前后对照，只留三个改进点。</li>
+            </ol>
+          </div>
+        </aside>
+      </div>
+    </div>
+  </section>
+
+  <!-- ══════ 复盘 ══════ -->
+  <section class="sec" id="review">
+    <div class="wrap">
+      <div class="sec-head reveal">
+        <h2>证据先于结论</h2>
+        <p>
+          总分只说明位置，证据才说明下一步改什么。每条评分都能点回到具体那一句，
+          技术分析默认折叠，不抢训练主线。
+        </p>
+      </div>
+
+      <div class="review-grid">
+        <table class="rubric reveal d1" id="rubric">
+          <caption>六维量规 · 第 3 轮</caption>
+          <thead>
+            <tr>
+              <th scope="col">维度</th>
+              <th scope="col">依据</th>
+              <th scope="col" class="num">得分</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>目标达成</td>
+              <td class="dim">3 条目标中 2 条在课堂上有对应证据</td>
+              <td class="num"><span class="score ok">4</span><span class="ui-meta"> / 5</span></td>
+            </tr>
+            <tr>
+              <td>内容准确</td>
+              <td class="dim">文本解读无硬伤，一处引文有省略未说明</td>
+              <td class="num"><span class="score ok">4</span><span class="ui-meta"> / 5</span></td>
+            </tr>
+            <tr>
+              <td>提问与候答</td>
+              <td class="dim">9 次提问中开放性问题 3 次，候答均值 1.4 秒</td>
+              <td class="num"><span class="score low">2</span><span class="ui-meta"> / 5</span></td>
+            </tr>
+            <tr>
+              <td>学生参与</td>
+              <td class="dim">3 名学生中 2 人发言，苏芮全程未被点名</td>
+              <td class="num"><span class="score mid">3</span><span class="ui-meta"> / 5</span></td>
+            </tr>
+            <tr>
+              <td>语言与节奏</td>
+              <td class="dim">语速 172 字/分偏慢，口头禅共 48 次</td>
+              <td class="num"><span class="score mid">3</span><span class="ui-meta"> / 5</span></td>
+            </tr>
+            <tr>
+              <td>板书与媒体</td>
+              <td class="dim">板书三块分区清楚，媒体只在导入环节使用</td>
+              <td class="num"><span class="score ok">4</span><span class="ui-meta"> / 5</span></td>
+            </tr>
+          </tbody>
+        </table>
+
+        <div class="delta-panel reveal d2">
+          <h3>与第 2 轮对照</h3>
+          <dl class="delta">
+            <div class="delta-row">
+              <dt>候答均值</dt>
+              <dd><span class="from num">1.1 秒</span><span class="to num">1.4 秒</span></dd>
+            </div>
+            <div class="delta-row">
+              <dt>开放性问题</dt>
+              <dd><span class="from num">1 次</span><span class="to num">3 次</span></dd>
+            </div>
+            <div class="delta-row">
+              <dt>学生发言时长</dt>
+              <dd><span class="from num">8 分</span><span class="to num">12 分</span></dd>
+            </div>
+            <div class="delta-row">
+              <dt>学生发言占比</dt>
+              <dd><span class="from num">18%</span><span class="to num">27%</span></dd>
+            </div>
+            <div class="delta-row">
+              <dt>口头禅</dt>
+              <dd><span class="flat num">48 次</span></dd>
+            </div>
+            <div class="delta-row">
+              <dt>点名覆盖</dt>
+              <dd><span class="flat num">2 / 3</span></dd>
+            </div>
+          </dl>
+          <div class="rubric-foot">
+            <span>本轮总分</span>
+            <b class="num">20 <span class="ui-meta">/ 30</span></b>
+          </div>
+        </div>
+      </div>
+
+      <div class="wall-head reveal">
+        <h3>证据墙</h3>
+        <button class="btn btn-sm btn-ghost" id="regen" type="button">重新生成本轮复盘</button>
+      </div>
+
+      <div id="wallHost" class="wall reveal d1" aria-live="polite">
+        <div class="wall-card">
+          <div class="wall-k"><span>时间分配</span><span class="num">45 分钟</span></div>
+          <b class="wall-v num">24<small>分</small></b>
+          <p>教师讲授占 53%，比上一轮少 3 分钟。学生发言 12 分、独立练习 6 分、课堂管理 3 分。</p>
+          <div class="spark" aria-hidden="true">
+            <i style="height:100%" class="hot"></i><i style="height:50%"></i><i style="height:25%"></i><i style="height:12.5%"></i>
+          </div>
+        </div>
+
+        <div class="wall-card">
+          <div class="wall-k"><span>候答时间</span><span class="pill pill-alert">低于预设</span></div>
+          <b class="wall-v num">1.4<small>秒</small></b>
+          <p>9 次提问中最长候答 2.6 秒，最短 0.8 秒。预设是 3 秒。</p>
+          <p class="wall-quote">第 14 分 22 秒：问完「父亲为什么要买橘子」后 0.8 秒即自行接话，<em>截断了陈亦然的回答</em>。</p>
+        </div>
+
+        <div class="wall-card">
+          <div class="wall-k"><span>口头禅</span><span class="num">48 次 / 45 分</span></div>
+          <b class="wall-v num">1.07<small>次/分</small></b>
+          <p>与上一轮持平。其中"然后"23 次、"这个"18 次、"对不对"7 次。</p>
+        </div>
+
+        <div class="wall-card">
+          <div class="wall-k"><span>提问类型</span><span class="num">9 次</span></div>
+          <b class="wall-v num">3 : 6</b>
+          <p>开放性问题 3 次、封闭性问题 6 次。开放性问题集中在导入环节，正文分析全是封闭式。</p>
+        </div>
+
+        <div class="wall-card">
+          <div class="wall-k"><span>学生参与</span><span class="pill pill-warn">有遗漏</span></div>
+          <b class="wall-v num">2 / 3</b>
+          <p>苏芮全程未被点名。她被点名时会先看周围再答，需要的候答时间比其他两人更长。</p>
+        </div>
+
+        <div class="wall-card">
+          <div class="wall-k"><span>站位与走位</span><span class="num">全程</span></div>
+          <b class="wall-v num">0<small>次离开讲台</small></b>
+          <p>45 分钟未移动。后排两名学生的视线被前排遮挡，课堂管理全部在讲台上完成。</p>
+        </div>
+      </div>
+
+      <details class="deep reveal">
+        <summary>
+          <span>深度分析<span class="s">iFIAS 互动矩阵 · PCA 课堂画像</span></span>
+          <svg class="chev" width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M4 6l4 4 4-4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </summary>
+        <div class="deep-body">
+          <p>
+            默认折叠。这些数据用于比较不同课例、做教学研究，对正在准备下一轮试讲的你没有直接帮助，
+            所以不放在训练主线里。
+          </p>
+          <div class="grid2">
+            <div>
+              <h4>iFIAS 互动结构</h4>
+              <p>
+                14 类编码中，教师讲授（5 类）占 53%，学生主动发言（9 类）占 21%。
+                稳态格落在"教师讲授—教师讲授"，说明有一段讲授连续超过 6 分钟没有被打断。
+                内容十字区偏向"内容—提问"，缺少"方法—开放"的交叉。
+              </p>
+            </div>
+            <div>
+              <h4>PCA 课堂画像</h4>
+              <p>
+                投影到主成分空间后，本轮位于第 2 轮与年级均值之间，主要位移来自"学生发言时长"轴。
+                第一主成分解释 61% 的方差，第二主成分 18%。
+              </p>
+            </div>
+          </div>
+        </div>
+      </details>
+    </div>
+  </section>
+
+  <!-- ══════ 辅助 ══════ -->
+  <section class="sec" id="more">
+    <div class="wrap">
+      <div class="sec-head reveal">
+        <h2>排行榜不是训练</h2>
+        <p>
+          徽章、排名和海报只在训练结束之后才有意义。它们被下沉到这里，
+          不占用你准备下一轮的时间，也不参与训练流程的任何一步。
+        </p>
+      </div>
+      <div class="aside-panel reveal d1">
+        <a class="aside-item" href="#more">
+          <div>
+            <h3>训练排行榜</h3>
+            <p>按六维量规总分排序，只统计完整走完四步的训练。同校、跨校两个视图，默认只看同校。</p>
+          </div>
+          <span class="go" aria-hidden="true">→</span>
+        </a>
+        <a class="aside-item" href="#more">
+          <div>
+            <h3>技能徽章</h3>
+            <p>候答满 3 秒连续 5 次、开放性问题占比过半、点名覆盖全部学生——三个可验证的条件，不看总分。</p>
+          </div>
+          <span class="go" aria-hidden="true">→</span>
+        </a>
+        <a class="aside-item" href="#more">
+          <div>
+            <h3>课堂海报</h3>
+            <p>把本轮的一条证据和一条改进点排成一张图，可打印贴进教案本，供指导教师面谈时对照。</p>
+          </div>
+          <span class="go" aria-hidden="true">→</span>
+        </a>
+      </div>
+    </div>
+  </section>
+
+  <section class="sec" id="codex">
+    <style>
+      #codex .codex-card{ background:var(--surface); border:1px solid var(--line); border-radius:var(--r-card); padding:22px; }
+      #codex .codex-row{ display:flex; gap:14px; flex-wrap:wrap; }
+      #codex .codex-row>div{ flex:1 1 300px; }
+      #codex .codex-label{ display:block; font-size:13px; color:var(--muted); margin-bottom:6px; }
+      #codex textarea, #codex input[type=text]{ width:100%; border:1px solid var(--line); border-radius:var(--r-ctrl); padding:10px 12px; font:inherit; font-size:14px; color:var(--ink); background:var(--surface-2); resize:vertical; }
+      #codex textarea{ min-height:92px; }
+      #codex .codex-quick{ display:flex; gap:8px; flex-wrap:wrap; margin-top:12px; }
+      #codex .codex-quick button{ background:var(--surface-2); border:1px solid var(--line); color:var(--muted); border-radius:999px; padding:6px 13px; font-size:13px; cursor:pointer; transition:color .15s, border-color .15s; }
+      #codex .codex-quick button:hover{ color:var(--ink); border-color:var(--brand); }
+      #codex .codex-send{ margin-top:16px; background:var(--brand); color:#fff; border:0; border-radius:var(--r-ctrl); padding:11px 24px; font-size:15px; cursor:pointer; }
+      #codex .codex-send:disabled{ opacity:.55; cursor:not-allowed; }
+      #codex .codex-badges{ display:flex; gap:8px; flex-wrap:wrap; margin-bottom:12px; }
+      #codex .codex-badge{ font-size:12px; padding:3px 10px; border-radius:999px; border:1px solid var(--line); color:var(--muted); }
+      #codex .codex-badge.codex{ color:var(--brand); border-color:var(--brand); }
+      #codex .codex-badge.fb{ color:var(--amber); border-color:var(--amber); }
+      #codex #codex-out{ white-space:pre-wrap; line-height:1.75; font-size:14px; min-height:80px; color:var(--ink); }
+      #codex .codex-hint{ font-size:12px; color:var(--muted); margin-top:8px; }
+      #codex code{ background:var(--brand-soft); padding:1px 6px; border-radius:5px; font-size:12px; }
+    </style>
+    <div class="wrap">
+      <div class="sec-head reveal">
+        <h2>Codex 教学教练</h2>
+        <p>
+          把讲稿、复盘或学情贴进来，让 AI 帮你生成改进逐字稿、分层追问、板书与当堂检测。
+          当前走 DeepSeek 兜底；在服务端配置 <code>CODEX_*</code> 后自动切换到 Codex / Azure OpenAI，密钥只留服务端。
+        </p>
+      </div>
+      <div class="codex-card reveal d1">
+        <div class="codex-row">
+          <div>
+            <label class="codex-label" for="codex-ctx">参考上下文（讲稿 / 复盘 / 学情，可留空）</label>
+            <textarea id="codex-ctx" placeholder="例如：本节课讲《牛吃草》，学生常把“草生长速度”当成已知条件……"></textarea>
+          </div>
+        </div>
+        <div class="codex-row" style="margin-top:12px;">
+          <div>
+            <label class="codex-label" for="codex-prompt">你的需求 / 提问</label>
+            <textarea id="codex-prompt" placeholder="例如：给我一版改进逐字稿，重点突破草生长速度的建模，并设计 3 个分层追问。"></textarea>
+          </div>
+        </div>
+        <div class="codex-quick">
+          <button type="button" data-q="生成一版改进逐字稿，只突出一个最值得改的教学改进点，并说明为什么。">改进逐字稿</button>
+          <button type="button" data-q="给 3 个分层追问话术，分别面向学困生、中等生、学优生，并标注各自意图。">分层追问</button>
+          <button type="button" data-q="给板书结构建议，突出本节课的知识主干与两个易错点。">板书建议</button>
+          <button type="button" data-q="设计一道当堂检测题，能快速暴露学生的典型误解。">当堂检测</button>
+        </div>
+        <button type="button" id="codex-send" class="codex-send">发送</button>
+        <p class="codex-hint">保留文字输入，不依赖语音识别；后端密钥只在服务端，前端只发送 prompt 与上下文。</p>
+      </div>
+      <div class="codex-card reveal d2" style="margin-top:16px;">
+        <div class="codex-badges" id="codex-badges"><span class="codex-badge">待命</span></div>
+        <div id="codex-out">结果会显示在这里……</div>
+      </div>
+    </div>
+    <script src="codex-panel.js?v=20261030"></script>
+  </section>
+
+</main>
+
+<footer>
+  <div class="wrap">
+    <p class="foot-name">讲台求生</p>
+    <p class="foot-desc">
+      面向师范生的微格教学训练工作台。定标、备课、试讲、复盘四步，
+      每一步都留下可以拿给指导教师看的记录。
+    </p>
+    <div class="foot-meta">
+      <span>示例数据：初中语文《背影》八年级，第 3 轮训练</span>
+      <span>页面原型 · 原生 HTML / CSS / JS，无外部依赖</span>
+    </div>
+  </div>
+</footer>
+
+<script>
+(function(){
+  'use strict';
+  var reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  /* 顶栏吸附后加一条极浅的投影，滚动前保持完全平 */
+  var bar = document.getElementById('topbar');
+  if (bar) {
+    var onScroll = function(){ bar.classList.toggle('stuck', window.scrollY > 8); };
+    window.addEventListener('scroll', onScroll, { passive: true });
+    onScroll();
+  }
+
+  /* 滚动进场：逐元素错位，不是整块淡入 */
+  var revealables = document.querySelectorAll('.reveal');
+  if (reduce || !('IntersectionObserver' in window)) {
+    revealables.forEach(function(el){ el.classList.add('in'); });
+  } else {
+    /* 首屏内的元素立刻显示，不参与进场延迟——否则第一眼看到的是空版 */
+    var vh = window.innerHeight;
+    var io = new IntersectionObserver(function(entries){
+      entries.forEach(function(e){
+        if (e.isIntersecting) { e.target.classList.add('in'); io.unobserve(e.target); }
+      });
+    }, { rootMargin: '0px 0px -8% 0px', threshold: 0.08 });
+    revealables.forEach(function(el){
+      if (el.getBoundingClientRect().top < vh * 0.92) { el.classList.add('in'); }
+      else { io.observe(el); }
+    });
+  }
+
+  /* 学生轮流发言 */
+  var students = Array.prototype.slice.call(document.querySelectorAll('#students .student'));
+  var sayEls = students.map(function(s){ return s.querySelector('.student-say'); });
+  var idle = sayEls.map(function(p){ return p.textContent; });   /* 未发言时显示的静息文本 */
+  var lines = [
+    '老师，那把动作拆开写，是不是比直接写"父亲很爱我"更有力量？',
+    '那我们为什么还要读这篇？我爷爷也有点胖，他上公交车也很慢……',
+    '……（被点名后停顿 4 秒）就是，父亲爬上去，很费劲。'
+  ];
+  var idx = 1, rotation = null;
+
+  function sayNext(){
+    students.forEach(function(s){ s.classList.remove('speaking'); });
+    sayEls.forEach(function(p,i){ p.textContent = idle[i]; });
+    idx = (idx + 1) % students.length;
+    students[idx].classList.add('speaking');
+    sayEls[idx].textContent = lines[idx];
+  }
+
+  if (!reduce && students.length) {
+    rotation = setInterval(sayNext, 4600);
+    var grid = document.getElementById('students');
+    if (grid) grid.addEventListener('mouseenter', function(){ clearInterval(rotation); rotation = null; });
+  }
+
+  /* 候答计时器 —— 这一页唯一能动手的东西 */
+  var waitBtn = document.getElementById('waitBtn');
+  var waitNum = document.getElementById('waitNum');
+  var waitRead = document.getElementById('waitRead');
+  var waitHint = document.getElementById('waitHint');
+  var OK = '满 3 秒。这时候接话，学生才来得及把第二层想法说出来。';
+  var IDLE = '候答满 3 秒，追问型学生才会给出第二层回答。';
+  var raf = null, t0 = 0, running = false;
+
+  function frame(now){
+    if (!t0) t0 = now;
+    var s = (now - t0) / 1000;
+    waitNum.textContent = s.toFixed(1);
+    if (s >= 3) { waitRead.classList.add('ok'); waitHint.textContent = OK; }
+    if (running) raf = requestAnimationFrame(frame);
+  }
+  function reset(){
+    running = false;
+    if (raf) cancelAnimationFrame(raf);
+    raf = null; t0 = 0;
+    waitNum.textContent = '0.0';
+    waitRead.classList.remove('ok');
+    waitHint.textContent = IDLE;
+    waitBtn.textContent = '开始候答';
+  }
+  if (waitBtn) {
+    waitBtn.addEventListener('click', function(){
+      if (running) { reset(); return; }
+      if (reduce) {
+        waitNum.textContent = '3.0';
+        waitRead.classList.add('ok');
+        waitHint.textContent = OK;
+        waitBtn.textContent = '重新计时';
+        running = false;
+        return;
+      }
+      running = true;
+      t0 = 0;
+      waitRead.classList.remove('ok');
+      waitBtn.textContent = '重新计时';
+      raf = requestAnimationFrame(frame);
+    });
+  }
+
+  /* 骨架屏 → 内容 → 空状态 */
+  var regen = document.getElementById('regen');
+  var host = document.getElementById('wallHost');
+  var real = host ? host.innerHTML : '';
+  var SKELETON = new Array(6).fill(
+    '<div class="skel-card"><div class="sk sk-k"></div><div class="sk sk-v"></div><div class="sk sk-p"></div><div class="sk sk-p2"></div></div>'
+  ).join('');
+  var EMPTY = [
+    '<div class="empty">',
+    '<div class="empty-rule"></div>',
+    '<h3>这一轮还没有课堂记录</h3>',
+    '<p>证据墙从试讲室里的转写和互动时间线生成。先进试讲室走完一轮，回到这里就会出现每条评分对应的原句。</p>',
+    '<a class="btn btn-sm btn-brand" href="#room">进入试讲室</a>',
+    '</div>'
+  ].join('');
+
+  if (regen && host) {
+    var busy = false, emptied = false;
+    regen.addEventListener('click', function(){
+      if (busy) return;
+      busy = true;
+      regen.disabled = true;
+      regen.textContent = '生成中…';
+      host.innerHTML = SKELETON;
+      host.style.columns = '3';
+      setTimeout(function(){
+        if (emptied) {
+          host.innerHTML = real;
+          host.style.columns = '';
+          emptied = false;
+          regen.textContent = '清空本轮记录';
+        } else {
+          host.innerHTML = EMPTY;
+          host.style.columns = '1';
+          emptied = true;
+          regen.textContent = '回到本轮复盘';
+        }
+        busy = false;
+        regen.disabled = false;
+      }, 1400);
+    });
+  }
+
+  /* 锚点平滑滚动 */
+  document.querySelectorAll('a[href^="#"]').forEach(function(a){
+    a.addEventListener('click', function(ev){
+      var id = a.getAttribute('href');
+      if (!id || id.length < 2) return;
+      var t = document.querySelector(id);
+      if (!t) return;
+      ev.preventDefault();
+      t.scrollIntoView({ behavior: reduce ? 'auto' : 'smooth', block: 'start' });
+    });
+  });
+
+  /* 学生卡 3D 视差：只用 transform，仅桌面指针设备 */
+  var fine = window.matchMedia('(hover:hover) and (pointer:fine)').matches;
+  if (!reduce && fine && window.innerWidth > 820) {
+    students.forEach(function(card){
+      card.addEventListener('pointermove', function(ev){
+        var r = card.getBoundingClientRect();
+        var x = (ev.clientX - r.left) / r.width - 0.5;
+        var y = (ev.clientY - r.top) / r.height - 0.5;
+        card.style.transform = 'perspective(700px) rotateX(' + (-y * 2.4).toFixed(2) + 'deg) rotateY(' + (x * 2.4).toFixed(2) + 'deg)';
+      });
+      card.addEventListener('pointerleave', function(){ card.style.transform = ''; });
+    });
+  }
+})();
+</script>
+<script src="fx.js?v=20261030-hero1"></script>
+<script src="motion.js?v=20261030-m5"></script>
+</body>
+</html>

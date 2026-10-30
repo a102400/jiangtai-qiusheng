@@ -2,6 +2,12 @@
 node_modules/
 .env
 .env.local
+# 兜底：任何子目录下的 .env 都不许入库（app/.env、备份里的 .env 等）
+**/.env
+**/.env.local
+*.pem
+*.key
+*.p12
 
 # 上传的临时视频
 app/uploads/
@@ -36,3 +42,17 @@ app/server.log
 # 密钥与本地配置（保留 .env.example 作为模板）
 .env
 .env.local
+
+# 运行时配额计数文件
+.quota.json
+
+# 设计工具中间产物/缓存(非源码, 不入库)
+.taste-skill/
+app/public/.taste-skill/
+
+# 生成的离线包(build-standalone.js 产出, 不入库)
+app/public/offline.html
+
+# 测试临时二进制
+*.bin
+app/tests/.tmp-*

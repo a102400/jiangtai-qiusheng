@@ -12,6 +12,15 @@ RUN npm install --omit=dev || true
 
 COPY app/ ./
 
+# ---- 密钥防线（双层）----
+# 第 1 层是 app/.dockerignore（COPY 阶段就不复制 .env）
+# 第 2 层是下面这行：即使 .dockerignore 被人误删/被绕过，这里也会清掉；
+# 若清理后仍存在 .env，构建立即失败（宁可部署失败，也不让密钥进镜像层）。
+RUN rm -f .env .env.local .env.* 2>/dev/null; \
+    if [ -f .env ] || [ -f .env.local ]; then \
+      echo "FATAL: .env 仍存在于镜像中，构建中止（密钥不得进入镜像）" >&2; exit 1; \
+    fi
+
 ENV PORT=3000
 EXPOSE 3000
 

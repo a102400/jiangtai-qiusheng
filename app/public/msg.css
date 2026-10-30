@@ -1,0 +1,127 @@
+/* ============================================================
+   对话消息入场层 · 2026-10-29
+   参数来源：React Bits — AnimatedList（JS-CSS 版 registry 源码）
+     · 弹簧曲线 linear(...) 29 点，峰值 1.0828 → 约 8.3% 过冲后收敛
+     · transform 620ms spring / opacity 300ms cubic-bezier(.22,1,.36,1)
+     · 位移模型 slide: translate3d(0,±28px,0) scale(.98)
+     · stagger 默认 0.05s
+   TextType（JS-CSS 版 registry 源码）
+     · 光标 cursorStyle=bar，cursorBlinkDuration=0.5s
+     · 闪烁节奏 hold=0.7×dur，fade=0.45×dur，ease=sine.inOut
+   本站改动只有一处：位移 28px → 18px。理由：对话气泡行间距 12px，
+   28px 会让新消息在起始帧压到上一条，密集对话里像抖动而非入场。
+   曲线、时长、缓动、缩放比例全部原值保留。
+   ============================================================ */
+
+:root{
+  /* react-bits AnimatedList 的弹簧曲线，原样搬运（29 个采样点，峰值 1.0828） */
+  --rb-spring: linear(0, 0.0603, 0.2033, 0.3821, 0.5633, 0.7258, 0.8584, 0.9574,
+    1.0242, 1.0634, 1.0809, 1.0828, 1.0747, 1.0613, 1.046, 1.0313, 1.0186,
+    1.0085, 1.0012, 0.9965, 0.994, 0.9931, 0.9933, 0.9941, 0.9953, 0.9966,
+    0.9978, 0.9988, 1);
+  --rb-ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --msg-enter-dist: 18px;      /* AnimatedList slide 的 28px，按行距收窄 */
+}
+
+/* 入场起始态：只在 .js 下生效，脚本没跑时消息照常可见 */
+html.js .msg-enter{
+  opacity: 0;
+  transform: translate3d(0, var(--msg-enter-dist), 0) scale(0.98);
+  transition:
+    transform 620ms var(--rb-ease-out),
+    opacity 300ms var(--rb-ease-out);
+  will-change: transform, opacity;
+}
+
+/* 能力检测：浏览器支持 linear() 缓动时才换成真弹簧；否则用上面的 ease-out 兜底 */
+@supports (transition-timing-function: linear(0, 1)){
+  html.js .msg-enter{
+    transition:
+      transform 620ms var(--rb-spring),
+      opacity 300ms var(--rb-ease-out);
+  }
+}
+
+/* 教师消息从右侧进来（右对齐气泡，方向跟对齐方式一致） */
+html.js .msg-enter[data-side="right"]{
+  transform: translate3d(var(--msg-enter-dist), 0, 0) scale(0.98);
+}
+
+/* 系统提示最轻：react-bits 的 fade 模式原值 4px，不加缩放 */
+html.js .msg-enter[data-side="fade"]{
+  transform: translate3d(0, 4px, 0);
+  transition:
+    transform 420ms var(--rb-ease-out),
+    opacity 300ms var(--rb-ease-out);
+}
+
+html.js .msg-enter.is-in{
+  opacity: 1;
+  transform: none;
+}
+
+/* 入场结束后释放合成层，避免长对话里几十条消息都留着 will-change */
+html.js .msg-enter.is-in{
+  will-change: auto;
+}
+
+/* ---------- 光标尾随（TextType 的 bar 光标） ---------- */
+/* 不做全文字打字机：一条追问常在 60~120 字，50ms/字 要 3~6 秒，
+   会拖慢用户读取，也破坏屏幕阅读器。只在消息末尾留一段光标闪现，
+   给出「刚说完」的即时感，不延迟任何内容。 */
+.msg-caret{
+  display: inline-block;
+  width: 2px;
+  height: 1.05em;
+  margin-left: 2px;
+  vertical-align: -0.16em;
+  border-radius: 1px;
+  background: currentColor;
+  opacity: 0.85;
+  animation: msgCaret 0.5s ease-in-out 4;
+}
+@keyframes msgCaret{
+  0%, 70%{ opacity: 0.85; }
+  100%{ opacity: 0; }
+}
+
+/* ---------- 等待态：三点跳动（question-drill 补的动作反馈） ---------- */
+.msg-typing{
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  height: 1.2em;
+}
+.msg-typing i{
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+  opacity: 0.5;
+  animation: msgDot 1.2s var(--rb-ease-out) infinite;
+}
+.msg-typing i:nth-child(2){ animation-delay: 0.16s; }
+.msg-typing i:nth-child(3){ animation-delay: 0.32s; }
+@keyframes msgDot{
+  0%, 60%, 100%{ transform: translateY(0); opacity: 0.4; }
+  30%{ transform: translateY(-4px); opacity: 1; }
+}
+
+/* ---------- 无障碍与降级 ---------- */
+@media (prefers-reduced-motion: reduce){
+  html.js .msg-enter{
+    opacity: 1 !important;
+    transform: none !important;
+    transition: none !important;
+  }
+  .msg-caret{ animation: none; opacity: 0; }
+  .msg-typing i{ animation: none; opacity: 0.55; }
+}
+
+@media print{
+  html.js .msg-enter{
+    opacity: 1 !important;
+    transform: none !important;
+  }
+  .msg-caret{ display: none; }
+}

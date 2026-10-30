@@ -5,815 +5,890 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>讲台求生 · AI 试讲教练</title>
 <meta name="description" content="粘贴讲稿，AI 从语速、提问、口头禅、环节覆盖多维度复盘，并派出 AI 学生实时向你提问。">
-<link rel="stylesheet" href="styles.css?v=20261022-metrics1">
+<link rel="stylesheet" href="styles.css?v=20261030-hero2">
+<link rel="stylesheet" href="fx.css?v=20261030-hero1">
+<link rel="stylesheet" href="material.css?v=20261030-m5">
+<link rel="stylesheet" href="motion.css?v=20261030-m5">
+<link rel="stylesheet" href="ui.css?v=20261030-m5">
+<link rel="stylesheet" href="msg.css?v=20261030-m5">
+<link rel="stylesheet" href="rb-fx.css?v=20261030-tilt1">
 </head>
 <body>
 
 <header class="topbar">
-  <div class="brand">
-    <span class="mark">讲</span>
-    <div class="brand-txt">
-      <b>讲台求生</b>
-      <span>上台前，先被 AI 拆台一次</span>
-    </div>
-  </div>
-  <div class="badges">
-    <span class="badge" id="modeBadge">
-      <i class="dot" id="modeDot"></i>
-      <span id="modeText">检测中…</span>
-    </span>
-    <span class="badge ghost" id="modelBadge" title="当前使用的模型">模型：—</span>
-    <button class="icon-btn" id="themeBtn" type="button" title="切换深色 / 浅色主题">◐</button>
-    <a class="icon-btn" id="landingLink" href="landing.html" title="项目介绍页">ⓘ 介绍</a>
-    <button class="icon-btn" id="roadshowBtn" type="button" title="3 分钟路演动线：分镜 + 倒计时 + 逐字稿">🎬 路演</button>
-    <button class="icon-btn demo-start" id="autoDemoBtn" type="button" title="一键自动跑完整流程，可作现场演示">▷ 自动演示</button>
-  </div>
+ <div class="brand">
+ <span class="mark">讲</span>
+ <div class="brand-txt">
+ <b>讲台求生</b>
+ <span>上台前，先被 AI 拆台一次</span>
+ </div>
+ </div>
+ <div class="badges">
+ <span class="badge" id="modeBadge">
+ <i class="dot" id="modeDot"></i>
+ <span id="modeText">检测中…</span>
+ </span>
+ <button class="icon-btn demo-start" id="autoDemoBtn" type="button" title="一键自动跑完整流程，可作现场演示">▷ 自动演示</button>
+ <button class="icon-btn" id="topMoreBtn" type="button" aria-expanded="false" aria-controls="topMorePanel" title="更多选项">⋯ 更多</button>
+ </div>
+
+ <!-- 技术状态与次要入口收进抽屉：首屏第一行留给「这是什么」，不留给「模型: deepseek-chat」 -->
+ <div class="top-more" id="topMorePanel" hidden>
+ <span class="tm-model" id="modelBadge" title="当前使用的模型">模型：—</span>
+ <button class="tm-item" id="themeBtn" type="button">切换深色 / 浅色主题</button>
+ <a class="tm-item" id="landingLink" href="landing.html">项目介绍</a>
+ <a class="tm-item" id="codexLink" href="codex.html">AI 教学教练面板</a>
+ <button class="tm-item" id="roadshowBtn" type="button">3 分钟路演动线</button>
+ </div>
 </header>
 
 <main class="layout">
 
-  <!-- 工作区入口 hero：引导开始一次试讲 / 观看示例演示 -->
-  <section class="hero" id="heroBanner" aria-labelledby="workspaceHeading">
-    <div class="hero-txt">
-      <b id="workspaceHeading">今天，把一个教学难点讲清楚。</b>
-      <span>
-        提交试讲内容，查看问题与建议，再进入 AI 学生问答或情境演练。
-        <br>
-        从一次试讲开始，为下一次上台做准备。
-      </span>
-    </div>
-
-    <div class="workspace-entry-actions">
-      <a
-        class="primary"
-        href="#trainingInput"
-        style="text-decoration:none"
-      >开始一次试讲</a>
-
-      <button
-        class="ghost-btn"
-        id="heroDemoBtn"
-        type="button"
-        title="运行示例流程；其中的固定示例结果不代表你的试讲表现"
-      >观看示例演示</button>
-    </div>
-  </section>
-
-  <!-- 训练输入 -->
-  <section
-    class="panel"
-    id="trainingInput"
-    aria-labelledby="trainingInputHeading"
-  >
-    <h2 class="panel-title" id="trainingInputHeading">1 · 准备试讲内容</h2>
-    <p class="tip">
-      填写课题和学段，粘贴逐字稿；如需检查教案覆盖或进行双人对比，可展开高级设置。
-    </p>
-
-    <div class="uploader" id="uploader">
-      <input type="file" id="videoFile" accept="video/*,audio/*" hidden>
-      <div class="up-row">
-        <button class="ghost-btn sm" id="uploadBtn" type="button">上传试讲视频</button>
-        <span class="up-tip" id="uploadTip">
-          可上传音视频；能否完成转写取决于文件、服务配置与运行环境
-        </span>
-      </div>
-    </div>
-
-    <div class="row2">
-      <div class="field">
-        <label for="subjectInput">试讲课题</label>
-        <input id="subjectInput" type="text" value="勾股定理" placeholder="如：勾股定理">
-      </div>
-      <div class="field">
-        <label for="gradeInput">学段</label>
-        <input id="gradeInput" type="text" value="初中八年级" placeholder="如：初中八年级">
-      </div>
-    </div>
-
-    <!-- 教学任务与学情配置（可选，不填也能跑） -->
-    <details class="cfg-panel" id="teachingConfig">
-      <summary class="cfg-summary">
-        <span>⚙ 教学任务与学情（可选，不填也能跑）</span>
-        <span class="cfg-chip" id="cfgSummaryChip" hidden></span>
-      </summary>
-
-      <div class="cfg-body" id="cfgPanel">
-        <p class="tip">
-          先写清这节课教什么、班里什么水平，AI 学生和专项练习会按这份配置来。
-          在准备试讲区展开填写。
-        </p>
-        <p class="tip">
-          默认班级画像为「中等水平 / 45 人 / 活跃度一般」，年级与学科沿用上方输入框实时值。
-        </p>
-
-        <fieldset class="cfg-group" id="cfgTaskGroup">
-          <legend>本次教学任务</legend>
-
-          <div class="field">
-            <label for="cfgTopic">本次课题</label>
-            <input id="cfgTopic" type="text" placeholder="留空则沿用上方试讲课题"
-              aria-describedby="cfgTopicHelp">
-            <span class="up-tip" id="cfgTopicHelp">不填则沿用上方试讲课题</span>
-          </div>
-
-          <div class="field">
-            <label for="cfgLessonType">课时类型</label>
-            <select id="cfgLessonType" aria-describedby="cfgLessonTypeHelp">
-              <option value="new">新授课</option>
-              <option value="review">复习课</option>
-              <option value="exercise">习题课</option>
-              <option value="lab">实验课</option>
-              <option value="assessment">讲评课</option>
-              <option value="public">公开课</option>
-            </select>
-            <span class="up-tip" id="cfgLessonTypeHelp">不同课型的提问方式不同</span>
-          </div>
-
-          <div class="field">
-            <label for="cfgObjectives">教学目标</label>
-            <textarea id="cfgObjectives" rows="3" placeholder="如：能说出 y 随 x 怎么变"
-              aria-describedby="cfgObjectivesHelp"></textarea>
-            <span class="up-tip" id="cfgObjectivesHelp">写成可检验的学生行为</span>
-          </div>
-
-          <div class="field">
-            <label for="cfgKeyPoints">教学重点</label>
-            <textarea id="cfgKeyPoints" rows="2" placeholder="重点：…"
-              aria-describedby="cfgKeyPointsHelp"></textarea>
-            <span class="up-tip" id="cfgKeyPointsHelp">分析时会核对讲稿是否讲到</span>
-          </div>
-
-          <div class="field">
-            <label for="cfgDifficulties">教学难点</label>
-            <textarea id="cfgDifficulties" rows="2" placeholder="难点：…"
-              aria-describedby="cfgDifficultiesHelp"></textarea>
-            <span class="up-tip" id="cfgDifficultiesHelp">分析时会核对讲稿是否讲到</span>
-          </div>
-
-          <div class="field">
-            <label for="cfgAssessment">评价方式</label>
-            <select id="cfgAssessment" aria-describedby="cfgAssessmentHelp">
-              <option value="formative">形成性评价</option>
-              <option value="summative">终结性评价</option>
-              <option value="both">两者兼有</option>
-              <option value="none">不评价</option>
-            </select>
-            <span class="up-tip" id="cfgAssessmentHelp">决定用什么方式判定你讲清楚了</span>
-          </div>
-
-          <div class="field">
-            <label for="cfgDurationMin">计划课时(分钟)</label>
-            <input id="cfgDurationMin" type="number" min="0" max="180" step="1" value="0"
-              placeholder="0 表示未填" aria-describedby="cfgDurationMinHelp">
-            <span class="up-tip" id="cfgDurationMinHelp">0 表示未填</span>
-          </div>
-        </fieldset>
-
-        <fieldset class="cfg-group" id="cfgClassGroup">
-          <legend>学情画像</legend>
-
-          <div class="field">
-            <label for="cfgClassLevel">班级水平</label>
-            <select id="cfgClassLevel" aria-describedby="cfgClassLevelHelp">
-              <option value="weak">基础薄弱</option>
-              <option value="basic">中等偏弱</option>
-              <option value="good" selected>中等</option>
-              <option value="excellent">优秀</option>
-            </select>
-            <span class="up-tip" id="cfgClassLevelHelp">决定学生提问的难度和频次</span>
-          </div>
-
-          <div class="field">
-            <label for="cfgPriorKnowledge">前置知识</label>
-            <textarea id="cfgPriorKnowledge" rows="2" placeholder="如：已学一次函数与坐标系"
-              aria-describedby="cfgPriorKnowledgeHelp"></textarea>
-            <span class="up-tip" id="cfgPriorKnowledgeHelp">已会的不会再问，减少无效提问</span>
-          </div>
-
-          <div class="field">
-            <label for="cfgCommonErrors">常见错误</label>
-            <textarea id="cfgCommonErrors" rows="2" placeholder="如：把 a 当成斜率"
-              aria-describedby="cfgCommonErrorsHelp"></textarea>
-            <span class="up-tip" id="cfgCommonErrorsHelp">学生最容易错的地方，会被专门追问</span>
-          </div>
-
-          <div class="field">
-            <label for="cfgClassSize">班级规模(人)</label>
-            <input id="cfgClassSize" type="number" min="1" max="80" step="1" value="45"
-              placeholder="45" aria-describedby="cfgClassSizeHelp">
-            <span class="up-tip" id="cfgClassSizeHelp">影响参与度和提问轮次</span>
-          </div>
-
-          <div class="field">
-            <label for="cfgActivity">课堂活跃度</label>
-            <select id="cfgActivity" aria-describedby="cfgActivityHelp">
-              <option value="low">偏低</option>
-              <option value="mid" selected>一般</option>
-              <option value="high">较高</option>
-            </select>
-            <span class="up-tip" id="cfgActivityHelp">决定学生主动发言的频率</span>
-          </div>
-        </fieldset>
-
-        <div class="cfg-actions">
-          <button class="primary" id="cfgSaveBtn" type="button">保存配置</button>
-          <button class="ghost-btn" id="cfgResetBtn" type="button" title="清空配置，恢复默认值">重置</button>
-          <button class="link" id="cfgSkipBtn" type="button">跳过此步</button>
-        </div>
-
-        <p class="tip" id="cfgStatusTip" role="status" aria-live="polite"></p>
-
-        <div class="cfg-trust">
-          <p>这份配置只用于本次训练的分析与 AI 学生模拟，不进入公开榜单。</p>
-          <p>填得越具体，AI 学生的提问越接近你真实面对的那班学生。</p>
-        </div>
-      </div>
-    </details>
-
-    <details class="workspace-advanced" id="trainingAdvanced">
-      <summary class="workspace-advanced-summary">
-        高级设置：评分标准、双人对比、教案与时长
-      </summary>
-
-      <p class="tip">
-        以下配置可选。没有实际时长或可靠时间信息时，相关时间指标只能作为估算或推断参考。
-      </p>
-
-      <div class="workspace-advanced-content">
-
-    <div class="row2">
-      <div class="field">
-        <label for="subjectKeyInput">学科评分标准</label>
-        <select id="subjectKeyInput">
-          <option value="auto">智能识别（推荐）</option>
-          <option value="math">数学</option>
-          <option value="chinese">语文</option>
-          <option value="english">英语</option>
-          <option value="science">理化生</option>
-          <option value="generic">通用</option>
-        </select>
-        <span class="up-tip" id="subjectDetectedTip">将根据课题自动匹配专属评分维度</span>
-      </div>
-      <div class="field">
-        <label for="compareToggle">小组博弈：双人对比</label>
-        <select id="compareToggle">
-          <option value="off">关闭（单人）</option>
-          <option value="on">开启：填入第二份讲稿</option>
-        </select>
-      </div>
-    </div>
-
-    <div class="field" id="scriptBWrap" hidden>
-      <label for="scriptInputB">对比讲稿（B 稿）</label>
-      <textarea id="scriptInputB" placeholder="另一位同学的讲稿粘到这里…"></textarea>
-    </div>
-
-    <div class="field" id="planWrap">
-      <label for="planInput">📋 教案导入（检查知识点覆盖）
-        <button class="ghost-btn sm" id="planFileBtn" type="button" style="margin-left:8px">读取 .txt 教案</button>
-      </label>
-      <textarea id="planInput" placeholder="把教案粘到这里（支持 .txt 文件读取；PDF / Word 请复制粘贴）…"></textarea>
-      <input type="file" id="planFile" accept=".txt,.md" hidden>
-      <span class="up-tip">分析时会自动对照教案，检查试讲是否覆盖全部知识点、有没有讲跑偏</span>
-    </div>
-
-    <div class="field">
-      <label for="durationInput">试讲总时长（秒，选填）</label>
-      <input
-        id="durationInput"
-        type="number"
-        min="0"
-        step="any"
-        placeholder="不填时按 240 秒估算，不代表实际时长"
-        aria-describedby="durationSourceHint"
-      >
-      <span class="up-tip" id="durationSourceHint">
-        请填写与本次逐字稿对应的总时长；平均语速将包含其中的停顿和互动时间。
-      </span>
-    </div>
-
-      </div>
-    </details>
-
-    <div class="field">
-      <label for="scriptInput">试讲逐字稿
-        <button class="ghost-btn sm" id="dictateBtn" type="button" style="margin-left:8px">🎤 语音输入</button>
-        <span class="up-tip" id="dictateTip" hidden>● 正在听…再点一次停止</span>
-      </label>
-      <textarea id="scriptInput" placeholder="把你说的话粘到这里…（也可以用 Whisper 从视频转写出来，或直接点语音输入）"></textarea>
-      <div class="meta-row">
-        <span id="charHint">0 字</span>
-        <button class="link" id="fillSampleBtn" type="button">填入示例讲稿</button>
-      </div>
-    </div>
-
-    <button class="primary big" id="analyzeBtn" type="button">
-      <span id="analyzeBtnText">开始 AI 分析</span>
-    </button>
-
-    <p class="tip" id="errTip" role="alert"></p>
-
-    <div class="howto">
-      <b>分析方式与数据提示</b>
-      在线分析会将相关输入发送到应用后端；启用外部 AI 或转写服务时，
-      完成任务所需的内容还可能发送至对应服务。
-      请先移除学生姓名、联系方式等可识别个人的信息。
-      <br>
-      配置有效模型时使用模型能力，部分功能可由服务端规则处理；
-      固定示例演示不代表对当前讲稿的真实分析。
-    </div>
-  </section>
-
-  <!-- 复盘与演练 -->
-  <section
-    class="panel"
-    id="trainingResults"
-    aria-labelledby="trainingResultsHeading"
-  >
-    <h2 class="panel-title" id="trainingResultsHeading">2 · 复盘与演练
-      <button class="ghost-btn sm" id="exportBtn" type="button" hidden style="margin-left:auto">导出 PDF 报告</button>
-      <button class="ghost-btn sm" id="posterBtn" type="button" hidden>🎴 分享海报</button>
-    </h2>
-
-    <div id="resultEmpty" class="empty">
-      <div class="empty-icon" aria-hidden="true">◍</div>
-      <p>
-        完成一次分析后，在这里查看复盘与建议，
-        <br>
-        再选择 AI 学生问答、情境演练或多视角反馈。
-      </p>
-      <p class="tip">
-        <a class="link" href="#trainingInput">先准备试讲内容 ↑</a>
-      </p>
-    </div>
-
-    <div id="resultBody" hidden>
-
-      <!-- 总分 -->
-      <div class="score-top">
-        <div class="ring" id="scoreRing"><span id="scoreNum">--</span><small>分</small></div>
-        <div class="score-side">
-          <p class="score-sum" id="scoreSummary"></p>
-          <div class="engine-tag" id="engineTag"></div>
-          <div class="rank-title" id="rankTitle" hidden></div>
-        </div>
-      </div>
-
-      <!-- 求生等级 + 徽章 -->
-      <div class="badge-row" id="badgeRow"></div>
-
-      <!-- Tab -->
-      <div class="tabs">
-        <button class="tab active" data-tab="report" type="button">复盘报告</button>
-        <button class="tab" data-tab="improve" type="button">改进建议</button>
-        <button class="tab" data-tab="chat" type="button">AI 学生拆台</button>
-        <button class="tab" data-tab="drill" type="button">⏱ 3 分钟专项练习</button>
-        <button class="tab" data-tab="crisis" type="button">💥 课堂崩塌模拟</button>
-        <button class="tab" data-tab="pano" type="button">🔭 六视角透视</button>
-        <button class="tab" data-tab="growth" type="button">📈 成长档案</button>
-      </div>
-
-      <!-- Tab1 -->
-      <div class="tabpane active" id="pane-report">
-        <div class="metrics" id="metricsGrid"></div>
-
-        <h3 class="sub">⚠️ 危险瞬间</h3>
-        <div class="danger-box" id="dangerBox"><p class="tip">分析完成后自动摘录卡壳、冷场、伪提问等高风险片段。</p></div>
-
-        <h3 class="sub">📋 教案覆盖检查</h3>
-        <div class="plan-box" id="planBox"><p class="tip">左侧粘入教案后分析，这里会显示每个知识点的覆盖情况。</p></div>
-
-        <h3 class="sub">📐 课标对照</h3>
-        <div class="std-box" id="curriculumBox"><p class="tip">分析完成后自动对照义务教育课程标准（2022 年版），核验教学目标达成度。</p></div>
-
-        <h3 class="sub">⏱️ 提问等待热力图</h3>
-        <div class="heatmap-box" id="heatmapBox"><p class="tip">分析完成后自动生成：红色 = 推断等待不足 1 秒（疑似自问自答），绿色 = 推断等待 2–3 秒（留白充分）。悬停查看每次提问的原文。等待秒数由讲稿文本推断，非音频时间戳实测值。</p></div>
-
-        <h3 class="sub">语速节奏曲线</h3>
-        <div class="curve-box" id="curveBox"></div>
-
-        <h3 class="sub">🥧 一节课的时间分配</h3>
-        <div class="pie-box" id="pieBox"><p class="tip">教师讲 / 学生答 / 互动 / 过渡各占多少，对标理想配比。</p></div>
-
-        <h3 class="sub">🧭 iFIAS 课堂互动编码（14 类）</h3>
-        <div class="ifias-box" id="ifiasBox"><p class="tip">分析完成后自动按改进型弗兰德斯互动分析系统（iFIAS）逐句编码：互动矩阵 + 比率指标 + DBSCAN 片段聚类 + PCA 结构图。</p></div>
-
-        <h3 class="sub">逐字稿（口头禅已标黄）</h3>
-        <div class="transcript" id="transcriptHi"></div>
-
-        <h3 class="sub">🚫 口头禅排行榜</h3>
-        <div class="filler-rank" id="fillerRankBox"><p class="tip">分析完成后按出现次数排名，点掉排名前三，专业感立刻回来。</p></div>
-
-        <h3 class="sub">行动建议</h3>
-        <div class="suggestions" id="suggestionsList"></div>
-
-        <h3 class="sub">🎓 名师点评库</h3>
-        <div class="master-box" id="masterQuoteBox"><p class="tip">分析完成后，按你的短板匹配微格教学评委的典型点评与改进方向。</p></div>
-      </div>
-
-      <!-- Tab2 -->
-      <div class="tabpane" id="pane-improve">
-        <div id="improveEmpty" class="mini-empty">
-          <button class="primary" id="improveBtn" type="button">生成改进版逐字稿</button>
-          <p class="tip">AI 会重写你的讲稿：删口头禅、把伪提问改成留白式提问、补齐缺失环节。</p>
-        </div>
-        <div id="improveBody" hidden>
-          <h3 class="sub">主要改动</h3>
-          <ul class="changes" id="keyChanges"></ul>
-
-          <h3 class="sub">改进版逐字稿</h3>
-          <div class="script-out" id="improvedScript"></div>
-
-          <h3 class="sub">🧩 分环节改进稿（复制去练）
-            <button class="ghost-btn sm" id="copySegBtn" type="button" style="margin-left:8px">📋 复制全文</button>
-          </h3>
-          <div class="seg-script" id="segScript"><p class="tip">按【导入】【新授】【互动】【小结】切分的练嘴稿，每段标注关键改动。</p></div>
-
-          <div class="two-col">
-            <div>
-              <h3 class="sub">板书建议</h3>
-              <div class="card sm" id="blackboardBox"></div>
-            </div>
-            <div>
-              <h3 class="sub">分层作业</h3>
-              <div class="card sm" id="homeworkBox"></div>
-            </div>
-          </div>
-
-          <div class="next-focus" id="nextFocusBox"></div>
-        </div>
-      </div>
-
-      <!-- Tab3 -->
-      <div class="tabpane" id="pane-chat">
-        <p class="tip profile-intro">
-          AI 学生的提问难度和困惑点，按你填的班级水平与常见错误生成。
-        </p>
-
-        <div class="profile-bar" id="profileBar">
-          <span class="profile-bar-text" id="profileBarText"></span>
-          <button class="link" id="profileBarEditBtn" type="button">查看学情配置</button>
-        </div>
-        <p class="tip" id="profileDemoNote" hidden>演示模式：以下为演示数据，不代表你本次练习的真实表现。</p>
-
-        <div class="mode-switch" id="chatModeBar">
-          <button class="msw active" data-mode="solo" type="button">单人拆台</button>
-          <button class="msw" data-mode="class" type="button">👥 三学生课堂（高能）</button>
-        </div>
-
-        <!-- 三学生课堂模式 -->
-        <div id="classMode" hidden>
-          <div class="profile-note" id="classProfileNote">
-            <span class="profile-tag" id="classProfileTag">默认学情</span>
-            <span id="classProfileText"></span>
-          </div>
-          <div class="pressure-bar" id="pressureBar">
-            <div class="pressure-label">课堂压力 <b id="pressureNum">20</b> / 100</div>
-            <div class="pressure-track"><div class="pressure-fill" id="pressureFill"></div></div>
-            <div class="pressure-hint" id="pressureHint">稳住，你能行</div>
-          </div>
-          <div class="cockpit" id="classCockpit" aria-label="课堂实时驾驶舱">
-            <div class="ck-item">
-              <div class="ck-head"><span>节奏</span><b id="ckPaceV">—</b></div>
-              <div class="ck-track"><i id="ckPaceBar" style="width:0%"></i></div>
-              <div class="ck-note" id="ckPaceN">等第一轮课堂</div>
-            </div>
-            <div class="ck-item">
-              <div class="ck-head"><span>张力</span><b id="ckTensionV">20</b></div>
-              <div class="ck-track"><i id="ckTensionBar" style="width:20%"></i></div>
-              <div class="ck-note" id="ckTensionN">课堂稳定</div>
-            </div>
-            <div class="ck-item">
-              <div class="ck-head"><span>参与度</span><b id="ckFocusV">—</b></div>
-              <div class="ck-track"><i id="ckFocusBar" style="width:0%"></i></div>
-              <div class="ck-note" id="ckFocusN">等学生开口</div>
-            </div>
-          </div>
-          <div class="class-students" id="classStudents"></div>
-          <div class="chat" id="classLog"></div>
-          <form class="chat-input" id="classForm">
-            <input id="classInput" type="text" placeholder="作为老师回应全班…（可点🎤直接说话）" autocomplete="off">
-            <button class="ghost-btn" id="classMicBtn" type="button" title="按住说话：语音回答学生">🎤</button>
-            <button class="primary" type="submit">回应</button>
-          </form>
-          <div class="chat-actions">
-            <button class="ghost-btn" id="classNextBtn" type="button">下一轮课堂 →</button>
-            <div class="right-actions" style="display:flex;gap:10px;align-items:center">
-              <label class="switch"><input type="checkbox" id="classSpeakToggle"><span>朗读学生的话</span></label>
-              <button class="link" id="classResetBtn" type="button">重新开课</button>
-            </div>
-          </div>
-        </div>
-
-        <!-- 单人模式（原有） -->
-        <div id="soloMode">
-          <div class="profile-note" id="soloProfileNote"></div>
-          <div class="personas" id="personaBar">
-            <button class="persona active" data-p="naughty" type="button">调皮型</button>
-            <button class="persona" data-p="geek" type="button">学霸型</button>
-            <button class="persona" data-p="drift" type="button">走神型</button>
-            <span style="flex:1"></span>
-          </div>
-          <div class="field" style="margin:10px 0 0">
-            <input id="customPersona" type="text" placeholder="自定义人设（选填）：如「班上有位 ADHD 的孩子，容易走神还会突然问奇怪问题」">
-          </div>
-
-          <div class="chat" id="chatLog">
-            <div class="msg sys">选好性格，点下面的按钮，AI 学生就会基于你的讲稿向你发难。</div>
-          </div>
-
-          <form class="chat-input" id="chatForm">
-            <input id="chatInput" type="text" placeholder="作为老师回答他…" autocomplete="off">
-            <button class="primary" type="submit">发送</button>
-          </form>
-
-          <div class="chat-actions">
-            <button class="ghost-btn" id="askBtn" type="button">让学生提问</button>
-            <div class="right-actions">
-              <label class="switch"><input type="checkbox" id="speakToggle"><span>朗读学生的话</span></label>
-              <button class="link" id="clearChatBtn" type="button">清空对话</button>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Tab4: 3 分钟专项练习 -->
-      <div class="tabpane" id="pane-drill">
-        <p class="tip">
-          只练一个技能，3 分钟限时，结束后给出该项评分和一条改进动作。
-        </p>
-
-        <div class="drill-entry">
-          <button class="primary sm drill-entry-start" type="button">开始练习</button>
-          <button class="link drill-pick-btn" type="button" disabled>选一项再开始</button>
-        </div>
-
-        <div class="drill-empty" id="drillEmpty">
-          <p>选一项技能，开始 3 分钟练习</p>
-          <p class="tip">先完成一次分析即可带入讲稿。</p>
-        </div>
-
-        <div class="drill-skill-list" id="drillSkillList">
-          <div class="drill-skill-cards" id="drillSkillCards"></div>
-        </div>
-
-        <div class="drill-task-box" id="drillTaskBox" hidden>
-          <h3 class="sub drill-task-title"></h3>
-          <p class="drill-task-brief"></p>
-          <ul class="drill-checklist"></ul>
-          <p class="drill-starter"></p>
-
-          <div class="drill-timer-row">
-            <span class="drill-timer" id="drillTimer" role="timer" aria-live="off">03:00</span>
-            <span class="drill-timer-text">剩余 3 分 0 秒</span>
-            <button class="primary sm" id="drillTimerStartBtn" type="button">开始练习</button>
-            <button class="ghost-btn sm" id="drillTimerStopBtn" type="button" disabled>结束并评分</button>
-          </div>
-
-          <div class="field">
-            <label for="drillTranscript">本次练习内容</label>
-            <textarea id="drillTranscript" rows="6"
-              placeholder="只写这一项的练习内容，比如一段提问、一段导入"></textarea>
-            <div class="meta-row">
-              <span id="drillCharHint">已输入 0 字</span>
-            </div>
-          </div>
-
-          <button class="primary" id="drillSubmitBtn" type="button">提交本次练习</button>
-          <p class="tip drill-tip" role="status" aria-live="polite"></p>
-        </div>
-
-        <div class="drill-result" id="drillResult" hidden>
-          <h3 class="sub drill-result-title">本项评分</h3>
-          <p class="drill-result-head"></p>
-          <div class="drill-score-line">
-            <span class="drill-score-label">我的得分</span>
-            <b class="drill-score" id="drillScore">0</b>
-            <span class="drill-grade" id="drillGrade"></span>
-            <span class="engine-tag" id="drillEngineTag"></span>
-          </div>
-          <p class="drill-summary" id="drillSummary"></p>
-          <p class="drill-duration"></p>
-
-          <h3 class="sub">分项说明</h3>
-          <div class="drill-dims" id="drillDims"></div>
-
-          <h3 class="sub">原文证据</h3>
-          <ul class="drill-evidence" id="drillEvidence"></ul>
-
-          <h3 class="sub">改进建议</h3>
-          <ul class="drill-suggestions" id="drillSuggestions"></ul>
-
-          <p class="drill-next"></p>
-          <div class="drill-actions">
-            <button class="ghost-btn" id="drillNextBtn" type="button">再练一个技能</button>
-          </div>
-          <p class="drill-archive-note">
-            本次练习只归档在本机成长档案，不计入总试讲分，也不进公开榜单。
-          </p>
-        </div>
-
-        <p class="tip" id="drillDemoNote" hidden>演示模式：以下为演示数据，不代表你本次练习的真实表现。</p>
-
-        <div class="drill-history">
-          <h3 class="sub">本机练习记录 <span id="drillHistoryCount">0 次</span></h3>
-          <div class="drill-history-list" id="drillHistoryList"></div>
-          <button class="link" id="drillClearHistoryBtn" type="button">清空历史</button>
-        </div>
-      </div>
-
-      <!-- Tab5: 课堂崩塌模拟 -->
-      <div class="tabpane" id="pane-crisis">
-        <div class="mode-switch" id="crisisModeBar">
-          <button class="msw active" data-cmode="drill" type="button">自由演练</button>
-          <button class="msw" data-cmode="challenge" type="button">🏆 极限挑战（6 关 3 命）</button>
-        </div>
-
-        <div class="ch-hud" id="challengeHud" hidden>
-          <div class="ch-levels" id="chLevels"></div>
-          <div class="ch-lives" id="chLives"></div>
-        </div>
-        <div class="ch-result" id="chResult" hidden></div>
-
-        <div class="crisis-empty" id="crisisEmpty">
-          <div class="empty-icon">💥</div>
-          <p>课堂不会永远顺利——设备断电、学生吵架、家长推门、有人哭了……<br>
-          点下方按钮，随机触发一次课堂事故，输入你的应对，<br>AI 按 FIAS 量化你的<b>控场得分</b>。</p>
-          <button class="primary" id="crisisStartBtn" type="button">💥 随机触发课堂事故</button>
-        </div>
-        <div id="crisisBody" hidden>
-          <div class="crisis-event" id="crisisEventCard"></div>
-          <div class="chat" id="crisisLog"></div>
-          <form class="chat-input" id="crisisForm">
-            <input id="crisisInput" type="text" placeholder="作为老师，你怎么办？（说/做什么都行）" autocomplete="off">
-            <button class="primary" type="submit">应对</button>
-          </form>
-          <div class="chat-actions">
-            <button class="ghost-btn" id="crisisNextBtn" type="button" hidden>下一次事故 →</button>
-            <div class="right-actions" style="display:flex;gap:10px;align-items:center">
-              <button class="link" id="crisisRecBtn" type="button">● 录制我的演练</button>
-              <button class="link" id="crisisResetBtn" type="button">结束本次模拟</button>
-            </div>
-          </div>
-          <video id="crisisReplay" controls playsinline hidden style="width:100%;border-radius:10px;margin-top:10px;max-height:220px"></video>
-          <div class="up-tip" id="crisisRecTip" hidden></div>
-        </div>
-      </div>
-
-      <!-- Tab5: 六视角透视 -->
-      <div class="tabpane" id="pane-pano">
-        <div class="pano-empty" id="panoEmpty">
-          <div class="empty-icon">🔭</div>
-          <p>一场试讲，六双眼睛。<br>
-          AI 督导 / 学困生 / 家长 / 同行教师 / 教研组长 / 学情分析师<br>
-          同时给出六个视角的报告与评分雷达图。</p>
-          <button class="primary" id="panoBtn" type="button">开始六视角透视</button>
-        </div>
-        <div id="panoBody" hidden>
-          <div class="pano-radar" id="panoRadar"></div>
-          <p class="tip" id="panoAvg"></p>
-          <div class="pano-views" id="panoViews"></div>
-        </div>
-      </div>
-
-      <!-- Tab6: 成长档案 -->
-      <div class="tabpane" id="pane-growth">
-        <div id="growthBody">
-          <p style="color:#64748b;font-size:13px;margin:0 0 12px">你的历次复盘会自动沉淀在这里（含登录后云端的全部记录），看到进步的轨迹。</p>
-          <div class="pano-card" style="border:1px solid var(--line,#e2e8f0);border-radius:12px;padding:14px 16px;margin-bottom:12px">
-            <b>板书摄像头</b>
-            <p style="font-size:13px;color:#64748b;margin:6px 0 10px">拍一张板书照片上传，AI 给出结构/字迹/完整度评分与改进建议（需配置视觉模型，否则给出板书自检清单）。</p>
-            <input type="file" id="blackboardFile" accept="image/*" hidden>
-            <div style="display:flex;gap:8px;align-items:center">
-              <button class="ghost-btn sm" id="blackboardBtn" type="button">📷 上传板书照片</button>
-              <span class="up-tip" id="blackboardTip">支持 jpg / png</span>
-            </div>
-            <div id="blackboardResult" style="margin-top:10px"></div>
-          </div>
-          <div class="pano-card" style="border:1px solid var(--line,#e2e8f0);border-radius:12px;padding:14px 16px;margin-bottom:12px">
-            <b>🏆 华师校内榜</b>
-            <p style="font-size:13px;color:#64748b;margin:6px 0 10px">今日最高分 / 本周进步最快 / 总分榜。登录后每次复盘自动上榜，昵称可自行设置。</p>
-            <div style="display:flex;gap:8px;align-items:center;margin-bottom:8px;flex-wrap:wrap">
-              <input id="nicknameInput" type="text" placeholder="上榜昵称（如：小张老师）" style="flex:1;min-width:150px;padding:8px 10px;border:1px solid var(--line,#e2e8f0);border-radius:8px">
-              <select id="schoolSelect" style="padding:8px 10px;border:1px solid var(--line,#e2e8f0);border-radius:8px;background:var(--card,#fff);color:inherit;font-size:13px">
-                <option value="">学校</option>
-                <option value="华南师大">华南师大</option>
-                <option value="中山大学">中山大学</option>
-                <option value="暨南大学">暨南大学</option>
-                <option value="广东外语外贸">广东外语外贸</option>
-                <option value="广州大学">广州大学</option>
-                <option value="其他院校">其他院校</option>
-              </select>
-              <input id="teamInput" type="text" placeholder="战队/班级（如 教科院25级1班）" style="flex:1;min-width:150px;padding:8px 10px;border:1px solid var(--line,#e2e8f0);border-radius:8px">
-              <button class="ghost-btn sm" id="saveNickBtn" type="button">保存</button>
-              <span class="up-tip" id="lbLoginTip"></span>
-            </div>
-            <div class="lb-avatars" id="lbAvatarPicker"></div>
-            <div class="lb-tabs" id="lbTabs">
-              <button class="lb-tab active" data-lb="today" type="button">今日最高</button>
-              <button class="lb-tab" data-lb="week" type="button">本周进步</button>
-              <button class="lb-tab" data-lb="total" type="button">总分榜</button>
-              <button class="lb-tab" data-lb="team" type="button">战队榜</button>
-            </div>
-            <div id="lbBody"></div>
-          </div>
-          <div class="daily-card" id="dailyCard" style="border:1px solid var(--line,#e2e8f0);border-radius:12px;padding:14px 16px;margin-bottom:12px">
-            <b>📅 每日一练</b>
-            <div id="dailyBody"><p class="tip">加载今日题目…</p></div>
-            <p id="dailyTip" hidden style="margin:8px 0 0;font-size:12.5px;color:#16a34a"></p>
-          </div>
-          <div class="if-trail-card" style="border:1px solid var(--line,#e2e8f0);border-radius:12px;padding:14px 16px;margin-bottom:12px">
-            <b>📈 多节课互动结构轨迹</b>
-            <p style="font-size:13px;color:#64748b;margin:6px 0 8px">每次复盘都会记录 7 维互动特征（师生占比、提问结构、沉寂、技术、多样性），这里把它们投影到同一张 PCA 平面上：点越靠近 = 课堂结构越像，箭头方向 = 你的课堂在往哪变。</p>
-            <div id="ifiasTrail"><p class="tip">完成 2 次带 iFIAS 编码的复盘后自动生成。</p></div>
-          </div>
-          <div class="hollow-card" id="hollowCard" style="border:1px solid var(--line,#e2e8f0);border-radius:12px;padding:14px 16px;margin-bottom:12px">
-            <b>🕳️ 匿名树洞</b>
-            <p style="font-size:13px;color:#64748b;margin:6px 0 10px">试讲翻车了？说给树洞听。AI 会先接住你的情绪，再给一个能立刻用的小建议。<b>请注意：</b>你输入的内容会发送到服务端交给 AI 处理；登录后，帖子正文、回复与学校名会保存到云端并<b>对所有用户公开显示</b>，可点击举报下架。不登录则仅保存在本设备。</p>
-            <textarea id="hollowInput" rows="3" placeholder="今天讲砸了……（说说发生了什么）" style="width:100%;padding:9px 11px;border:1px solid var(--line,#e2e8f0);border-radius:9px;font-size:13.5px;resize:vertical;box-sizing:border-box;background:var(--card,#fff);color:inherit"></textarea>
-            <div style="display:flex;justify-content:flex-end;margin-top:8px">
-              <button class="primary sm" id="hollowSubmit" type="button">说给树洞听</button>
-            </div>
-            <div class="hollow-tabs" id="hollowTabs">
-              <button class="hollow-tab active" data-sort="new" type="button">最新</button>
-              <button class="hollow-tab" data-sort="hot" type="button">最戳心</button>
-              <span class="hollow-count" id="hollowCount"></span>
-            </div>
-            <div id="hollowPosts"></div>
-          </div>
-          <div id="growthCurve"></div>
-          <div id="growthList"></div>
-        </div>
-      </div>
-
-    </div>
-  </section>
+ <!-- 首屏：一句话说明 + 真实课堂片段（片段用的是和课堂里同一套立绘与压力条） -->
+ <section class="hero" id="heroBanner" aria-labelledby="heroTitle">
+ <div class="hero-txt">
+ <h1 class="hero-title" id="heroTitle">上台前，先被三个 AI 学生拆一次台</h1>
+ <p class="hero-sub">
+ <b>师范生试讲教练。</b>粘贴逐字稿，AI 先复盘语速、提问、口头禅与环节覆盖；
+ 再扮成三个学生当场发难。课堂会崩，压力会涨——你要在爆表前把课讲完。
+ </p>
+
+ <div class="workspace-entry-actions">
+ <a
+ class="primary"
+ href="#trainingInput"
+ style="text-decoration:none"
+ >开始一次试讲</a>
+
+ <button
+ class="ghost-btn"
+ id="heroDemoBtn"
+ type="button"
+ title="运行示例流程；其中的固定示例结果不代表你的试讲表现"
+ >看一遍示例</button>
+ </div>
+
+ <p class="hero-note">示例流程使用固定数据，只用来看清会发生什么，不代表你的试讲表现。</p>
+ </div>
+
+ <!-- 真实界面片段（不是截图，也不是图库照片）：课堂里正在发生的一帧 -->
+ <figure class="hero-clip" data-ui="classroom-clip">
+ <div class="clip-head">
+ <span class="clip-topic">勾股定理 · 初中八年级</span>
+ <span class="clip-state">正在崩塌</span>
+ </div>
+
+ <div class="clip-stage">
+ <span class="clip-stu" data-art-key="naughty" data-art-state="default"><img alt="" data-fill><em>小皮</em><i class="clip-tag">抬杠</i></span>
+ <span class="clip-stu" data-art-key="geek" data-art-state="closed"><img alt="" data-fill><em>小霸</em><i class="clip-tag">追问</i></span>
+ <span class="clip-stu is-drift" data-art-key="drift" data-art-state="closed"><img alt="" data-fill><em>小走</em><i class="clip-tag">飘走</i></span>
+ </div>
+
+ <blockquote class="clip-quote">
+ <b>小皮</b>老师，那钝角三角形也这样吗？
+ </blockquote>
+
+ <div class="clip-verdict">
+ <span class="clip-press"><b>87</b><i>/100</i></span>
+ <span class="clip-meter" aria-hidden="true"><i style="width:87%"></i></span>
+ <span class="clip-warn">再答不上来就要崩塌</span>
+ </div>
+ </figure>
+ </section>
+
+ <!-- 训练输入 -->
+ <section
+ class="panel"
+ id="trainingInput"
+ aria-labelledby="trainingInputHeading"
+ >
+ <h2 class="panel-title" id="trainingInputHeading">1 · 准备试讲内容</h2>
+ <p class="tip">
+ 填写课题和学段，粘贴逐字稿；如需检查教案覆盖或进行双人对比，可展开高级设置。
+ </p>
+
+ <div class="uploader" id="uploader">
+ <input type="file" id="videoFile" accept="video/*,audio/*" hidden>
+ <div class="up-row">
+ <button class="ghost-btn sm" id="uploadBtn" type="button">上传试讲视频</button>
+ <span class="up-tip" id="uploadTip">
+ 可上传音视频；能否完成转写取决于文件、服务配置与运行环境
+ </span>
+ </div>
+ </div>
+
+ <div class="row2">
+ <div class="field">
+ <label for="subjectInput">试讲课题</label>
+ <input id="subjectInput" type="text" value="勾股定理" placeholder="如：勾股定理">
+ </div>
+ <div class="field">
+ <label for="gradeInput">学段</label>
+ <input id="gradeInput" type="text" value="初中八年级" placeholder="如：初中八年级">
+ </div>
+ </div>
+
+ <!-- 教学任务与学情配置（可选，不填也能跑） -->
+ <details class="cfg-panel" id="teachingConfig">
+ <summary class="cfg-summary">
+ <span>教学任务与学情（可选，不填也能跑）</span>
+ <span class="cfg-chip" id="cfgSummaryChip" hidden></span>
+ </summary>
+
+ <div class="cfg-body" id="cfgPanel">
+ <p class="tip">
+ 先写清这节课教什么、班里什么水平，AI 学生和专项练习会按这份配置来。
+ 在准备试讲区展开填写。
+ </p>
+ <p class="tip">
+ 默认班级画像为「中等水平 / 45 人 / 活跃度一般」，年级与学科沿用上方输入框实时值。
+ </p>
+
+ <fieldset class="cfg-group" id="cfgTaskGroup">
+ <legend>本次教学任务</legend>
+
+ <div class="field">
+ <label for="cfgTopic">本次课题</label>
+ <input id="cfgTopic" type="text" placeholder="留空则沿用上方试讲课题"
+ aria-describedby="cfgTopicHelp">
+ <span class="up-tip" id="cfgTopicHelp">不填则沿用上方试讲课题</span>
+ </div>
+
+ <div class="field">
+ <label for="cfgLessonType">课时类型</label>
+ <select id="cfgLessonType" aria-describedby="cfgLessonTypeHelp">
+ <option value="new">新授课</option>
+ <option value="review">复习课</option>
+ <option value="exercise">习题课</option>
+ <option value="lab">实验课</option>
+ <option value="assessment">讲评课</option>
+ <option value="public">公开课</option>
+ </select>
+ <span class="up-tip" id="cfgLessonTypeHelp">不同课型的提问方式不同</span>
+ </div>
+
+ <div class="field">
+ <label for="cfgObjectives">教学目标</label>
+ <textarea id="cfgObjectives" rows="3" placeholder="如：能说出 y 随 x 怎么变"
+ aria-describedby="cfgObjectivesHelp"></textarea>
+ <span class="up-tip" id="cfgObjectivesHelp">写成可检验的学生行为</span>
+ </div>
+
+ <div class="field">
+ <label for="cfgKeyPoints">教学重点</label>
+ <textarea id="cfgKeyPoints" rows="2" placeholder="重点：…"
+ aria-describedby="cfgKeyPointsHelp"></textarea>
+ <span class="up-tip" id="cfgKeyPointsHelp">分析时会核对讲稿是否讲到</span>
+ </div>
+
+ <div class="field">
+ <label for="cfgDifficulties">教学难点</label>
+ <textarea id="cfgDifficulties" rows="2" placeholder="难点：…"
+ aria-describedby="cfgDifficultiesHelp"></textarea>
+ <span class="up-tip" id="cfgDifficultiesHelp">分析时会核对讲稿是否讲到</span>
+ </div>
+
+ <div class="field">
+ <label for="cfgAssessment">评价方式</label>
+ <select id="cfgAssessment" aria-describedby="cfgAssessmentHelp">
+ <option value="formative">形成性评价</option>
+ <option value="summative">终结性评价</option>
+ <option value="both">两者兼有</option>
+ <option value="none">不评价</option>
+ </select>
+ <span class="up-tip" id="cfgAssessmentHelp">决定用什么方式判定你讲清楚了</span>
+ </div>
+
+ <div class="field">
+ <label for="cfgDurationMin">计划课时(分钟)</label>
+ <input id="cfgDurationMin" type="number" min="0" max="180" step="1" value="0"
+ placeholder="0 表示未填" aria-describedby="cfgDurationMinHelp">
+ <span class="up-tip" id="cfgDurationMinHelp">0 表示未填</span>
+ </div>
+ </fieldset>
+
+ <fieldset class="cfg-group" id="cfgClassGroup">
+ <legend>学情画像</legend>
+
+ <div class="field">
+ <label for="cfgClassLevel">班级水平</label>
+ <select id="cfgClassLevel" aria-describedby="cfgClassLevelHelp">
+ <option value="weak">基础薄弱</option>
+ <option value="basic">中等偏弱</option>
+ <option value="good" selected>中等</option>
+ <option value="excellent">优秀</option>
+ </select>
+ <span class="up-tip" id="cfgClassLevelHelp">决定学生提问的难度和频次</span>
+ </div>
+
+ <div class="field">
+ <label for="cfgPriorKnowledge">前置知识</label>
+ <textarea id="cfgPriorKnowledge" rows="2" placeholder="如：已学一次函数与坐标系"
+ aria-describedby="cfgPriorKnowledgeHelp"></textarea>
+ <span class="up-tip" id="cfgPriorKnowledgeHelp">已会的不会再问，减少无效提问</span>
+ </div>
+
+ <div class="field">
+ <label for="cfgCommonErrors">常见错误</label>
+ <textarea id="cfgCommonErrors" rows="2" placeholder="如：把 a 当成斜率"
+ aria-describedby="cfgCommonErrorsHelp"></textarea>
+ <span class="up-tip" id="cfgCommonErrorsHelp">学生最容易错的地方，会被专门追问</span>
+ </div>
+
+ <div class="field">
+ <label for="cfgClassSize">班级规模(人)</label>
+ <input id="cfgClassSize" type="number" min="1" max="80" step="1" value="45"
+ placeholder="45" aria-describedby="cfgClassSizeHelp">
+ <span class="up-tip" id="cfgClassSizeHelp">影响参与度和提问轮次</span>
+ </div>
+
+ <div class="field">
+ <label for="cfgActivity">课堂活跃度</label>
+ <select id="cfgActivity" aria-describedby="cfgActivityHelp">
+ <option value="low">偏低</option>
+ <option value="mid" selected>一般</option>
+ <option value="high">较高</option>
+ </select>
+ <span class="up-tip" id="cfgActivityHelp">决定学生主动发言的频率</span>
+ </div>
+ </fieldset>
+
+ <div class="cfg-actions">
+ <button class="primary" id="cfgSaveBtn" type="button">保存配置</button>
+ <button class="ghost-btn" id="cfgResetBtn" type="button" title="清空配置，恢复默认值">重置</button>
+ <button class="link" id="cfgSkipBtn" type="button">跳过此步</button>
+ </div>
+
+ <p class="tip" id="cfgStatusTip" role="status" aria-live="polite"></p>
+
+ <div class="cfg-trust">
+ <p>这份配置只用于本次训练的分析与 AI 学生模拟，不进入公开榜单。</p>
+ <p>填得越具体，AI 学生的提问越接近你真实面对的那班学生。</p>
+ </div>
+ </div>
+ </details>
+
+ <details class="workspace-advanced" id="trainingAdvanced">
+ <summary class="workspace-advanced-summary">
+ 高级设置：评分标准、双人对比、教案与时长
+ </summary>
+
+ <p class="tip">
+ 以下配置可选。没有实际时长或可靠时间信息时，相关时间指标只能作为估算或推断参考。
+ </p>
+
+ <div class="workspace-advanced-content">
+
+ <div class="row2">
+ <div class="field">
+ <label for="subjectKeyInput">学科评分标准</label>
+ <select id="subjectKeyInput">
+ <option value="auto">智能识别（推荐）</option>
+ <option value="math">数学</option>
+ <option value="chinese">语文</option>
+ <option value="english">英语</option>
+ <option value="science">理化生</option>
+ <option value="generic">通用</option>
+ </select>
+ <span class="up-tip" id="subjectDetectedTip">将根据课题自动匹配专属评分维度</span>
+ </div>
+ <div class="field">
+ <label for="compareToggle">小组博弈：双人对比</label>
+ <select id="compareToggle">
+ <option value="off">关闭（单人）</option>
+ <option value="on">开启：填入第二份讲稿</option>
+ </select>
+ </div>
+ </div>
+
+ <div class="field" id="scriptBWrap" hidden>
+ <label for="scriptInputB">对比讲稿（B 稿）</label>
+ <textarea id="scriptInputB" placeholder="另一位同学的讲稿粘到这里…"></textarea>
+ </div>
+
+ <div class="field" id="planWrap">
+ <label for="planInput"> 教案导入（检查知识点覆盖）
+ <button class="ghost-btn sm" id="planFileBtn" type="button" style="margin-left:8px">读取 .txt 教案</button>
+ </label>
+ <textarea id="planInput" placeholder="把教案粘到这里（支持 .txt 文件读取；PDF / Word 请复制粘贴）…"></textarea>
+ <input type="file" id="planFile" accept=".txt,.md" hidden>
+ <span class="up-tip">分析时会自动对照教案，检查试讲是否覆盖全部知识点、有没有讲跑偏</span>
+ </div>
+
+ <div class="field">
+ <label for="durationInput">试讲总时长（秒，选填）</label>
+ <input
+ id="durationInput"
+ type="number"
+ min="0"
+ step="any"
+ placeholder="不填时按 240 秒估算，不代表实际时长"
+ aria-describedby="durationSourceHint"
+ >
+ <span class="up-tip" id="durationSourceHint">
+ 请填写与本次逐字稿对应的总时长；平均语速将包含其中的停顿和互动时间。
+ </span>
+ </div>
+
+ </div>
+ </details>
+
+ <div class="field">
+ <label for="scriptInput">试讲逐字稿
+ <button class="ghost-btn sm" id="dictateBtn" type="button" style="margin-left:8px"> 语音输入</button>
+ <span class="up-tip" id="dictateTip" hidden>● 正在听…再点一次停止</span>
+ </label>
+ <textarea id="scriptInput" placeholder="把你说的话粘到这里…（也可以用 Whisper 从视频转写出来，或直接点语音输入）"></textarea>
+ <div class="meta-row">
+ <span id="charHint">0 字</span>
+ <button class="link" id="fillSampleBtn" type="button">填入示例讲稿</button>
+ </div>
+ </div>
+
+ <button class="primary big" id="analyzeBtn" type="button" data-rb-magnet>
+ <span id="analyzeBtnText">开始 AI 分析</span>
+ </button>
+
+ <p class="tip" id="errTip" role="alert"></p>
+
+ <div class="howto">
+ <b>分析方式与数据提示</b>
+ 在线分析会将相关输入发送到应用后端；启用外部 AI 或转写服务时，
+ 完成任务所需的内容还可能发送至对应服务。
+ 请先移除学生姓名、联系方式等可识别个人的信息。
+ <br>
+ 配置有效模型时使用模型能力，部分功能可由服务端规则处理；
+ 固定示例演示不代表对当前讲稿的真实分析。
+ </div>
+ </section>
+
+ <!-- 复盘与演练 -->
+ <section
+ class="panel"
+ id="trainingResults"
+ aria-labelledby="trainingResultsHeading"
+ >
+ <h2 class="panel-title" id="trainingResultsHeading">2 · 复盘与演练
+ <button class="ghost-btn sm" id="exportBtn" type="button" hidden style="margin-left:auto">导出 PDF 报告</button>
+ <button class="ghost-btn sm" id="posterBtn" type="button" hidden> 分享海报</button>
+ </h2>
+
+ <div id="resultEmpty" class="empty">
+ <div class="empty-icon" aria-hidden="true"></div>
+ <p>
+ 完成一次分析后，在这里查看复盘与建议，
+ <br>
+ 再选择 AI 学生问答、情境演练或多视角反馈。
+ </p>
+ <p class="tip">
+ <a class="link" href="#trainingInput">先准备试讲内容 ↑</a>
+ </p>
+ </div>
+
+ <div id="resultBody" hidden>
+
+ <!-- 总分 -->
+ <div class="score-top">
+ <div class="ring" id="scoreRing"><span id="scoreNum">--</span><small>分</small></div>
+ <div class="score-side">
+ <p class="score-sum" id="scoreSummary"></p>
+ <div class="engine-tag" id="engineTag"></div>
+ <div class="rank-title" id="rankTitle" hidden></div>
+ </div>
+ </div>
+
+ <!-- 求生等级 + 徽章 -->
+ <div class="badge-row" id="badgeRow"></div>
+
+ <!-- Tab -->
+ <div class="tabs">
+ <button class="tab active" data-tab="report" type="button">复盘报告</button>
+ <button class="tab" data-tab="improve" type="button">改进建议</button>
+ <button class="tab" data-tab="chat" type="button">AI 学生拆台</button>
+ <button class="tab" data-tab="drill" type="button"> 3 分钟专项练习</button>
+ <button class="tab" data-tab="crisis" type="button"> 课堂崩塌模拟</button>
+ <button class="tab" data-tab="pano" type="button"> 六视角透视</button>
+ <button class="tab" data-tab="growth" type="button"> 成长档案</button>
+ </div>
+
+ <!-- Tab1 -->
+ <div class="tabpane active" id="pane-report">
+ <div class="metrics" id="metricsGrid" data-rb-glare="> *"></div>
+
+ <h3 class="sub">⚠️ 危险瞬间</h3>
+ <div class="danger-box" id="dangerBox"><p class="tip">分析完成后自动摘录卡壳、冷场、伪提问等高风险片段。</p></div>
+
+ <h3 class="sub">🧭 通用教学环节线索</h3>
+ <div class="phase-cue-box" id="phaseCueBox"><p class="tip">分析完成后显示：逐字稿里匹配到的通用教学环节线索（七环节）。这不是知识点掌握率。</p></div>
+
+ <h3 class="sub"> 教案逐点比对</h3>
+ <div class="plan-box" id="planBox"><p class="tip">左侧粘入教案后，这里逐条显示教案中的知识点与讲稿的比对结果（讲透 / 提到 / 漏讲）。这是「你贴的这份教案」的比对，与上方七环节线索不是同一口径。</p></div>
+
+ <h3 class="sub">📎 学科内容核对</h3>
+ <div class="subject-knowledge-box" id="subjectKnowledgeBox"><p class="tip">模型提示，需人工确认；不是评分，也不是结论。分析后显示可核对的学科内容线索。</p></div>
+
+ <h3 class="sub">📐 课程目标与标准对照</h3>
+ <div class="std-box" id="curriculumBox"><p class="tip">分析完成后自动对照义务教育课程标准（2022 年版），核验教学目标达成度。</p></div>
+
+ <h3 class="sub"> 提问等待热力图</h3>
+ <div class="heatmap-box" id="heatmapBox"><p class="tip">分析完成后自动生成。颜色表示讲稿文本的推断，不是真实课堂行为：红色 = 文本推断偏短（&lt;1 秒），橙色 = 文本推断中等（1–2 秒），绿色 = 文本推断有留白（≥2 秒），灰色 = 无法测量。悬停查看每次提问的原文。等待秒数由讲稿文本推断，非音频时间戳实测值。</p></div>
+
+ <h3 class="sub">语速节奏曲线</h3>
+ <div class="curve-box" id="curveBox"></div>
+
+ <h3 class="sub">🥧 课堂活动时间估算</h3>
+ <div class="pie-box" id="pieBox"><p class="tip">教师讲 / 学生答 / 互动 / 过渡各占多少，对标理想配比。</p></div>
+
+ <h3 class="sub">🧭 iFIAS 课堂互动编码（14 类）</h3>
+ <div class="ifias-box" id="ifiasBox"><p class="tip">分析完成后自动按改进型弗兰德斯互动分析系统（iFIAS）逐句编码：互动矩阵 + 比率指标 + DBSCAN 片段聚类 + PCA 结构图。</p></div>
+
+ <h3 class="sub">逐字稿（口头禅已标黄）</h3>
+ <div class="transcript" id="transcriptHi"></div>
+
+ <h3 class="sub">🚫 口头禅排行榜</h3>
+ <div class="filler-rank" id="fillerRankBox"><p class="tip">分析完成后按出现次数排名，点掉排名前三，专业感立刻回来。</p></div>
+
+ <h3 class="sub">行动建议</h3>
+ <div class="suggestions" id="suggestionsList"></div>
+
+ <h3 class="sub">🎓 名师点评库</h3>
+ <div class="master-box" id="masterQuoteBox"><p class="tip">分析完成后，按你的短板匹配微格教学评委的典型点评与改进方向。</p></div>
+ </div>
+
+ <!-- Tab2 -->
+ <div class="tabpane" id="pane-improve">
+ <div id="improveEmpty" class="mini-empty">
+ <button class="primary" id="improveBtn" type="button">生成改进版逐字稿</button>
+ <p class="tip">AI 会重写你的讲稿：删口头禅、把伪提问改成留白式提问、补齐缺失环节。</p>
+ </div>
+ <div id="improveBody" hidden>
+ <h3 class="sub">主要改动</h3>
+ <ul class="changes" id="keyChanges"></ul>
+
+ <h3 class="sub">改进版逐字稿</h3>
+ <div class="script-out" id="improvedScript"></div>
+
+ <h3 class="sub">🧩 四段练习口述稿（复制去练）
+ <button class="ghost-btn sm" id="copySegBtn" type="button" style="margin-left:8px"> 复制全文</button>
+ </h3>
+ <div class="seg-script" id="segScript"><p class="tip">按【导入】【新授】【互动】【小结】切分的练嘴稿，每段标注关键改动。</p></div>
+
+ <div class="two-col">
+ <div>
+ <h3 class="sub">板书建议</h3>
+ <div class="card sm" id="blackboardBox"></div>
+ </div>
+ <div>
+ <h3 class="sub">分层作业</h3>
+ <div class="card sm" id="homeworkBox"></div>
+ </div>
+ </div>
+
+ <div class="next-focus" id="nextFocusBox"></div>
+ </div>
+ </div>
+
+ <!-- Tab3 -->
+ <div class="tabpane" id="pane-chat">
+ <p class="tip profile-intro">
+ AI 学生的提问难度和困惑点，按你填的班级水平与常见错误生成。
+ </p>
+
+ <div class="profile-bar" id="profileBar">
+ <span class="profile-bar-text" id="profileBarText"></span>
+ <button class="link" id="profileBarEditBtn" type="button">查看学情配置</button>
+ </div>
+ <p class="tip" id="profileDemoNote" hidden>演示模式：以下为演示数据，不代表你本次练习的真实表现。</p>
+
+ <div class="mode-switch" id="chatModeBar">
+ <button class="msw active" data-mode="solo" type="button">单人拆台</button>
+ <button class="msw" data-mode="class" type="button">👥 三学生课堂（高能）</button>
+ </div>
+
+ <!-- 三学生课堂模式 -->
+ <div id="classMode" hidden>
+ <div class="profile-note" id="classProfileNote">
+ <span class="profile-tag" id="classProfileTag">默认学情</span>
+ <span id="classProfileText"></span>
+ </div>
+
+ <!-- 2D 教室场景：原生 Canvas，挂在现有 classNextRound 流程上，无外部依赖 -->
+ <div class="class-scene">
+ <canvas id="classSceneCanvas" role="img"
+ aria-label="模拟课堂 2D 场景：教师与三名学生。点学生可点名让他当场回答。学生状态为模拟数据，详细数值见下方学生卡片。"></canvas>
+ <p class="tip class-scene-note"><b>点图上的学生或下方卡片即可点名</b>（先在输入框写一句提示，再点，会一起带过去）。学生的专注/理解数值与下方卡片实时一致，均为模拟状态，不代表真实测量。</p>
+ </div>
+
+ <div class="pressure-bar" id="pressureBar">
+ <div class="pressure-label">课堂压力 <b id="pressureNum">20</b> / 100</div>
+ <div class="pressure-track"><div class="pressure-fill" id="pressureFill"></div></div>
+ <div class="pressure-hint" id="pressureHint">稳住，你能行</div>
+ </div>
+ <div class="cockpit" id="classCockpit" aria-label="课堂实时驾驶舱">
+ <div class="ck-item">
+ <div class="ck-head"><span>节奏</span><b id="ckPaceV">—</b></div>
+ <div class="ck-track"><i id="ckPaceBar" style="width:0%"></i></div>
+ <div class="ck-note" id="ckPaceN">等第一轮课堂</div>
+ </div>
+ <div class="ck-item">
+ <div class="ck-head"><span>张力</span><b id="ckTensionV">20</b></div>
+ <div class="ck-track"><i id="ckTensionBar" style="width:20%"></i></div>
+ <div class="ck-note" id="ckTensionN">课堂稳定</div>
+ </div>
+ <div class="ck-item">
+ <div class="ck-head"><span>参与度</span><b id="ckFocusV">—</b></div>
+ <div class="ck-track"><i id="ckFocusBar" style="width:0%"></i></div>
+ <div class="ck-note" id="ckFocusN">等学生开口</div>
+ </div>
+ </div>
+ <div class="class-students" id="classStudents" data-rb-spotlight=".cs-card" data-rb-tilt=".cs-card"></div>
+ <div class="chat" id="classLog"></div>
+ <form class="chat-input" id="classForm">
+ <input id="classInput" type="text" placeholder="作为老师回应全班…（可点直接说话）" autocomplete="off">
+ <button class="ghost-btn" id="classMicBtn" type="button" title="按住说话：语音回答学生"></button>
+ <button class="primary" type="submit">回应</button>
+ </form>
+ <div class="chat-actions">
+ <button class="ghost-btn" id="classNextBtn" type="button">下一轮课堂 →</button>
+ <div class="right-actions" style="display:flex;gap:10px;align-items:center">
+ <label class="switch"><input type="checkbox" id="classSpeakToggle"><span>朗读学生的话</span></label>
+ <button class="link" id="classResetBtn" type="button">重新开课</button>
+ </div>
+ </div>
+ </div>
+
+ <!-- 单人模式（原有） -->
+ <div id="soloMode">
+ <div class="profile-note" id="soloProfileNote"></div>
+ <div class="personas" id="personaBar">
+ <button class="persona active" data-p="naughty" type="button">调皮型</button>
+ <button class="persona" data-p="geek" type="button">学霸型</button>
+ <button class="persona" data-p="drift" type="button">走神型</button>
+ <span style="flex:1"></span>
+ </div>
+ <div class="field" style="margin:10px 0 0">
+ <input id="customPersona" type="text" placeholder="自定义人设（选填）：如「班上有位 ADHD 的孩子，容易走神还会突然问奇怪问题」">
+ </div>
+
+ <div class="chat" id="chatLog">
+ <div class="msg sys">选好性格，点下面的按钮，AI 学生就会基于你的讲稿向你发难。</div>
+ </div>
+
+ <form class="chat-input" id="chatForm">
+ <input id="chatInput" type="text" placeholder="作为老师回答他…" autocomplete="off">
+ <button class="primary" type="submit">发送</button>
+ </form>
+
+ <div class="chat-actions">
+ <button class="ghost-btn" id="askBtn" type="button">让学生提问</button>
+ <div class="right-actions">
+ <label class="switch"><input type="checkbox" id="speakToggle"><span>朗读学生的话</span></label>
+ <button class="link" id="clearChatBtn" type="button">清空对话</button>
+ </div>
+ </div>
+ </div>
+ </div>
+
+ <!-- Tab4: 3 分钟专项练习 -->
+ <div class="tabpane" id="pane-drill">
+ <p class="tip">
+ 只练一个技能，3 分钟限时，结束后给出该项评分和一条改进动作。
+ </p>
+
+ <div class="drill-entry">
+ <button class="primary sm drill-entry-start" type="button">开始练习</button>
+ <button class="link drill-pick-btn" type="button" disabled>选一项再开始</button>
+ </div>
+
+ <div class="drill-empty" id="drillEmpty">
+ <p>选一项技能，开始 3 分钟练习</p>
+ <p class="tip">先完成一次分析即可带入讲稿。</p>
+ </div>
+
+ <div class="drill-skill-list" id="drillSkillList">
+ <div class="drill-skill-cards" id="drillSkillCards"></div>
+ </div>
+
+ <div class="drill-task-box" id="drillTaskBox" hidden>
+ <h3 class="sub drill-task-title"></h3>
+ <p class="drill-task-brief"></p>
+ <ul class="drill-checklist"></ul>
+ <p class="drill-starter"></p>
+
+ <div class="drill-timer-row">
+ <span class="drill-timer" id="drillTimer" role="timer" aria-live="off">03:00</span>
+ <span class="drill-timer-text">剩余 3 分 0 秒</span>
+ <button class="primary sm" id="drillTimerStartBtn" type="button">开始练习</button>
+ <button class="ghost-btn sm" id="drillTimerStopBtn" type="button" disabled>结束并评分</button>
+ </div>
+
+ <div class="field">
+ <label for="drillTranscript">本次练习内容</label>
+ <textarea id="drillTranscript" rows="6"
+ placeholder="只写这一项的练习内容，比如一段提问、一段导入"></textarea>
+ <div class="meta-row">
+ <span id="drillCharHint">已输入 0 字</span>
+ </div>
+ </div>
+
+ <button class="primary" id="drillSubmitBtn" type="button">提交本次练习</button>
+ <p class="tip drill-tip" role="status" aria-live="polite"></p>
+ </div>
+
+ <div class="drill-result" id="drillResult" hidden>
+ <h3 class="sub drill-result-title">本项评分</h3>
+ <p class="drill-result-head"></p>
+ <div class="drill-score-line">
+ <span class="drill-score-label">我的得分</span>
+ <b class="drill-score" id="drillScore">0</b>
+ <span class="drill-grade" id="drillGrade"></span>
+ <span class="engine-tag" id="drillEngineTag"></span>
+ </div>
+ <p class="drill-summary" id="drillSummary"></p>
+ <p class="drill-duration"></p>
+
+ <h3 class="sub">分项说明</h3>
+ <div class="drill-dims" id="drillDims"></div>
+
+ <h3 class="sub">原文证据</h3>
+ <ul class="drill-evidence" id="drillEvidence"></ul>
+
+ <h3 class="sub">改进建议</h3>
+ <ul class="drill-suggestions" id="drillSuggestions"></ul>
+
+ <p class="drill-next"></p>
+ <div class="drill-actions">
+ <button class="ghost-btn" id="drillNextBtn" type="button">再练一个技能</button>
+ </div>
+ <p class="drill-archive-note">
+ 本次练习只归档在本机成长档案，不计入总试讲分，也不进公开榜单。
+ </p>
+ </div>
+
+ <p class="tip" id="drillDemoNote" hidden>演示模式：以下为演示数据，不代表你本次练习的真实表现。</p>
+
+ <div class="drill-history">
+ <h3 class="sub">本机练习记录 <span id="drillHistoryCount">0 次</span></h3>
+ <div class="drill-history-list" id="drillHistoryList"></div>
+ <button class="link" id="drillClearHistoryBtn" type="button">清空历史</button>
+ </div>
+ </div>
+
+ <!-- Tab5: 课堂崩塌模拟 -->
+ <div class="tabpane" id="pane-crisis">
+ <div class="mode-switch" id="crisisModeBar">
+ <button class="msw active" data-cmode="drill" type="button">自由演练</button>
+ <button class="msw" data-cmode="challenge" type="button"> 极限挑战（6 关 3 命）</button>
+ </div>
+
+ <div class="ch-hud" id="challengeHud" hidden>
+ <div class="ch-levels" id="chLevels"></div>
+ <div class="ch-lives" id="chLives"></div>
+ </div>
+ <div class="ch-result" id="chResult" hidden></div>
+
+ <div class="crisis-empty" id="crisisEmpty">
+ <div class="empty-icon"></div>
+ <p>课堂不会永远顺利——设备断电、学生吵架、家长推门、有人哭了……<br>
+ 点下方按钮，随机触发一次课堂事故，输入你的应对，<br>AI 按 FIAS 量化你的<b>控场得分</b>。</p>
+ <button class="primary" id="crisisStartBtn" type="button"> 随机触发课堂事故</button>
+ </div>
+ <div id="crisisBody" hidden>
+ <div class="crisis-event" id="crisisEventCard"></div>
+ <div class="chat" id="crisisLog"></div>
+ <form class="chat-input" id="crisisForm">
+ <input id="crisisInput" type="text" placeholder="作为老师，你怎么办？（说/做什么都行）" autocomplete="off">
+ <button class="primary" type="submit">应对</button>
+ </form>
+ <div class="chat-actions">
+ <button class="ghost-btn" id="crisisNextBtn" type="button" hidden>下一次事故 →</button>
+ <div class="right-actions" style="display:flex;gap:10px;align-items:center">
+ <button class="link" id="crisisRecBtn" type="button">● 录制我的演练</button>
+ <button class="link" id="crisisResetBtn" type="button">结束本次模拟</button>
+ </div>
+ </div>
+ <video id="crisisReplay" controls playsinline hidden style="width:100%;border-radius:10px;margin-top:10px;max-height:220px"></video>
+ <div class="up-tip" id="crisisRecTip" hidden></div>
+ </div>
+ </div>
+
+ <!-- Tab5: 六视角透视 -->
+ <div class="tabpane" id="pane-pano">
+ <div class="pano-empty" id="panoEmpty">
+ <div class="empty-icon"></div>
+ <p>一场试讲，六双眼睛。<br>
+ AI 督导 / 学困生 / 家长 / 同行教师 / 教研组长 / 学情分析师<br>
+ 同时给出六个视角的报告与评分雷达图。</p>
+ <button class="primary" id="panoBtn" type="button">开始六视角透视</button>
+ </div>
+ <div id="panoBody" hidden>
+ <div class="pano-radar" id="panoRadar"></div>
+ <p class="tip" id="panoAvg"></p>
+ <div class="pano-views" id="panoViews"></div>
+ </div>
+ </div>
+
+ <!-- Tab6: 成长档案 -->
+ <div class="tabpane" id="pane-growth">
+ <div id="growthBody">
+ <p style="color:#64748b;font-size:13px;margin:0 0 12px">你的历次复盘会自动沉淀在这里（含登录后云端的全部记录），看到进步的轨迹。</p>
+ <div class="pano-card" style="border:1px solid var(--line,#e2e8f0);border-radius:12px;padding:14px 16px;margin-bottom:12px">
+ <b>板书摄像头</b>
+ <p style="font-size:13px;color:#64748b;margin:6px 0 10px">拍一张板书照片上传，AI 给出结构/字迹/完整度评分与改进建议（需配置视觉模型，否则给出板书自检清单）。</p>
+ <input type="file" id="blackboardFile" accept="image/*" hidden>
+ <div style="display:flex;gap:8px;align-items:center">
+ <button class="ghost-btn sm" id="blackboardBtn" type="button">📷 上传板书照片</button>
+ <span class="up-tip" id="blackboardTip">支持 jpg / png</span>
+ </div>
+ <div id="blackboardResult" style="margin-top:10px"></div>
+ </div>
+ <div class="pano-card" style="border:1px solid var(--line,#e2e8f0);border-radius:12px;padding:14px 16px;margin-bottom:12px">
+ <b> 华师校内榜</b>
+ <p style="font-size:13px;color:#64748b;margin:6px 0 10px">今日最高分 / 本周进步最快 / 总分榜。登录后每次复盘自动上榜，昵称可自行设置。</p>
+ <div style="display:flex;gap:8px;align-items:center;margin-bottom:8px;flex-wrap:wrap">
+ <input id="nicknameInput" type="text" placeholder="上榜昵称（如：小张老师）" style="flex:1;min-width:150px;padding:8px 10px;border:1px solid var(--line,#e2e8f0);border-radius:8px">
+ <select id="schoolSelect" style="padding:8px 10px;border:1px solid var(--line,#e2e8f0);border-radius:8px;background:var(--card,#fff);color:inherit;font-size:13px">
+ <option value="">学校</option>
+ <option value="华南师大">华南师大</option>
+ <option value="中山大学">中山大学</option>
+ <option value="暨南大学">暨南大学</option>
+ <option value="广东外语外贸">广东外语外贸</option>
+ <option value="广州大学">广州大学</option>
+ <option value="其他院校">其他院校</option>
+ </select>
+ <input id="teamInput" type="text" placeholder="战队/班级（如 教科院25级1班）" style="flex:1;min-width:150px;padding:8px 10px;border:1px solid var(--line,#e2e8f0);border-radius:8px">
+ <button class="ghost-btn sm" id="saveNickBtn" type="button">保存</button>
+ <span class="up-tip" id="lbLoginTip"></span>
+ </div>
+ <div class="lb-avatars" id="lbAvatarPicker"></div>
+ <div class="lb-tabs" id="lbTabs">
+ <button class="lb-tab active" data-lb="today" type="button">今日最高</button>
+ <button class="lb-tab" data-lb="week" type="button">本周进步</button>
+ <button class="lb-tab" data-lb="total" type="button">总分榜</button>
+ <button class="lb-tab" data-lb="team" type="button">战队榜</button>
+ </div>
+ <div id="lbBody"></div>
+ </div>
+ <div class="daily-card" id="dailyCard" style="border:1px solid var(--line,#e2e8f0);border-radius:12px;padding:14px 16px;margin-bottom:12px">
+ <b>📅 每日一练</b>
+ <div id="dailyBody"><p class="tip">加载今日题目…</p></div>
+ <p id="dailyTip" hidden style="margin:8px 0 0;font-size:12.5px;color:#16a34a"></p>
+ </div>
+ <div class="if-trail-card" style="border:1px solid var(--line,#e2e8f0);border-radius:12px;padding:14px 16px;margin-bottom:12px">
+ <b> 多节课互动结构轨迹</b>
+ <p style="font-size:13px;color:#64748b;margin:6px 0 8px">每次复盘都会记录 7 维互动特征（师生占比、提问结构、沉寂、技术、多样性），这里把它们投影到同一张 PCA 平面上：点越靠近 = 课堂结构越像，箭头方向 = 你的课堂在往哪变。</p>
+ <div id="ifiasTrail"><p class="tip">完成 2 次带 iFIAS 编码的复盘后自动生成。</p></div>
+ </div>
+ <div class="hollow-card" id="hollowCard" style="border:1px solid var(--line,#e2e8f0);border-radius:12px;padding:14px 16px;margin-bottom:12px">
+ <b>🕳️ 匿名树洞</b>
+ <p style="font-size:13px;color:#64748b;margin:6px 0 10px">试讲翻车了？说给树洞听。AI 会先接住你的情绪，再给一个能立刻用的小建议。<b>请注意：</b>你输入的内容会发送到服务端交给 AI 处理；登录后，帖子正文、回复与学校名会保存到云端并<b>对所有用户公开显示</b>，可点击举报下架。不登录则仅保存在本设备。</p>
+ <textarea id="hollowInput" rows="3" placeholder="今天讲砸了……（说说发生了什么）" style="width:100%;padding:9px 11px;border:1px solid var(--line,#e2e8f0);border-radius:9px;font-size:13.5px;resize:vertical;box-sizing:border-box;background:var(--card,#fff);color:inherit"></textarea>
+ <div style="display:flex;justify-content:flex-end;margin-top:8px">
+ <button class="primary sm" id="hollowSubmit" type="button">说给树洞听</button>
+ </div>
+ <div class="hollow-tabs" id="hollowTabs">
+ <button class="hollow-tab active" data-sort="new" type="button">最新</button>
+ <button class="hollow-tab" data-sort="hot" type="button">最戳心</button>
+ <span class="hollow-count" id="hollowCount"></span>
+ </div>
+ <div id="hollowPosts"></div>
+ </div>
+ <div id="growthCurve"></div>
+ <div id="growthList"></div>
+ </div>
+ </div>
+
+ </div>
+ </section>
 </main>
 
 <footer class="foot">
-  讲台求生 · 全栈版（Node 零依赖后端 + 真实大模型接口）· 断网也能跑：未配 Key 时自动切换本地规则引擎
+ 讲台求生 · 全栈版（Node 零依赖后端 + 真实大模型接口）· 断网也能跑：未配 Key 时自动切换本地规则引擎
 </footer>
 
 <!-- 社死结局弹层 -->
 <div class="doomed-overlay" id="doomedOverlay">
-  <div class="doomed-card">
-    <div class="doomed-emoji" aria-hidden="true">↺</div>
-    <h2>本轮训练结束</h2>
-    <p id="doomedReason">模拟课堂压力已达到本轮上限。</p>
-    <p class="doomed-sub">
-      这是模拟情境中的反馈，不代表你的真实教学能力。
-      <br>
-      下一轮先练习一个动作：确认学生的困惑，再调整解释。
-    </p>
-    <button class="primary" id="doomedRetry" type="button">
-      重新开始一轮
-    </button>
-  </div>
+ <div class="doomed-card">
+ <div class="doomed-emoji" aria-hidden="true">↺</div>
+ <h2>本轮训练结束</h2>
+ <p id="doomedReason">模拟课堂压力已达到本轮上限。</p>
+ <p class="doomed-sub">
+ 这是模拟情境中的反馈，不代表你的真实教学能力。
+ <br>
+ 下一轮先练习一个动作：确认学生的困惑，再调整解释。
+ </p>
+ <button class="primary" id="doomedRetry" type="button">
+ 重新开始一轮
+ </button>
+ </div>
 </div>
 
 <!-- 分享海报弹层 -->
 <div class="rs-overlay" id="roadshowOverlay" hidden>
-  <div class="rs-card">
-    <div class="rs-head">
-      <b>🎬 路演 3 分钟动线</b>
-      <span class="rs-clock" id="rsClock">3:00</span>
-      <button class="rs-close" id="rsClose" type="button" title="关闭">✕</button>
-    </div>
-    <p class="rs-sub">按顺序点「执行」，每步都给了该说的话。倒计时剩 30 秒会变红提醒收尾；断网也能跑（走离线数据）。</p>
-    <div class="rs-steps" id="rsSteps"></div>
-    <div class="rs-foot">
-      <button class="primary sm" id="rsStart" type="button">开始计时</button>
-      <button class="ghost-btn sm" id="rsReset" type="button">重置</button>
-      <select id="rsPace" style="padding:6px 9px;border:1px solid var(--line,#e2e8f0);border-radius:7px;font-size:12px;background:var(--card,#fff);color:inherit">
-        <option value="std">标准 3:00</option>
-        <option value="fast">快剪 60s</option>
-      </select>
-      <button class="ghost-btn sm" id="rsRec" type="button" title="自动跑完 6 个分镜并录屏，结束后自动下载">◉ 录制整场</button>
-      <span class="rs-tip" id="rsTip"></span>
-    </div>
-  </div>
+ <div class="rs-card">
+ <div class="rs-head">
+ <b> 路演 3 分钟动线</b>
+ <span class="rs-clock" id="rsClock">3:00</span>
+ <button class="rs-close" id="rsClose" type="button" title="关闭">✕</button>
+ </div>
+ <p class="rs-sub">按顺序点「执行」，每步都给了该说的话。倒计时剩 30 秒会变红提醒收尾；断网也能跑（走离线数据）。</p>
+ <div class="rs-steps" id="rsSteps"></div>
+ <div class="rs-foot">
+ <button class="primary sm" id="rsStart" type="button">开始计时</button>
+ <button class="ghost-btn sm" id="rsReset" type="button">重置</button>
+ <select id="rsPace" style="padding:6px 9px;border:1px solid var(--line,#e2e8f0);border-radius:7px;font-size:12px;background:var(--card,#fff);color:inherit">
+ <option value="std">标准 3:00</option>
+ <option value="fast">快剪 60s</option>
+ </select>
+ <button class="ghost-btn sm" id="rsRec" type="button" title="自动跑完 6 个分镜并录屏，结束后自动下载">◉ 录制整场</button>
+ <span class="rs-tip" id="rsTip"></span>
+ </div>
+ </div>
 </div>
 
 <div class="poster-overlay" id="posterOverlay">
-  <div class="poster-card">
-    <canvas id="posterCanvas" width="540" height="960"></canvas>
-    <div class="poster-actions">
-      <button class="primary" id="posterDownloadBtn" type="button">⬇ 保存海报</button>
-      <button class="ghost-btn" id="posterCloseBtn" type="button">关闭</button>
-    </div>
-    <p class="tip">保存后发朋友圈 / 班级群——扫码即可打开「讲台求生」</p>
-  </div>
+ <div class="poster-card">
+ <canvas id="posterCanvas" width="540" height="960"></canvas>
+ <div class="poster-actions">
+ <button class="primary" id="posterDownloadBtn" type="button">⬇ 保存海报</button>
+ <button class="ghost-btn" id="posterCloseBtn" type="button">关闭</button>
+ </div>
+ <p class="tip">保存后发朋友圈 / 班级群——扫码即可打开「讲台求生」</p>
+ </div>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/@tencent-ai/workbuddy-cloud-sdk@dev/lib/index.global.js"></script>
 <script src="https://cdn.jsdelivr.net/gh/davidshimjs/qrcodejs@master/qrcode.min.js"></script>
 <button class="to-top" id="toTopBtn" type="button" title="回到顶部" aria-label="回到顶部">↑</button>
 
-<script src="demo-data.js?v=20261022a"></script>
+<script src="demo-data.js?v=20261030-callon1"></script>
 <script src="cloud.js?v=20261022-integrity1"></script>
 <script src="evidence.js?v=20261022-evidence1"></script>
-<script src="app.js?v=20261022-metrics1"></script>
+<script src="vendor/gsap.min.js?v=20261030-rbfx2"></script>
+<script src="vendor/ScrollTrigger.min.js?v=20261030-rbfx2"></script>
+<script src="rb-fx.js?v=20261030-tilt1"></script>
+<script src="classroom-roster.js?v=20261030-callon1"></script>
+<script src="classroom-art.js?v=20261030-art1"></script>
+<script src="students-art.js?v=20261030-hero1"></script>
+<script src="countup.js?v=20261030-m5"></script>
+<script src="blurtext.js?v=20261030-m5"></script>
+<script src="app.js?v=20261030-hero3"></script>
+<script src="scroll-gsap.js?v=20261030-rbfx2"></script>
+<script src="question-drill-rules.js?v=20261030-drill6"></script>
+<script src="question-drill.js?v=20261030-drill6"></script>
 <script src="workspace.js?v=20261022-workspace2"></script>
+<script src="fx.js?v=20261030-hero1"></script>
+<script src="motion.js?v=20261030-m5"></script>
+<script src="msg.js?v=20261030-m5"></script>
+<script>
+/* Codex 入口：把 URL 上的 sharecode 透传到 codex.html，部署环境调用 /api/codex 才不会 403 */
+(function () {
+ try {
+ var sc = new URLSearchParams(location.search).get('sharecode');
+ var a = document.getElementById('codexLink');
+ if (a && sc) a.href = a.getAttribute('href').split('?')[0] + '?sharecode=' + encodeURIComponent(sc);
+ } catch (e) {}
+})();
+</script>
 </body>
 </html>

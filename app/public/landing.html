@@ -319,6 +319,10 @@
 		html, body { background-color: #DBEAFE !important; background-image: none !important; }
 		.hero-panel.surface { background: #D3E5FC !important; }
 	</style>
+<link rel="stylesheet" href="fx.css?v=20261030-hero1">
+<link rel="stylesheet" href="material.css?v=20261030-m5">
+<link rel="stylesheet" href="motion.css?v=20261030-m5">
+<link rel="stylesheet" href="ui.css?v=20261030-m5">
 </head>
 
 <body>
@@ -365,6 +369,7 @@
 					<a href="#features"><span class="i18n-en">Features</span><span class="i18n-zh">功能</span></a>
 					<a href="#tech"><span class="i18n-en">Under the hood</span><span class="i18n-zh">技术实现</span></a>
 					<a href="#ethics"><span class="i18n-en">Ethics</span><span class="i18n-zh">伦理</span></a>
+					<a href="codex.html" id="codexLink"><span class="i18n-en">Codex Coach</span><span class="i18n-zh">Codex 教练</span></a>
 					<a class="cta" href="index.html"><span class="i18n-en">Try it live ↗</span><span class="i18n-zh">立即试用 ↗</span></a>
 				</nav>
 			</div>
@@ -644,6 +649,18 @@
 	} else {
 		document.querySelectorAll('.reveal').forEach(function (el) { el.classList.add('visible'); });
 	}
+})();
+</script>
+<script src="fx.js?v=20261030-hero1"></script>
+<script src="motion.js?v=20261030-m5"></script>
+<script>
+/* Codex 入口：把 URL 上的 sharecode 透传到 codex.html，部署环境调用 /api/codex 才不会 403 */
+(function () {
+  try {
+    var sc = new URLSearchParams(location.search).get('sharecode');
+    var a = document.getElementById('codexLink');
+    if (a && sc) a.href = a.getAttribute('href').split('?')[0] + '?sharecode=' + encodeURIComponent(sc);
+  } catch (e) {}
 })();
 </script>
 </body>

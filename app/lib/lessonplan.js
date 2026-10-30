@@ -6,6 +6,7 @@
  */
 
 const ai = require('./deepseek');
+const { withFallback } = require('./fallback-reason');
 
 /* ---------------- Prompt ---------------- */
 function lessonPlanPrompt({ plan, transcript, subject }) {
@@ -127,6 +128,8 @@ async function lessonPlanCoverage(input = {}) {
   if (plan.length < 10) throw new Error('教案内容太短，请至少粘贴 10 个字');
   if (transcript.length < 10) throw new Error('请先输入试讲逐字稿');
 
+  // 捕获真实错误：模型失败时据此判定降级原因（不许笼统报成一种）
+  let modelError = null;
   if (ai.hasKey()) {
     try {
       console.log('[lessonplan] 调用大模型对照教案检查覆盖…');
@@ -145,24 +148,29 @@ async function lessonPlanCoverage(input = {}) {
       );
       const json = ai.extractJson(raw);
       if (json && Array.isArray(json.coverage)) {
-        return {
-          coverage: json.coverage.slice(0, 10).map((c) => ({
-            point: String(c.point || '').slice(0, 40),
-            status: ['讲透了', '提到了', '漏讲'].indexOf(c.status) !== -1 ? c.status : '提到了',
-            evidence: String(c.evidence || '').slice(0, 60),
-          })),
-          missing: (Array.isArray(json.missing) ? json.missing : []).map((m) => String(m).slice(0, 20)).slice(0, 8),
-          verdict: String(json.verdict || '').slice(0, 80),
-          suggestions: (Array.isArray(json.suggestions) ? json.suggestions : []).map((s) => String(s).slice(0, 50)).slice(0, 4),
-          engine: 'llm',
-        };
+        return withFallback(
+          {
+            coverage: json.coverage.slice(0, 10).map((c) => ({
+              point: String(c.point || '').slice(0, 40),
+              status: ['讲透了', '提到了', '漏讲'].indexOf(c.status) !== -1 ? c.status : '提到了',
+              evidence: String(c.evidence || '').slice(0, 60),
+            })),
+            missing: (Array.isArray(json.missing) ? json.missing : []).map((m) => String(m).slice(0, 20)).slice(0, 8),
+            verdict: String(json.verdict || '').slice(0, 80),
+            suggestions: (Array.isArray(json.suggestions) ? json.suggestions : []).map((s) => String(s).slice(0, 50)).slice(0, 4),
+            engine: 'llm',
+          },
+          null,
+          true
+        );
       }
       throw new Error('模型未返回合法 JSON');
     } catch (e) {
+      modelError = e;
       console.warn('[lessonplan] 降级本地规则 ->', e && e.message ? e.message : e);
     }
   }
-  return ruleCoverage(plan, transcript);
+  return withFallback(ruleCoverage(plan, transcript), modelError, ai.hasKey());
 }
 
 module.exports = { lessonPlanCoverage };

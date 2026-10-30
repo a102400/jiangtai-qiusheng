@@ -9,3 +9,7 @@ node_modules/
 *.bak
 *.bak-*
 *.bak-*
+
+# 运行时配额计数文件（按日滚动，不得入库）
+.quota.json
+app/.quota.json

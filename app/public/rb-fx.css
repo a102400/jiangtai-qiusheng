@@ -1,0 +1,177 @@
+/* ============================================================
+   讲台求生 · 三个 react-bits 效果的原生移植 rb-fx.css
+   ------------------------------------------------------------
+   来源：https://reactbits.dev （MIT + Commons Clause，可免费商用）
+     · .rb-spotlight  ← SpotlightCard (JS-CSS)
+     · .rb-magnet     ← Magnet        (JS-CSS)
+     · .rb-glare      ← GlareHover    (JS-CSS)
+
+   全部用「CSS 变量 + 伪元素」实现，不改任何现有 DOM 结构与布局：
+     · 光斑走 ::after 一层，mix-blend-mode: soft-light，明暗主题都自然；
+     · 磁吸走独立的 `translate` 属性（不是 transform），
+       因此不会和已有的 transform 动画打架；
+     · 光带走 background-position 的 transition，无逐帧 JS。
+
+   简化说明（与上游的差异，写在这里免得后来人以为漏了）：
+     - SpotlightCard 上游还有 grain 噪点层、border 双层 mask 描边、
+       ambient 自漂移。这里只保留「跟随指针的柔和光斑 + 邻近衰减」，
+       因为本项目的卡片尺寸小、内容密，噪点和描边会脏。
+     - Magnet 上游用弹簧积分（stiffness/damping/mass）。这里用指数趋近，
+       手感等价但只有一行，且不会因为掉帧而积分发散。
+     - GlareHover 上游用 33 段 color-mix 生成自定义 profile。
+       这里用单条线性渐变光带，观感在卡片尺寸下无差别。
+   ============================================================ */
+
+/* ---------- SpotlightCard：指针聚光 ---------- */
+
+.rb-spotlight {
+  position: relative;
+  isolation: isolate;
+}
+
+/* 不用 mix-blend-mode：soft-light 在白底上几乎不可见（实测截图里等于没做），
+   screen 又会把浅色底洗白。直接用带透明度的品牌色叠加，明暗主题各自调浓度。 */
+.rb-spotlight::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  border-radius: inherit;
+  pointer-events: none;
+  background: radial-gradient(
+    circle var(--rb-spot-size, 220px) at var(--rb-spot-x, 50%) var(--rb-spot-y, 50%),
+    color-mix(in srgb, var(--brand, #4F46E5) 30%, transparent),
+    color-mix(in srgb, var(--brand, #4F46E5) 8%, transparent) 38%,
+    transparent 64%
+  );
+  opacity: var(--rb-spot-on, 0);
+  transition: opacity 0.32s ease;
+}
+
+[data-theme='dark'] .rb-spotlight::after {
+  background: radial-gradient(
+    circle var(--rb-spot-size, 220px) at var(--rb-spot-x, 50%) var(--rb-spot-y, 50%),
+    rgba(165, 180, 252, 0.28),
+    rgba(165, 180, 252, 0.08) 38%,
+    transparent 64%
+  );
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .rb-spotlight::after {
+    transition: none;
+  }
+}
+
+/* ---------- Magnet：指针磁吸 ---------- */
+
+.rb-magnet {
+  translate: var(--rb-mx, 0px) var(--rb-my, 0px);
+  will-change: translate;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .rb-magnet {
+    translate: 0 0 !important;
+  }
+}
+
+/* ---------- GlareHover：悬停光带扫过 ---------- */
+
+.rb-glare {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+}
+
+/* 光带同样不用 blend-mode：白色 screen 在白底上等于没画。
+   浅色主题走品牌色淡扫，深色主题走冷白，两种底都看得见。 */
+.rb-glare::after {
+  content: '';
+  position: absolute;
+  top: -60%;
+  bottom: -60%;
+  left: 0;
+  z-index: 3;
+  width: 46%;
+  pointer-events: none;
+  background: linear-gradient(
+    100deg,
+    transparent 0%,
+    color-mix(in srgb, var(--brand, #4F46E5) 26%, transparent) 45%,
+    transparent 100%
+  );
+  opacity: 0;
+  translate: var(--rb-glare-x, -160%) 0;
+  rotate: 8deg;
+  transition: opacity 0.24s ease;
+}
+
+.rb-glare:hover::after,
+.rb-glare:focus-visible::after {
+  opacity: 1;
+  transition: opacity 0.12s ease, translate 0.62s cubic-bezier(0.22, 0.61, 0.36, 1);
+  translate: var(--rb-glare-x-hover, 260%) 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .rb-glare::after {
+    display: none;
+  }
+}
+
+/* 深色主题下换成冷白光带，更接近原组件的观感 */
+[data-theme='dark'] .rb-glare::after {
+  background: linear-gradient(
+    100deg,
+    transparent 0%,
+    rgba(207, 227, 255, 0.30) 45%,
+    transparent 100%
+  );
+}
+
+/* ---------- scroll-gsap.js：顶部阅读进度条 ---------- */
+
+.rb-scroll-progress {
+  position: fixed;
+  left: 0;
+  top: 0;
+  z-index: 9998;
+  width: 100%;
+  height: 2px;
+  pointer-events: none;
+  background: linear-gradient(
+    90deg,
+    var(--brand, #4F46E5) 0%,
+    var(--accent, #0d9488) 100%
+  );
+  box-shadow: 0 0 8px color-mix(in srgb, var(--brand, #4F46E5) 55%, transparent);
+}
+
+/* ---------- TiltedCard：学生卡指针 3D 倾斜 ---------- */
+
+html .cs-card.rb-tilt {
+  /* 只做透视倾斜，不加 translateZ 分层：学生卡约 100px 宽、文字密集，
+     分层视差在这么小的尺度上只会让字发虚 */
+  transform:
+    perspective(var(--rb-persp, 620px))
+    rotateX(var(--rb-rx, 0deg))
+    rotateY(var(--rb-ry, 0deg));
+  /* .cs-card 原本是 transition: all .3s。JS 每帧都在写变量，再叠一层
+     .3s 的 all 过渡就是双重缓动 —— 手感会变成明显的拖尾。
+     这里只保留颜色/阴影过渡，transform 完全交给内部 rAF 自己算。 */
+  transition: border-color 0.3s, box-shadow 0.3s, background-color 0.3s;
+  will-change: transform;
+}
+
+/* 倾斜后相邻卡片边缘会互相压，抬起当前这一张 */
+html .cs-card.rb-tilt:hover {
+  z-index: 2;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html .cs-card.rb-tilt {
+    transform: none;
+    will-change: auto;
+  }
+}

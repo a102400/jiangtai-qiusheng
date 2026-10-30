@@ -1,0 +1,141 @@
+{
+  "_note": "静态资源版本指纹锁，由 scripts/asset-fingerprint.js --update 生成，请勿手改。",
+  "generatedAt": "2026-10-30T07:41:44.101Z",
+  "assets": {
+    "app.js": {
+      "version": "20261030-hero3",
+      "sha256": "0b4063375ca88ec2d94cb593be1740588e8f63f7fd71dc6f071b669c4012e14c",
+      "bytes": 281753
+    },
+    "blurtext.js": {
+      "version": "20261030-m5",
+      "sha256": "87cadc36348016abc6996332029355e0b04951f6778bed4aba34273e1b530317",
+      "bytes": 5244
+    },
+    "classroom-art.js": {
+      "version": "20261030-art1",
+      "sha256": "3b264efa418ce92b18bb04cea40ae950c3eb46ba3a8499a2f70d756963b8aad4",
+      "bytes": 3377
+    },
+    "classroom-roster.js": {
+      "version": "20261030-callon1",
+      "sha256": "0f8a815603aebda8441263af446ac7392b1eb9aa5b924bed52333a2cf3396a47",
+      "bytes": 6686
+    },
+    "cloud.js": {
+      "version": "20261022-integrity1",
+      "sha256": "e3adf3e1301dafaaed0049e3d4581c676654ba4cd89961f79ec40db506e369e5",
+      "bytes": 37363
+    },
+    "codex-panel.js": {
+      "version": "20261030",
+      "sha256": "ab1ab222e6f03cc1f62c8fe5d6e86e91f97d757e54ba508b1a1a3739f2942833",
+      "bytes": 3315
+    },
+    "countup.js": {
+      "version": "20261030-m5",
+      "sha256": "0c9d65686ee6f54f8ca8a1aad3263ca90acad119350b65b89b4732440364480b",
+      "bytes": 18691
+    },
+    "demo-data.js": {
+      "version": "20261030-callon1",
+      "sha256": "0fdeca736db0fd70998aa4f71608e7e8587f22877deb9320097f59d0e20f5135",
+      "bytes": 35026
+    },
+    "evidence.js": {
+      "version": "20261022-evidence1",
+      "sha256": "592298646a68962004145facbc8e0494e98cd24f6575dde70e7f70291853d905",
+      "bytes": 5147
+    },
+    "fx.css": {
+      "version": "20261030-hero1",
+      "sha256": "71f85ef14e41f404e86e7518339e52285ae9aac2834d3da67ed086d5eabcad84",
+      "bytes": 3053
+    },
+    "fx.js": {
+      "version": "20261030-hero1",
+      "sha256": "d0d7e028f2fd6b08acea0afe311a9b05f8a7eb586eb9aaa70714e77a7f34a630",
+      "bytes": 12349
+    },
+    "material.css": {
+      "version": "20261030-m5",
+      "sha256": "5b1d6ab90f870c9035b584cb2276269a37600cc3f9e757c697d48651662a0b69",
+      "bytes": 9016
+    },
+    "motion.css": {
+      "version": "20261030-m5",
+      "sha256": "6f9e308714410c878aae34f66ccb63989aeda785a4ef891f04cb8d90a5d8932d",
+      "bytes": 7991
+    },
+    "motion.js": {
+      "version": "20261030-m5",
+      "sha256": "42c1d5ad9b8befc269a7b48293f0763eb2dad3bd9e1cd57b1aff0a62966ef00c",
+      "bytes": 11398
+    },
+    "msg.css": {
+      "version": "20261030-m5",
+      "sha256": "9176bd7a1074037418db95e8b8cc43968bdb420c26cde437f2fdb04794d38f27",
+      "bytes": 4314
+    },
+    "msg.js": {
+      "version": "20261030-m5",
+      "sha256": "e29c5993a3605f345e9f57c4449263c3ecc08bd1c71518933f9a0ca0765fdc7a",
+      "bytes": 6952
+    },
+    "question-drill-rules.js": {
+      "version": "20261030-drill6",
+      "sha256": "45d48e29475da4630c43a108c4b711e26d3a37d086b5d1f9fdebcf83cbc8564a",
+      "bytes": 19595
+    },
+    "question-drill.js": {
+      "version": "20261030-drill6",
+      "sha256": "0fd27405f4b9f93991d7f0cc91590dfed11bf2c9bc204fd4b1a32b8066ae6928",
+      "bytes": 30484
+    },
+    "rb-fx.css": {
+      "version": "20261030-tilt1",
+      "sha256": "9e277c766733ed559d97a3edeebf7bfcfc846ad0aaf1d12f9314cffc9de807c1",
+      "bytes": 5546
+    },
+    "rb-fx.js": {
+      "version": "20261030-tilt1",
+      "sha256": "2b36d7bf9b364058e7a60dd64b1524bbfed19920d5f2402837f007320067e6b6",
+      "bytes": 17109
+    },
+    "scroll-gsap.js": {
+      "version": "20261030-rbfx2",
+      "sha256": "eb89c975d952f25107cbe0a2a1bd87aa0c2e0afd4b2028a95b09baf52d8ebb23",
+      "bytes": 4107
+    },
+    "students-art.js": {
+      "version": "20261030-hero1",
+      "sha256": "a75aed2fda0fc4910c87e29cf344fbce53ca37b9fa135ebe65003e7a1e509cab",
+      "bytes": 10061
+    },
+    "styles.css": {
+      "version": "20261030-hero2",
+      "sha256": "cc55dad0fd43f4b43c1fdd76dc2b8fb2538671038612ec7768bacc352c393843",
+      "bytes": 90702
+    },
+    "ui.css": {
+      "version": "20261030-m5",
+      "sha256": "09e8478cf96907b88ec8678b33895f732cc3ed6c2c709c7613e16f5a03752fb8",
+      "bytes": 8592
+    },
+    "vendor/ScrollTrigger.min.js": {
+      "version": "20261030-rbfx2",
+      "sha256": "308219390e5e3b84cda0c481e70caa9820883ae10bda44e6e9a149a81aac4b3f",
+      "bytes": 44157
+    },
+    "vendor/gsap.min.js": {
+      "version": "20261030-rbfx2",
+      "sha256": "96c01b81f44a3290e2b4532f55e2c9534b2adc43273a19f3756b2cb41f0fd0b6",
+      "bytes": 72435
+    },
+    "workspace.js": {
+      "version": "20261022-workspace2",
+      "sha256": "1f2f7ea1f4421344af5a9dfb4e24e2e52e5195c6e79ed1e43cb8a3aa8c8928a6",
+      "bytes": 5396
+    }
+  }
+}

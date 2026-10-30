@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>iFIAS 标注页</title>
+<style>
+  :root { --bg:#0f1115; --panel:#181b22; --line:#2a2f3a; --fg:#e8ebf0; --dim:#8b93a3;
+          --accent:#5b9dff; --ok:#3ecf8e; --warn:#ffb454; }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--bg); color:var(--fg);
+         font:16px/1.6 -apple-system,"Segoe UI","Microsoft YaHei",sans-serif; }
+  header { display:flex; align-items:center; gap:16px; padding:14px 22px; border-bottom:1px solid var(--line); }
+  header h1 { font-size:16px; margin:0; font-weight:600; }
+  .bar { flex:1; height:6px; background:var(--line); border-radius:3px; overflow:hidden; }
+  .bar > i { display:block; height:100%; width:0; background:var(--accent); transition:width .15s; }
+  .count { color:var(--dim); font-variant-numeric:tabular-nums; font-size:14px; }
+  main { max-width:860px; margin:0 auto; padding:34px 22px 60px; }
+  .card { background:var(--panel); border:1px solid var(--line); border-radius:14px; padding:34px 30px; }
+  .meta { color:var(--dim); font-size:13px; margin-bottom:16px; }
+  .sentence { font-size:27px; line-height:1.55; font-weight:600; min-height:96px; letter-spacing:.3px; }
+  .grid { display:grid; grid-template-columns:repeat(4,1fr); gap:10px; margin-top:26px; }
+  button.c { background:#20242e; color:var(--fg); border:1px solid var(--line); border-radius:10px;
+             padding:14px 8px; font-size:15px; cursor:pointer; text-align:center; transition:.12s; }
+  button.c:hover { border-color:var(--accent); background:#252b38; }
+  button.c kbd { display:block; font-size:11px; color:var(--dim); margin-top:4px; font-family:inherit; }
+  .row { display:flex; gap:10px; margin-top:20px; }
+  .row button { flex:1; padding:12px; border-radius:10px; border:1px solid var(--line);
+                background:#20242e; color:var(--fg); cursor:pointer; font-size:14px; }
+  .row button.primary { background:var(--accent); border-color:var(--accent); color:#0b1220; font-weight:600; }
+  .done { padding:60px 20px; text-align:center; }
+  .done h2 { font-size:24px; }
+  .hint { color:var(--dim); font-size:13px; margin-top:22px; line-height:1.9; }
+  .badge { display:inline-block; padding:2px 8px; border-radius:6px; background:#20242e;
+           color:var(--dim); font-size:12px; margin-left:8px; }
+</style>
+</head>
+<body>
+<header>
+  <h1>iFIAS 标注 <span class="badge" id="who">未选择</span></h1>
+  <div class="bar"><i id="prog"></i></div>
+  <div class="count" id="count">0 / 0</div>
+</header>
+<main>
+  <div class="card" id="card">
+    <div class="meta" id="meta"></div>
+    <div class="sentence" id="sen">加载中…</div>
+    <div class="grid" id="grid"></div>
+    <div class="row">
+      <button id="prev">← 上一条 (Backspace)</button>
+      <button class="primary" id="skip">跳过 (Enter)</button>
+    </div>
+    <div class="hint">
+      标注前请先读《iFIAS标注手册》。本页<b>不显示系统判断</b>，避免锚定。<br>
+      进度自动存在本机浏览器，刷新不丢；标完点「导出 CSV」交给组织者。
+    </div>
+  </div>
+  <div class="done" id="done" style="display:none">
+    <h2>已标完 30 句</h2>
+    <p class="hint">请导出 CSV，文件名为 <code>annotator-&lt;你的代号&gt;.csv</code></p>
+    <div class="row" style="max-width:420px;margin:24px auto 0">
+      <button class="primary" id="export2">导出 CSV</button>
+    </div>
+  </div>
+</main>
+<script>
+const ITEMS = [{"id":1,"text":"我们来看这个推导过程为什么成立。","source":"demo-corpus"},{"id":2,"text":"别急，这道题容易卡住，慢慢来。","source":"demo-corpus"},{"id":3,"text":"能不能用面积来解释一下？","source":"demo-corpus"},{"id":4,"text":"没关系，说错也是收获。","source":"demo-corpus"},{"id":5,"text":"同学们好，今天我们学习勾股定理。","source":"demo-corpus"},{"id":6,"text":"所以 a 的平方加 b 的平方就等于 c 的平方。","source":"demo-corpus"},{"id":7,"text":"很好，这个思路很清晰。","source":"demo-corpus"},{"id":8,"text":"那这三条边之间有什么关系呢？","source":"demo-corpus"},{"id":9,"text":"小组讨论一下，还有没有别的拼法。","source":"demo-corpus"},{"id":10,"text":"安静，先听我说完。","source":"demo-corpus"},{"id":11,"text":"谁能告诉我，勾三股四弦五是什么意思？","source":"demo-corpus"},{"id":12,"text":"嗯，很好，你比上次进步了。","source":"demo-corpus"},{"id":13,"text":"（板书课题）","source":"demo-corpus"},{"id":14,"text":"大家先自己算一算，直角边是 3 和 4 的时候，斜边是多少。","source":"demo-corpus"},{"id":15,"text":"第一步，把四个三角形摆成边长为 a 加 b 的正方形。","source":"demo-corpus"},{"id":16,"text":"第二步，中间空出来的部分，边长正好是 c。","source":"demo-corpus"},{"id":17,"text":"谁来说说你的答案？","source":"demo-corpus"},{"id":18,"text":"正如刚才这位同学说的，我们可以用四个直角三角形拼成一个大正方形。","source":"demo-corpus"},{"id":19,"text":"你为什么觉得是 5 呢？","source":"demo-corpus"},{"id":20,"text":"拿出练习本，把这道题的步骤写完整。","source":"demo-corpus"},{"id":21,"text":"算完了吗？","source":"demo-corpus"},{"id":22,"text":"看黑板，注意这里的等号方向。","source":"demo-corpus"},{"id":23,"text":"先看大屏幕，这个直角三角形的两条直角边分别是 a 和 b，斜边是 c。","source":"demo-corpus"},{"id":24,"text":"谁能举个生活里的例子？","source":"demo-corpus"},{"id":25,"text":"大家一起来读一遍这个结论。","source":"demo-corpus"},{"id":26,"text":"对不对？","source":"demo-corpus"},{"id":27,"text":"请大家翻开课本第 32 页，看例题 2。","source":"demo-corpus"},{"id":28,"text":"好，是 5，请坐。","source":"demo-corpus"},{"id":29,"text":"（停顿 1 秒）","source":"demo-corpus"},{"id":30,"text":"这个结论在古代叫什么？","source":"demo-corpus"}];
+const CODES = [{"code":"1","label":"接受情感","key":"1"},{"code":"2","label":"表扬鼓励","key":"2"},{"code":"3","label":"采纳观点","key":"3"},{"code":"4.1","label":"开放提问","key":"4"},{"code":"4.2","label":"封闭提问","key":"5"},{"code":"5","label":"讲授","key":"6"},{"code":"6","label":"指令","key":"7"},{"code":"7","label":"批评权威","key":"8"},{"code":"8","label":"学生被动应答","key":"q"},{"code":"9.1","label":"学生主动应答","key":"w"},{"code":"9.2","label":"学生主动提问","key":"e"},{"code":"10","label":"同伴讨论","key":"r"},{"code":"11","label":"混乱","key":"a"},{"code":"12","label":"有益沉寂","key":"s"},{"code":"13","label":"教师操作技术","key":"d"},{"code":"14","label":"学生操作技术","key":"f"}];
+const KEYMAP = Object.fromEntries(CODES.map(c => [c.key, c.code]));
+
+const who = prompt('你的标注员代号（A / B）：', 'A') || 'A';
+document.getElementById('who').textContent = who;
+const STORE = 'ifias-annot-' + who + '-30';
+let marks = {};
+try { marks = JSON.parse(localStorage.getItem(STORE) || '{}'); } catch (e) { marks = {}; }
+let cur = 0;
+while (cur < ITEMS.length && marks[ITEMS[cur].id]) cur++;
+
+const grid = document.getElementById('grid');
+CODES.forEach(c => {
+  const b = document.createElement('button');
+  b.className = 'c';
+  b.innerHTML = c.code + ' ' + c.label + '<kbd>键 ' + c.key + '</kbd>';
+  b.onclick = () => mark(c.code);
+  grid.appendChild(b);
+});
+
+function save() { localStorage.setItem(STORE, JSON.stringify(marks)); }
+function render() {
+  const done = Object.keys(marks).length;
+  document.getElementById('count').textContent = done + ' / ' + ITEMS.length;
+  document.getElementById('prog').style.width = (done / ITEMS.length * 100) + '%';
+  if (cur >= ITEMS.length) {
+    document.getElementById('card').style.display = 'none';
+    document.getElementById('done').style.display = 'block';
+    return;
+  }
+  document.getElementById('card').style.display = 'block';
+  document.getElementById('done').style.display = 'none';
+  const it = ITEMS[cur];
+  document.getElementById('meta').textContent = '第 ' + it.id + ' 句 · 来源 ' + it.source;
+  document.getElementById('sen').textContent = it.text;
+}
+function mark(code) {
+  if (cur >= ITEMS.length) return;
+  marks[ITEMS[cur].id] = code;
+  save();
+  cur++;
+  render();
+}
+function back() { if (cur > 0) { cur--; render(); } }
+function skip() {
+  if (cur >= ITEMS.length) return;
+  marks[ITEMS[cur].id] = 'SKIP';
+  save(); cur++; render();
+}
+document.getElementById('prev').onclick = back;
+document.getElementById('skip').onclick = skip;
+document.onkeydown = (e) => {
+  if (e.key === 'Backspace') { e.preventDefault(); back(); return; }
+  if (e.key === 'Enter') { e.preventDefault(); skip(); return; }
+  const code = KEYMAP[e.key.toLowerCase()];
+  if (code) { e.preventDefault(); mark(code); }
+};
+function exportCsv() {
+  const head = ['id', 'text', 'code'];
+  const lines = [head.join(',')];
+  ITEMS.forEach(it => {
+    const c = marks[it.id] || '';
+    const t = '"' + String(it.text).replace(/"/g, '""') + '"';
+    lines.push([it.id, t, c].join(','));
+  });
+  const blob = new Blob(['\ufeff' + lines.join('\r\n')], { type: 'text/csv;charset=utf-8' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'annotator-' + who + '.csv';
+  a.click();
+}
+document.getElementById('export2').onclick = exportCsv;
+render();
+</script>
+</body>
+</html>

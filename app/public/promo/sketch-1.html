@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="zh">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>讲台求生 · 方向A 复盘报告</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fontsource/noto-serif-sc@5/900.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fontsource/noto-sans-sc@5/400.css">
+<style>
+  *{margin:0;box-sizing:border-box}
+  body{font-family:"Noto Sans SC",sans-serif;background:#FAF7F0;color:#1A1A1A;-webkit-font-smoothing:antialiased}
+  .wrap{width:390px;min-height:100vh;padding:30px 22px;display:flex;flex-direction:column}
+  .brand{font-family:"Noto Serif SC";font-weight:900;font-size:28px;letter-spacing:1px}
+  .sub{font-size:13px;color:#6b6256;margin-top:6px;line-height:1.5}
+  .report{margin-top:22px;background:#fff;border:1px solid #E4DDD0;border-radius:16px;padding:20px}
+  .seal{display:inline-block;background:#C0392B;color:#fff;font-size:12px;padding:5px 12px;border-radius:7px;font-weight:700;letter-spacing:1px}
+  .score{font-family:"Noto Serif SC";font-weight:900;font-size:72px;color:#C0392B;line-height:1;margin-top:14px}
+  .score small{font-size:15px;color:#1A1A1A;font-family:"Noto Sans SC";font-weight:400}
+  .grid{display:grid;grid-template-columns:repeat(4,1fr);gap:5px;margin-top:16px}
+  .cell{aspect-ratio:1;border:1px solid #E4DDD0;border-radius:5px;display:grid;place-items:center;font-size:12px;color:#9a9082}
+  .cell.on{background:#2C4A7C;color:#fff;border-color:#2C4A7C;font-weight:700}
+  .row{display:flex;justify-content:space-between;font-size:12px;color:#4a443b;margin-top:12px;border-top:1px dashed #E4DDD0;padding-top:10px}
+  .img{margin-top:16px;height:104px;border-radius:12px;background:#DDE3EC}
+  .foot{margin-top:auto;font-size:11px;color:#a89e8e;line-height:1.6;padding-top:18px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="brand">讲台求生</div>
+  <div class="sub">师范生 AI 试讲教练 · 课堂模拟器</div>
+  <div class="report">
+    <span class="seal">AI 导师复盘</span>
+    <div class="score">86<small> 综合得分</small></div>
+    <div class="grid">
+      <div class="cell on">师</div><div class="cell">生</div><div class="cell on">师</div><div class="cell">生</div>
+      <div class="cell">生</div><div class="cell on">师</div><div class="cell">生</div><div class="cell on">师</div>
+      <div class="cell on">师</div><div class="cell">生</div><div class="cell on">师</div><div class="cell">生</div>
+    </div>
+    <div class="row"><span>课堂互动率 73%</span><span>语速 218 字/分</span></div>
+    <div class="row"><span>口头禅 4 次</span><span>停顿合规 91%</span></div>
+    <div class="img" data-img="课堂驾驶舱原型截图占位"></div>
+  </div>
+  <div class="foot">FIAS 学术传统 · LLM 工程化落地 · iFIAS 14 类 16 码量化互动分析</div>
+</div>
+</body>
+</html>

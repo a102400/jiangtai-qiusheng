@@ -2,6 +2,10 @@
   --brand:#4F46E5; --brand-dark:#3730A3; --brand-soft:#EEF2FF;
   --accent:#0D9488; --accent-soft:#E6FFFB;
   --warn:#B45309; --warn-soft:#FEF3C7;
+  /* 降级来源标签专用色：模型调用失败（限流/欠费/密钥无效等）后由规则引擎兜底。
+     与普通 .rule 的浅底弱提示区分开 —— 降级用实心注意色，一眼就能看出
+     「这次结果不是模型给的，而且你有事要做」。 */
+  --degrade-bg:#B45309; --degrade-fg:#FFFFFF;
   --danger:#B91C1C; --danger-soft:#FEE2E2;
   --ok:#15803D; --ok-soft:#DCFCE7;
   --bg:#F4F9FF; --card:#FFFFFF; --line:#CFE0F7;
@@ -84,8 +88,13 @@ code{font-family:ui-monospace,Menlo,Consolas,monospace;background:var(--bg);padd
 /* 评分 */
 .score-top{display:flex;gap:18px;align-items:center;flex-wrap:wrap;padding-bottom:18px;
   border-bottom:1px solid var(--line);margin-bottom:18px}
-.ring{width:92px;height:92px;border-radius:50%;flex:none;display:grid;place-items:center;
+.ring{width:92px;height:92px;border-radius:50%;flex:none;position:relative;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
   background:conic-gradient(var(--brand) 0 0%, var(--line) 0 100%);transition:background .6s ease}
+/* 环心留白：深色数字压在靛蓝扇面上对比度只有约 2.4:1，「分」字几乎看不见。
+   加一圈内盘让分数始终落在卡片底色上，顺带把扇形变成真正的刻度环。 */
+.ring::after{content:'';position:absolute;inset:9px;border-radius:50%;background:var(--card)}
+.ring > span,.ring > small{position:relative;z-index:1}
 .ring span{font-size:29px;font-weight:800;line-height:1}
 .ring small{font-size:12px;color:var(--text-3);font-weight:600}
 .score-side{flex:1;min-width:200px}
@@ -94,6 +103,12 @@ code{font-family:ui-monospace,Menlo,Consolas,monospace;background:var(--bg);padd
   background:var(--bg);color:var(--text-3)}
 .engine-tag.llm{background:var(--ok-soft);color:var(--ok)}
 .engine-tag.rule{background:var(--warn-soft);color:var(--warn)}
+/* 板书视觉模型评分：与 llm/rule 区分开，单独用青色系。 */
+.engine-tag.vision{background:#E0F2FE;color:#0369A1}
+/* 降级来源：模型调用失败（限流/欠费/密钥无效等）后由规则引擎兜底。
+   报告本身仍然是规则计算结果，所以这里只是把「为什么降级」讲清楚，
+   并用注意色让用户一眼看出这次不是模型评价。 */
+.engine-tag.rule-degraded{background:var(--degrade-bg);color:var(--degrade-fg)}
 
 /* Tab */
 .tabs{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:20px;padding-bottom:16px;
@@ -223,6 +238,8 @@ code{font-family:ui-monospace,Menlo,Consolas,monospace;background:var(--bg);padd
 [data-theme=dark] .mq-card,
 [data-theme=dark] .plan-item,
 [data-theme=dark] .std-item,
+[data-theme=dark] .subject-review-list li,
+[data-theme=dark] .phase-cue-list li.pc-item,
 [data-theme=dark] .ch-result,
 [data-theme=dark] .lb-row{background:#0F172A}
 [data-theme=dark] .lb-tab{background:#1F2937;color:var(--text-2)}
@@ -241,6 +258,10 @@ code{font-family:ui-monospace,Menlo,Consolas,monospace;background:var(--bg);padd
 [data-theme=dark] .engine-tag{background:#1F2937;color:var(--text-2)}
 [data-theme=dark] .engine-tag.llm{background:#14532D;color:#86EFAC}
 [data-theme=dark] .engine-tag.rule{background:#78350F;color:#FCD34D}
+[data-theme=dark] .engine-tag.vision{background:#083344;color:#67E8F9}
+/* 深色主题下同样要能一眼看出这是降级结果（深底 + 实心注意色）。 */
+[data-theme=dark] .engine-tag.rule-degraded{background:var(--degrade-bg);color:var(--degrade-fg)}
+[data-theme=dark] .engine-tag.rule-degraded{background:#B45309;color:#FFFFFF}
 [data-theme=dark] .topbar{border-color:var(--line)}
 [data-theme=dark] .foot{color:var(--text-3)}
 [data-theme=dark] mark{background:#78350F;color:#FDE68A}
@@ -291,7 +312,24 @@ code{font-family:ui-monospace,Menlo,Consolas,monospace;background:var(--bg);padd
 .poster-card canvas{width:100%;height:auto;border-radius:10px;display:block}
 .poster-actions{display:flex;gap:10px;justify-content:center;margin-top:12px}
 
-/* ===== 教案覆盖检查 ===== */
+/* ===== 通用教学环节线索（七环节清单） ===== */
+.phase-cue-box{display:grid;gap:8px}
+.phase-cue-list{margin:0;padding:0;list-style:none;display:grid;gap:6px;
+  grid-template-columns:repeat(auto-fit,minmax(190px,1fr))}
+.phase-cue-list li.pc-item{display:flex;align-items:center;gap:8px;
+  border:1px solid var(--line);border-left-width:4px;border-radius:10px;
+  padding:7px 10px;font-size:13px;background:var(--card);overflow-wrap:anywhere}
+.phase-cue-list li.pc-item.hit{border-left-color:var(--ok)}
+.phase-cue-list li.pc-item.miss{border-left-color:var(--line)}
+.pc-name{font-weight:600;color:var(--text)}
+.pc-state{margin-left:auto;font-size:11.5px;font-weight:700;border-radius:6px;
+  padding:1px 7px;white-space:nowrap;background:var(--bg);color:var(--text-2)}
+.phase-cue-list li.pc-item.hit .pc-state{background:var(--ok-soft);color:var(--ok)}
+.pc-intro{font-weight:600;color:var(--text-2)}
+.pc-summary{margin:0}
+.pc-note{margin:0;color:var(--warn)}
+
+/* ===== 教案逐点比对（教案知识点逐条比对） ===== */
 .plan-box{display:grid;gap:8px}
 .plan-summary{display:flex;gap:8px;flex-wrap:wrap;align-items:center;font-size:13px;font-weight:600}
 .plan-item{border:1px solid var(--line);border-radius:10px;padding:8px 12px;font-size:13px;background:var(--card)}
@@ -302,7 +340,17 @@ code{font-family:ui-monospace,Menlo,Consolas,monospace;background:var(--bg);padd
 .pi-status.partial{background:var(--warn-soft);color:var(--warn)}
 .pi-status.miss{background:var(--danger-soft);color:var(--danger)}
 
-/* ===== 课标对照 ===== */
+/* ===== 学科内容核对（模型提示，需人工确认） ===== */
+.subject-knowledge-box{display:grid;gap:8px}
+.subject-review-list{margin:0;padding:0;list-style:none;display:grid;gap:8px}
+.subject-review-list li{border:1px solid var(--line);border-left-width:4px;border-radius:10px;
+  padding:8px 12px;font-size:13px;background:var(--card);line-height:1.7;overflow-wrap:anywhere}
+.subject-review-list li.sk-covered{border-left-color:var(--ok)}
+.subject-review-list li.sk-review{border-left-color:var(--warn)}
+.subject-review-list .sk-evidence{font-size:12px;color:var(--text-2)}
+.sk-hint{font-weight:600;color:var(--text-2)}
+
+/* ===== 课程目标与标准对照 ===== */
 .std-box{display:grid;gap:8px}
 .std-item{border:1px solid var(--line);border-radius:10px;padding:8px 12px;font-size:13px;background:var(--card)}
 .std-item .si-head{display:flex;align-items:center;gap:8px;font-weight:600}
@@ -1726,4 +1774,772 @@ html[data-theme="dark"] .metric.neutral .ref {
   .drill-timer-row .primary,.drill-timer-row .ghost-btn{flex:1 1 auto;text-align:center}
   .drill-score{font-size:24px}
   .drill-evidence,.drill-suggestions{padding-left:16px}
+}
+
+/* ============== 提问与追问专项训练面板 ============== */
+html .question-drill-panel {
+  margin: 0 0 22px;
+  padding: 18px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--card);
+}
+
+html .question-drill-panel > textarea,
+html .question-drill-form textarea {
+  display: block;
+  width: 100%;
+  max-width: 100%;
+  margin: 8px 0 12px;
+  padding: 11px 12px;
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  background: var(--bg);
+  color: var(--text);
+  font: inherit;
+  line-height: 1.7;
+  resize: vertical;
+}
+
+html .question-drill-conversation {
+  display: grid;
+  gap: 8px;
+  max-height: 340px;
+  overflow-y: auto;
+}
+
+html .question-drill-message {
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  background: var(--bg);
+}
+
+html .question-drill-message p {
+  margin: 4px 0 0;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+html .question-drill-message.teacher {
+  border-left: 3px solid var(--brand);
+}
+
+html .question-drill-message.student {
+  border-left: 3px solid var(--accent);
+}
+
+html .question-drill-message.system {
+  border-left: 3px solid var(--warn);
+}
+
+html .question-drill-form {
+  margin-top: 12px;
+}
+
+html .question-drill-controls {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+html .question-drill-report {
+  display: grid;
+  gap: 10px;
+  margin-top: 16px;
+}
+
+html .question-drill-dimension {
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 9px;
+}
+
+html .question-drill-dimension blockquote {
+  margin: 8px 0 0;
+  padding-left: 10px;
+  border-left: 2px solid var(--line);
+  color: var(--text-2);
+  overflow-wrap: anywhere;
+}
+
+@media (max-width: 560px) {
+  html .question-drill-panel {
+    padding: 14px;
+  }
+
+  html .question-drill-controls {
+    align-items: stretch;
+    flex-direction: column;
+  }
+}
+
+/* ---------- 提问专项：本机训练记录 ---------- */
+html .question-drill-history {
+  margin-top: 20px;
+  padding-top: 16px;
+  border-top: 1px solid var(--line);
+}
+
+html .question-drill-history-list {
+  display: grid;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+html .question-drill-history-item {
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--bg);
+}
+
+html .question-drill-history-item > p:not(.tip) {
+  margin: 6px 0;
+  overflow-wrap: anywhere;
+}
+
+html .question-drill-history-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+html .question-drill-saved-conversation {
+  display: grid;
+  gap: 4px;
+  margin: 12px 0;
+}
+
+html .question-drill-saved-conversation p {
+  margin: 0;
+  padding: 8px 10px;
+  border-left: 2px solid var(--line);
+  overflow-wrap: anywhere;
+}
+
+/* ---------- 2D 教室场景（原生 Canvas，挂在 classNextRound 流程上）---------- */
+html .class-scene {
+  margin: 14px 0 4px;
+}
+
+html #classSceneCanvas {
+  display: block;
+  width: 100%;
+  height: clamp(220px, 32vw, 360px);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--bg);
+  /* 画布上可以直接点学生点名 */
+  cursor: pointer;
+  touch-action: manipulation;
+}
+
+/* ---------- 点名：只有合法角色的卡片可点 ----------
+ * 非法角色（key 属于原型链或未知值）的卡片没有 role/data-k，
+ * 因此既不会被 tab 到，也不会显示手型光标 —— 不能让用户对着一张不能点的卡反复点。 */
+html .cs-card[role="button"] {
+  cursor: pointer;
+}
+html .cs-card[role="button"]:hover {
+  border-color: var(--brand, #4F46E5);
+}
+html .cs-card[role="button"]:focus-visible {
+  outline: 2px solid var(--brand, #4F46E5);
+  outline-offset: 2px;
+}
+/* 按下反馈用内阴影，不用 transform：
+ * 卡片上叠了 rb-tilt 的 3D 旋转（每帧写 transform），
+ * 这里再写 scale 会和它抢同一个属性，表现为点击时卡片突然弹一下。 */
+html .cs-card[role="button"]:active {
+  box-shadow: inset 0 0 0 2px var(--brand-soft, rgba(79, 70, 229, 0.18));
+}
+
+html .class-scene-note {
+  margin: 6px 0 0;
+  color: var(--text-3);
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+@media (max-width: 560px) {
+  html #classSceneCanvas {
+    height: 240px;
+  }
+}
+
+
+/* ==========================================================================
+   首屏重做（2026-10-30，依据 docs/设计评审-2026-10-30-tasteskill.md）
+
+   评审的三条结论，这一段逐条对应：
+     1. 首屏没有 h1，第一行是「模型: deepseek-chat」等技术芯片  → h1 + 芯片收进抽屉
+     2. hero 是 100px 扁横幅，右半屏 400px 纯空                 → 两列：文案 + 真实课堂片段
+     3. 层级全靠 1px 边框，面板里套四个描边盒                    → 面板去边框去阴影，靠色调分层
+
+   例外清单（用户 2026-10-30 批 a/c/d，b 保留）：
+     A 学生头像改 SVG 立绘头部裁切（emoji 降级）  → 见文末 .cs-av-img
+     C 背景极光光晕保留但压暗（.30 → .16）       → 见 fx.css
+     D 用真实界面片段顶替图库照片                  → 见 .hero-clip
+     B 01/02/03 步骤条按用户决定不动
+   ========================================================================== */
+
+/* ---------- 1. 顶栏：技术状态收进抽屉 ---------- */
+
+html .top-more {
+  position: absolute;
+  top: calc(100% - 2px);
+  right: 16px;
+  z-index: 60;
+  width: min(272px, calc(100vw - 32px));
+  padding: 8px;
+  display: grid;
+  gap: 2px;
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  box-shadow: 0 18px 44px rgba(15, 23, 42, .18);
+}
+
+html .top-more[hidden] {
+  display: none;
+}
+
+html .tm-model {
+  display: block;
+  padding: 8px 10px 10px;
+  margin-bottom: 4px;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--text-3);
+  border-bottom: 1px solid var(--line);
+  word-break: break-all;
+}
+
+html .tm-item {
+  display: block;
+  width: 100%;
+  padding: 9px 10px;
+  border-radius: 9px;
+  font-size: 13.5px;
+  font-weight: 600;
+  line-height: 1.4;
+  color: var(--text);
+  text-align: left;
+  text-decoration: none;
+  background: none;
+  border: none;
+  cursor: pointer;
+}
+
+html .tm-item:hover {
+  background: var(--brand-soft);
+  color: var(--brand-dark);
+}
+
+html[data-theme="dark"] .tm-item:hover {
+  background: rgba(129, 140, 248, .16);
+  color: #E7EDF7;
+}
+
+/* ---------- 2. hero：两列，右列是课堂里正在发生的一帧 ---------- */
+
+html .hero {
+  display: grid;
+  grid-template-columns: minmax(0, 1.06fr) minmax(260px, .94fr);
+  align-items: center;
+  gap: clamp(20px, 3.4vw, 44px);
+  padding: clamp(22px, 3vw, 36px);
+  border: 1px solid transparent;
+  border-left: 1px solid transparent;
+  border-radius: 20px;
+  background: var(--card);
+  box-shadow: none;
+}
+
+/* 深色主题原来给 hero 铺了一层紫色渐变，这里改回纯卡片色 ——
+   渐变留给背景光晕一处（例外 C），不要在正文容器上再叠一层。 */
+html[data-theme="dark"] .hero {
+  background: var(--card);
+}
+
+html .hero-txt {
+  display: block;
+  flex: 0 1 auto;
+  min-width: 0;
+}
+
+html .hero-title {
+  margin: 0 0 14px;
+  font-size: clamp(26px, 3.5vw, 38px);
+  line-height: 1.34;
+  letter-spacing: -.035em;
+  font-weight: 800;
+  color: var(--text);
+  max-width: 17ch;
+}
+
+html .hero-sub {
+  margin: 0 0 22px;
+  max-width: 44ch;
+  font-size: 15px;
+  line-height: 1.85;
+  color: var(--text-2);
+}
+
+html .hero-sub b {
+  color: var(--text);
+  font-weight: 700;
+}
+
+html .hero-note {
+  margin: 14px 0 0;
+  max-width: 44ch;
+  font-size: 13px;
+  line-height: 1.7;
+  color: var(--text-3);
+}
+
+/* 课堂片段：不是截图，也不是图库照片 —— 是课堂组件本身的一个静态快照。
+ * 立绘、压力条、气泡都跟真课堂同一套视觉，所以它「经得起点进去看」。 */
+html .hero-clip {
+  margin: 0;
+  min-width: 0;
+  display: grid;
+  gap: 10px;
+  padding: 12px;
+  border-radius: 16px;
+  background: var(--bg);
+}
+
+html .clip-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+html .clip-topic {
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: .01em;
+  color: var(--text-2);
+}
+
+html .clip-stage {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 6px;
+  align-items: end;
+  padding: 8px 4px 10px;
+  border-radius: 12px;
+  background: var(--card);
+}
+
+html .clip-stu {
+  display: grid;
+  justify-items: center;
+  gap: 4px;
+  min-width: 0;
+}
+
+html .clip-stu img {
+  display: block;
+  width: 100%;
+  height: 84px;
+  object-fit: cover;
+  object-position: 50% 4%;
+}
+
+html .clip-stu em {
+  font-style: normal;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text-2);
+}
+
+html .clip-tag {
+  font-style: normal;
+  font-size: 13px;
+  color: var(--text-3);
+}
+
+html .clip-stu.is-drift {
+  opacity: .55;
+}
+
+html .clip-state {
+  flex: none;
+  padding: 3px 9px;
+  border-radius: 99px;
+  font-size: 13px;
+  font-weight: 700;
+  color: #F87171;
+  background: rgba(248, 113, 113, .14);
+}
+
+html .clip-quote {
+  margin: 0;
+  padding: 11px 13px;
+  border-radius: 12px;
+  background: var(--card);
+  font-size: 14px;
+  line-height: 1.7;
+  color: var(--text);
+}
+
+html .clip-quote b {
+  margin-right: 4px;
+  font-weight: 700;
+  color: var(--brand);
+}
+
+html .clip-verdict {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+}
+
+html .clip-press {
+  flex: none;
+  display: inline-flex;
+  align-items: baseline;
+  gap: 1px;
+  color: var(--danger);
+}
+
+html .clip-press b {
+  font-size: 20px;
+  font-weight: 800;
+  letter-spacing: -.02em;
+}
+
+html .clip-press i {
+  font-style: normal;
+  font-size: 13px;
+  font-weight: 600;
+  opacity: .75;
+}
+
+html .clip-meter {
+  position: relative;
+  flex: 1 1 auto;
+  display: block;
+  height: 6px;
+  border-radius: 99px;
+  background: rgba(185, 28, 28, .16);
+  overflow: hidden;
+}
+
+html .clip-meter i {
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  display: block;
+  border-radius: 99px;
+  background: var(--danger);
+}
+
+html .clip-warn {
+  flex: none;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-3);
+}
+
+html[data-theme="dark"] .clip-press {
+  color: #F87171;
+}
+
+html[data-theme="dark"] .clip-meter i {
+  background: #F87171;
+}
+
+html[data-theme="dark"] .clip-meter {
+  background: rgba(248, 113, 113, .18);
+}
+
+@media (max-width: 820px) {
+  html .hero {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 22px;
+  }
+
+  html .hero-title {
+    max-width: 22ch;
+  }
+
+  html .clip-stu img {
+    height: 56px;
+  }
+}
+
+@media (max-width: 560px) {
+  html .hero {
+    padding: 20px 18px;
+    border-radius: 16px;
+  }
+
+  html .clip-stu img {
+    height: 46px;
+  }
+}
+
+/* ---------- 3. 层级：面板不再用边框和阴影划边界 ---------- */
+
+/* 深色主题里 1px 边框几乎看不见，阴影更是纯浪费（它被测量抓到，视觉上不存在）。
+ * 改成「页面底 → 卡片 → 区块」三段亮度：这里只做卡片这一层，内部区块沿用 --bg。 */
+html .panel {
+  border-color: transparent;
+  box-shadow: none;
+  background: var(--card);
+}
+
+html .hero {
+  border-color: transparent;
+}
+
+/* ---------- 4. 例外 A：学生头像改用立绘头部裁切 ---------- */
+
+html .cs-card .cs-av {
+  position: relative;
+  display: block;
+  width: 42px;
+  height: 42px;
+  margin: 0 auto;
+  border-radius: 50%;
+  overflow: hidden;
+  background: var(--brand-soft);
+  font-size: 22px;
+  line-height: 42px;
+  text-align: center;
+}
+
+html .cs-av-emoji {
+  display: block;
+}
+
+html .cs-av-img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: 50% 8%;
+  /* 只取头部：立绘是全身图，圆形头像里放全身等于没有头像。
+     不支持 object-view-box 的浏览器退回 object-fit: cover 的整身，
+     小人仍然可辨认，不会空白。 */
+  object-view-box: inset(5% 27% 60% 27%);
+}
+
+html[data-theme="dark"] .cs-card .cs-av {
+  background: rgba(129, 140, 248, .18);
+}
+
+/* ---------- 5. 正文字号：13px 起 ---------- */
+
+html .tip {
+  font-size: 13.5px;
+}
+
+html .up-tip {
+  font-size: 13px;
+}
+
+html .cs-card .cs-nm {
+  font-size: 13px;
+}
+
+html .badge {
+  font-size: 13px;
+}
+
+/* ---------- 6. 导航和内容共用一对边距 ---------- */
+
+/* 原来顶栏 padding 24px、内容区左右各 185px：导航比正文更靠外，
+ * 整页被测量成「左 209 / 右 97」，看着像整块内容被推到了左边。
+ * 让顶栏内容站到同一根栅格线上，页面的左右边距就只剩一份。 */
+html .topbar {
+  padding-inline: max(24px, calc((100% - 1120px) / 2 + 32px));
+}
+
+@media (max-width: 900px) {
+  html .topbar {
+    padding-inline: 20px;
+  }
+}
+
+@media (max-width: 560px) {
+  html .topbar {
+    padding-inline: 16px;
+  }
+
+  /* 手机上顶栏一行塞不下四个物件（云登录 / 状态 / 自动演示 / 更多）。
+   * 「自动演示」在首屏就有同功能的「看一遍示例」，顶栏这一份先收起，
+   * 免得第二行只剩一个「⋯ 更多」孤零零挂着。 */
+  html #autoDemoBtn {
+    display: none;
+  }
+
+  html .brand-txt span {
+    display: none;
+  }
+
+  html .badges {
+    gap: 6px;
+    flex-wrap: nowrap;
+  }
+
+  html .badges .badge {
+    padding: 5px 9px;
+    font-size: 12.5px;
+  }
+
+  html .badges .icon-btn {
+    padding: 7px 10px;
+    font-size: 12.5px;
+  }
+}
+
+@media (max-width: 560px) {
+  /* 一行放得下：brand 缩到图标 + 三个字，badge 压到 12px */
+  html .topbar {
+    gap: 10px;
+  }
+
+  html .mark {
+    width: 30px;
+    height: 30px;
+    font-size: 15px;
+    border-radius: 9px;
+  }
+
+  html .brand-txt b {
+    font-size: 15px;
+  }
+
+  html .badges .badge {
+    padding: 4px 8px;
+    font-size: 12px;
+    gap: 5px;
+  }
+
+  html .badges .icon-btn {
+    padding: 6px 9px;
+    font-size: 12px;
+  }
+
+  /* 压力那一行在手机上放不下三段，让结论文案独占第二行 */
+  html .clip-verdict {
+    flex-wrap: wrap;
+    row-gap: 6px;
+  }
+
+  html .clip-warn {
+    flex-basis: 100%;
+    order: 3;
+  }
+}
+
+/* ---------- 7. 打扫：装饰线、描边盒、emoji ---------- */
+
+/* 分割线只在真表格和表单字段上出现。这两处是折叠面板内部的分节，
+ * 换成留白 + 色调就够，线只是噪音。 */
+html .cfg-body {
+  border-top: none;
+  padding-top: 16px;
+}
+
+html .workspace-advanced-content {
+  border-top: none;
+  padding-top: 16px;
+}
+
+/* 学生卡原来靠 1px 描边立起来；改成比容器再低一档的填色，
+ * 卡片仍然分得清，但页面少一层「框子」。 */
+html .cs-card {
+  border-color: transparent;
+  background: var(--bg);
+}
+
+html .cs-card.speaking {
+  border-color: var(--brand);
+}
+
+/* ---------- 8. 说明性小字统一到 13px 以上 ---------- */
+
+/* 12.5px 原本是页面上字符量最大的一档（263 字符），全是需要读的说明文字：
+ * 数据去向、配置用途、页脚。这些不是图表标签，没有理由比 13px 还小。 */
+html .howto {
+  font-size: 13.5px;
+}
+
+html .foot {
+  font-size: 13px;
+}
+
+html .workspace-navigation-status {
+  font-size: 13px;
+}
+
+html .cfg-panel p,
+html .cfg-body p {
+  font-size: 13.5px;
+}
+
+html .cfg-summary {
+  font-size: 14px;
+}
+
+/* 空状态原来用一个字符「◍」当图标 —— 它既不在字体保证范围内（不同终端
+ * 可能画成方块），又会被「标题上方的小标签」规则误判成 kicker。
+ * 画一个环，尺寸可控，不依赖字符。 */
+html .empty-icon {
+  width: 44px;
+  height: 44px;
+  margin: 0 auto 12px;
+  border-radius: 50%;
+  border: 8px solid var(--line);
+  font-size: 0;
+  color: transparent;
+}
+
+/* ---------- 9. 立绘裁切的角色补偿 + 剩余描边盒 ---------- */
+
+/* 三张立绘的内容包围盒不一样（drift 的人物整体偏下约 20%），
+ * 同一个 object-position 会让小走只露头顶、小霸只露额头。
+ * 裁切窗口按角色补偿，头才正好在圆里。 */
+html .clip-stu[data-art-key="geek"] img {
+  object-position: 50% 14%;
+}
+
+html .clip-stu[data-art-key="drift"] img {
+  object-position: 50% 24%;
+}
+
+html .cs-av[data-av="geek"] .cs-av-img {
+  object-view-box: inset(10% 27% 54% 27%);
+}
+
+html .cs-av[data-av="drift"] .cs-av-img {
+  object-view-box: inset(23% 30% 48% 30%);
+}
+
+/* 折叠面板和高级设置原来是两个描边盒子；改成比面板低一档的填色。 */
+html .cfg-panel,
+html .workspace-advanced {
+  border-color: transparent;
+  background: var(--bg);
+}
+
+/* 长段落按 60 字符收行宽：现在最长的一行能跑到 148 字符，读起来要来回摆头。 */
+html .tip,
+html .howto,
+html .cfg-panel p,
+html .cfg-body p {
+  max-width: 60ch;
 }
