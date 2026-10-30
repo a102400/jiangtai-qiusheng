@@ -13,6 +13,7 @@
 const fs = require('fs');
 const path = require('path');
 const { spawn, spawnSync } = require('child_process');
+const { toSimplified, needsConversion } = require('./zh-simplify');
 
 const SCRIPTS_DIR = path.join(__dirname, '..', 'scripts');
 
@@ -229,8 +230,47 @@ async function transcribeCloud(filePath) {
   }
 }
 
+/* ---------------- 繁简归一 ----------------
+ * 本地 faster-whisper small 对中文语音会输出繁体（实测原样输出：
+ * 「汽車車身的設計和製造,不僅關乎美觀與性能」）。而本项目的
+ * iFIAS 编码判据、标注手册、报告文案全部是简体：
+ * 「請/說/課/題/覺/聽」这些字都不会命中关键词表，
+ * 结果是整段话被兜底判成「讲授(5)」——教师语言占比、互动率全线失真。
+ * 云端 Whisper 一般返回简体，但统一过一遍没有副作用，所以两条通道都走。
+ * 转换表由 scripts/build-zh-simplify-table.js 从 OpenCC 字典生成，零依赖。
+ */
+function normalizeSimplified(r) {
+  if (!r || !r.ok) return r;
+  let touched = false;
+  const out = Object.assign({}, r);
+  if (typeof r.text === 'string' && needsConversion(r.text)) {
+    out.text = toSimplified(r.text);
+    touched = true;
+  }
+  if (Array.isArray(r.segments)) {
+    out.segments = r.segments.map((s) => {
+      if (s && typeof s.text === 'string' && needsConversion(s.text)) {
+        touched = true;
+        return Object.assign({}, s, { text: toSimplified(s.text) });
+      }
+      return s;
+    });
+  }
+  if (touched) {
+    // 保留原始输出，便于事后量化「繁简归一到底改了多少」。
+    // 只在实际发生转换时带上，避免正常情况多传一份文本。
+    if (typeof r.text === 'string') out.text_raw = r.text;
+    out.zh_normalized = true;
+  }
+  return out;
+}
+
 /* ---------------- 统一入口 ---------------- */
 async function transcribe(filePath, opts = {}) {
+  return normalizeSimplified(await transcribeRaw(filePath, opts));
+}
+
+async function transcribeRaw(filePath, opts = {}) {
   const prefer = opts.prefer || process.env.TRANSCRIBE_MODE || 'auto';
 
   if (prefer === 'cloud') {
