@@ -56,3 +56,13 @@ app/public/offline.html
 # 测试临时二进制
 *.bin
 app/tests/.tmp-*
+
+# 内部工作笔记 / 个人备忘（非项目源码，不入库）
+发布指令-给原账号.md
+docs/记忆1.md
+docs/记忆1-启动提示词.md
+docs/密钥防护与轮换.md
+docs/安全审计-2026-10-30.md
+docs/设计评审-2026-10-30-tasteskill.md
+app/docs/事实快照-2026-10-30.md
+ChatGPT-改站手册.md
