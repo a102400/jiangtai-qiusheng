@@ -2,12 +2,12 @@
 """测量学生立绘的内容包围盒（alpha > 8）。
 
 为什么需要它：
-  课堂画布把立绘按「内容包围盒」裁切后等高绘制。三个角色 x 三个状态，
+  课堂画布把立绘按「内容包围盒」裁切后等高绘制。一个角色有五个状态，
   如果每个状态各用各的裁切矩形，切换状态时人物会跳动（举手时头顶抬高，
   裁切框跟着变，脸的位置就漂了）。
 
-  所以按角色取「三个状态的包围盒并集」，三个状态共用同一裁切矩形 ——
-  人物在切换时纹丝不动，只有手臂和嘴巴在动。
+  所以按角色取「所有状态的包围盒并集」，所有状态共用同一裁切矩形 ——
+  人物在切换时纹丝不动，只有手臂、嘴巴和头在动。
 
 用法：
   python scripts/measure-student-bbox.py
@@ -29,7 +29,7 @@ SVG_DIR = ROOT / "public" / "assets" / "students" / "svg"
 INKSCAPE = r"D:\Tools\Inkscape\inkscape\bin\inkscape.exe"
 
 KEYS = ["geek", "naughty", "drift"]
-STATES = ["default", "closed", "raise"]
+STATES = ["default", "closed", "raise", "speak-raise", "idle-down"]
 ALPHA_THRESHOLD = 8
 
 

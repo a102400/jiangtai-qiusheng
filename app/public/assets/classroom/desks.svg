@@ -53,14 +53,15 @@
 
   <!-- 桌面道具（先画，之后被桌沿挡住底部 → 看起来立在桌面上） -->
   <g>
-    <!-- 左端：两本叠起的课本 -->
+    <!-- 左端：两本叠起的课本。原来封面被桌面遮掉后只剩大片书页白，
+         在小尺寸下会变成一个「空白方框」，所以改成深色封面 + 细书口。 -->
     <g>
-      <rect x="105" y="632" width="168" height="48" rx="6" fill="#a8705e"/>
-      <rect x="105" y="632" width="168" height="11" rx="5" fill="#bd8a76"/>
-      <rect x="111" y="638" width="156" height="36" rx="3" fill="#efe6d3" opacity=".9"/>
-      <rect x="117" y="592" width="144" height="42" rx="6" fill="#6f7e72"/>
-      <rect x="117" y="592" width="144" height="9" rx="4" fill="#84957f"/>
-      <rect x="123" y="598" width="132" height="30" rx="3" fill="#efe6d3" opacity=".85"/>
+      <rect x="105" y="600" width="168" height="48" rx="6" fill="#a8705e"/>
+      <rect x="105" y="600" width="168" height="9" rx="4" fill="#bd8a76"/>
+      <rect x="105" y="638" width="168" height="9" rx="2" fill="#efe6d3" opacity=".92"/>
+      <rect x="117" y="562" width="144" height="42" rx="6" fill="#6f7e72"/>
+      <rect x="117" y="562" width="144" height="8" rx="4" fill="#84957f"/>
+      <rect x="117" y="594" width="144" height="9" rx="2" fill="#efe6d3" opacity=".88"/>
     </g>
 
     <!-- 右端：笔筒 -->

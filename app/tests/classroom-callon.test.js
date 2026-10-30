@@ -227,7 +227,9 @@ test('前端：点名的三个约束都在（可点白名单 / 互斥 / 进历�
 
 test('前端：非法角色的卡片不可点（没有 role/tabindex）', () => {
   const src = fs.readFileSync(path.join(PUBLIC, 'app.js'), 'utf8');
-  assert.ok(/const clickable = key\s*\n?\s*\? ' role="button"/.test(src),
+  // 2026-10-30 卡片模板抽成 studentCardHtml(s, opts) 后，单人与课堂共用一份：
+  // 可点条件变成「key 合法 且 调用方没显式关掉」，语义与原来一致。
+  assert.ok(/const clickable = \(key && o\.clickable !== false\)\s*\n?\s*\? ' role="button"/.test(src),
     '可点属性必须只在 key 合法时才拼进 HTML');
 });
 

@@ -208,6 +208,15 @@
 <path d="M334 226C340 234 350 234 357 226" stroke="#466a2b" stroke-opacity=".32" stroke-width="1" stroke-linecap="round"/>
 </g>
 </g>
+<!-- 眯眼：低头走神态用。眼皮压成一条弧，瞳孔不画。 -->
+<g id="eyes-down">
+<g transform="rotate(8 255 212)">
+<path d="M240 214C248 221 262 221 270 212" stroke="#4b702d" stroke-width="2.4" stroke-linecap="round" fill="none"/>
+</g>
+<g transform="rotate(-7 345 212)">
+<path d="M330 212C338 219 352 219 360 210" stroke="#466a2b" stroke-width="2.4" stroke-linecap="round" fill="none"/>
+</g>
+</g>
 <g id="mouth-open">
 <path d="M270 246C285 240 316 240 331 245C326 267 278 269 270 246Z" fill="#544025"/>
 <path d="M278 247C292 244 313 244 324 247L320 252H282Z" fill="#fff0b0" opacity=".75"/>

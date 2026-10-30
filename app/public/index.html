@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>讲台求生 · AI 试讲教练</title>
 <meta name="description" content="粘贴讲稿，AI 从语速、提问、口头禅、环节覆盖多维度复盘，并派出 AI 学生实时向你提问。">
-<link rel="stylesheet" href="styles.css?v=20261030-hero2">
+<link rel="stylesheet" href="styles.css?v=20261030-solo1">
 <link rel="stylesheet" href="fx.css?v=20261030-hero1">
 <link rel="stylesheet" href="material.css?v=20261030-m5">
 <link rel="stylesheet" href="motion.css?v=20261030-m5">
@@ -560,6 +560,15 @@
  <!-- 单人模式（原有） -->
  <div id="soloMode">
  <div class="profile-note" id="soloProfileNote"></div>
+
+ <!-- 单人拆台也是「课堂」：同一名学生模型（立绘 / 举手 / 名字 / 学生卡），只是台上只有一个人 -->
+ <div class="class-scene solo-scene">
+ <canvas id="soloSceneCanvas" role="img"
+ aria-label="单人拆台场景：一名学生（模拟状态）。点他即可让他当场提问。"></canvas>
+ <p class="tip class-scene-note"><b>点图上的学生或下方卡片即可让他提问</b>。与三学生课堂同一个人物模型（立绘、举手、名牌、学生卡）；专注/理解数值单人接口未提供，所以不显示，也不填 0。</p>
+ </div>
+ <div class="class-students" id="soloStudents"></div>
+
  <div class="personas" id="personaBar">
  <button class="persona active" data-p="naughty" type="button">调皮型</button>
  <button class="persona" data-p="geek" type="button">学霸型</button>
@@ -838,7 +847,7 @@
  <button class="ghost-btn sm" id="rsReset" type="button">重置</button>
  <select id="rsPace" style="padding:6px 9px;border:1px solid var(--line,#e2e8f0);border-radius:7px;font-size:12px;background:var(--card,#fff);color:inherit">
  <option value="std">标准 3:00</option>
- <option value="fast">快剪 60s</option>
+ <option value="fast">精简 2:00</option>
  </select>
  <button class="ghost-btn sm" id="rsRec" type="button" title="自动跑完 6 个分镜并录屏，结束后自动下载">◉ 录制整场</button>
  <span class="rs-tip" id="rsTip"></span>
@@ -857,6 +866,24 @@
  </div>
 </div>
 
+<!-- 演示字幕条：自动演示时固定在底部，写明「第几步 / 这一步看哪里」，
+     并给出暂停 / 下一步 / 退出——评委提问时可以直接停住，不用重跑。 -->
+<div class="demo-hud" id="demoHud" hidden role="status" aria-live="polite">
+  <div class="dh-top">
+    <span class="dh-step" id="dhStep">1 / 8</span>
+    <div class="dh-text">
+      <b id="dhTitle">准备演示</b>
+      <span id="dhTip">正在填入示例讲稿…</span>
+    </div>
+    <div class="dh-actions">
+      <button class="dh-btn" id="dhPause" type="button">⏸ 暂停</button>
+      <button class="dh-btn" id="dhSkip" type="button">下一步 ⏭</button>
+      <button class="dh-btn dh-exit" id="dhExit" type="button" title="退出演示" aria-label="退出演示">✕</button>
+    </div>
+  </div>
+  <div class="dh-bar"><i id="dhBar"></i></div>
+</div>
+
 <script src="https://cdn.jsdelivr.net/npm/@tencent-ai/workbuddy-cloud-sdk@dev/lib/index.global.js"></script>
 <script src="https://cdn.jsdelivr.net/gh/davidshimjs/qrcodejs@master/qrcode.min.js"></script>
 <button class="to-top" id="toTopBtn" type="button" title="回到顶部" aria-label="回到顶部">↑</button>
@@ -867,12 +894,12 @@
 <script src="vendor/gsap.min.js?v=20261030-rbfx2"></script>
 <script src="vendor/ScrollTrigger.min.js?v=20261030-rbfx2"></script>
 <script src="rb-fx.js?v=20261030-tilt1"></script>
-<script src="classroom-roster.js?v=20261030-callon1"></script>
+<script src="classroom-roster.js?v=20261030-solo1"></script>
 <script src="classroom-art.js?v=20261030-art2"></script>
 <script src="students-art.js?v=20261030-hero3"></script>
 <script src="countup.js?v=20261030-m5"></script>
 <script src="blurtext.js?v=20261030-m5"></script>
-<script src="app.js?v=20261030-hero4"></script>
+<script src="app.js?v=20261030-solo1"></script>
 <script src="scroll-gsap.js?v=20261030-rbfx2"></script>
 <script src="question-drill-rules.js?v=20261030-drill6"></script>
 <script src="question-drill.js?v=20261030-drill6"></script>

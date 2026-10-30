@@ -58,16 +58,22 @@ const STUDENT_ART = {
     default: 'assets/students/svg/naughty-default.svg',
     closed: 'assets/students/svg/naughty-closed.svg',
     raise: 'assets/students/svg/naughty-raise.svg',
+    'speak-raise': 'assets/students/svg/naughty-speak-raise.svg',
+    'idle-down': 'assets/students/svg/naughty-idle-down.svg',
   },
   geek: {
     default: 'assets/students/svg/geek-default.svg',
     closed: 'assets/students/svg/geek-closed.svg',
     raise: 'assets/students/svg/geek-raise.svg',
+    'speak-raise': 'assets/students/svg/geek-speak-raise.svg',
+    'idle-down': 'assets/students/svg/geek-idle-down.svg',
   },
   drift: {
     default: 'assets/students/svg/drift-default.svg',
     closed: 'assets/students/svg/drift-closed.svg',
     raise: 'assets/students/svg/drift-raise.svg',
+    'speak-raise': 'assets/students/svg/drift-speak-raise.svg',
+    'idle-down': 'assets/students/svg/drift-idle-down.svg',
   },
 };
 const artSrc = {};

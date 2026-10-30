@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>三学生九状态对照</title>
+<style>
+  body { margin: 0; background: #f3f1ea; font: 13px/1.5 "Microsoft YaHei", sans-serif; color: #3d3327; }
+  h1 { font-size: 16px; margin: 14px 16px 4px; font-weight: 600; }
+  .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; padding: 12px 16px 20px; }
+  figure { margin: 0; background: #fbf9f3; border: 1px solid #ddd6c6; border-radius: 10px; padding: 6px; text-align: center; }
+  figure img { width: 100%; height: 190px; object-fit: contain; display: block; }
+  figcaption { font-size: 12px; color: #6b6152; margin-top: 4px; }
+</style>
+</head>
+<body>
+<h1>三学生 · 九状态立绘对照（张嘴 / 闭嘴 / 举手）</h1>
+<div class="grid" id="grid"></div>
+<script>
+  var SRC = '../app/public/assets/students/svg/';
+  var KEY = [
+    { key: 'naughty', name: '小皮 · 偏分短发女生' },
+    { key: 'geek', name: '小霸 · 戴眼镜男学生' },
+    { key: 'drift', name: '小走 · 黄色校服角色' }
+  ];
+  var STATE = ['default', 'closed', 'raise'];
+  var STATE_CN = { default: '张嘴', closed: '闭嘴', raise: '举手' };
+  var grid = document.getElementById('grid');
+  KEY.forEach(function (k) {
+    STATE.forEach(function (st) {
+      var fig = document.createElement('figure');
+      var img = document.createElement('img');
+      img.src = SRC + k.key + '-' + st + '.svg';
+      img.alt = k.name + ' ' + STATE_CN[st];
+      var cap = document.createElement('figcaption');
+      cap.textContent = k.name + ' · ' + STATE_CN[st];
+      fig.appendChild(img);
+      fig.appendChild(cap);
+      grid.appendChild(fig);
+    });
+  });
+  window.__ready = true;
+</script>
+</body>
+</html>

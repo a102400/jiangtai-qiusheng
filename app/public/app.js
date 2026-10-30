@@ -1618,6 +1618,36 @@ const stateColor = CLASS_ROSTER ? CLASS_ROSTER.colorOf : function (value) {
   return '#dc2626';
 };
 
+/* 学生模型工厂：单人拆台与三学生课堂共用（见 classroom-roster.js 的注释）。
+ * 这里保留一份等价兜底，只在该文件未加载（旧缓存页面）时生效。 */
+const makeStudent = CLASS_ROSTER && CLASS_ROSTER.makeStudent
+  ? CLASS_ROSTER.makeStudent
+  : function (key, patch) {
+      const p = (patch && typeof patch === 'object') ? patch : {};
+      const k = hasClassKey(key) ? key : '';
+      return {
+        key: k,
+        name: (p.name && String(p.name).trim()) || (k ? CLASS_META[k].name : ''),
+        mood: (p.mood && String(p.mood).trim()) || '😊',
+        hand_raise: p.hand_raise === true,
+        speaking: p.speaking === true,
+        attention: scoreOf(p.attention),
+        comprehension: scoreOf(p.comprehension),
+        state_reason: typeof p.state_reason === 'string' ? p.state_reason : '',
+        difficulty: ['basic', 'core', 'advanced'].indexOf(p.difficulty) !== -1 ? p.difficulty : '',
+      };
+    };
+
+/* 立绘状态唯一判定：举手 > 发言 > 闭嘴。绘制与卡片都读这一份。 */
+const portraitStateOf = CLASS_ROSTER && CLASS_ROSTER.portraitStateOf
+  ? CLASS_ROSTER.portraitStateOf
+  : function (s) {
+      if (!s) return 'closed';
+      if (s.hand_raise === true) return 'raise';
+      if (s.speaking === true) return 'default';
+      return 'closed';
+    };
+
 /* 场景几何：站位与命中盒子只在 classroom-roster.js 里算一份。
  * 画布绘制和「点画布点名」都用它，避免两份坐标公式漂移成「看到小走、点中小霸」。 */
 const figSize = CLASS_ROSTER && CLASS_ROSTER.figSize
@@ -1638,6 +1668,9 @@ const sceneHitTest = CLASS_ROSTER && CLASS_ROSTER.hitTest
 const chatModeBar = $('chatModeBar');
 const classMode = $('classMode');
 const soloMode = $('soloMode');
+/* 单人拆台也走同一套学生模型：场景画布 + 学生卡容器 */
+const soloSceneCanvas = $('soloSceneCanvas');
+const soloStudentsBox = $('soloStudents');
 const classLog = $('classLog');
 const classForm = $('classForm');
 const classInput = $('classInput');
@@ -1669,6 +1702,7 @@ if (chatModeBar) {
     classMode.hidden = !isClass;
     soloMode.hidden = isClass;
     if (isClass) requestAnimationFrame(drawClassScene);
+    else requestAnimationFrame(drawSoloScene);
     if (isClass && !lastAnalysis && !lastScript) {
       setErr('建议先提交讲稿，三学生会基于你的讲课内容发问（当然也可以空手开局）');
     }
@@ -1681,13 +1715,17 @@ document.addEventListener('jtq:tabchange', (e) => {
   const name = e.detail && e.detail.name;
   if (name === 'chat') {
     requestAnimationFrame(drawClassScene);
+    requestAnimationFrame(drawSoloScene);
     return;
   }
   clearClassSpeaking();
 });
 document.addEventListener('visibilitychange', () => {
   if (document.hidden) clearClassSpeaking();
-  else requestAnimationFrame(drawClassScene);
+  else {
+    requestAnimationFrame(drawClassScene);
+    requestAnimationFrame(drawSoloScene);
+  }
 });
 
 let lastClassStates = []; // 最近一轮学生状态，供驾驶舱计算
@@ -1715,46 +1753,61 @@ function classAvatarHtml(key, meta) {
     '</span>';
 }
 
+/**
+ * 单个学生卡片的 HTML —— 三学生课堂与单人拆台共用同一份模板。
+ *
+ * 为什么必须共用：卡片上写的是「这个学生是谁、现在什么状态」。
+ * 单人模式如果另写一套模板，早晚会漂移成「同一个角色两张脸、
+ * 课堂显示专注度、单人却没有」。学生模型统一之后，模板也必须统一。
+ *
+ * @param {object} s makeStudent() 产出的学生对象
+ * @param {object} [opts] { aria: 无障碍描述, clickable: boolean }
+ */
+function studentCardHtml(s, opts) {
+  const o = opts || {};
+  // 非法角色（含 constructor / toString 这类原型链属性）不渲染成有效学生
+  const key = hasClassKey(s && s.key) ? s.key : '';
+  const m = key ? CLASS_META[key] : CLASS_META.naughty;
+  const name = (s && s.name) ? String(s.name) : m.name;
+  const aria = o.aria || ('点名 ' + name + ' 回答');
+  // 先规整成 number|null：空白串 / 数组不再被当成 0 分渲染成红色告警条
+  const att = scoreOf(s && s.attention);
+  const comp = scoreOf(s && s.comprehension);
+  const has = att !== null && comp !== null;
+  const reason = s && s.state_reason ? escapeHtml(s.state_reason) : '';
+  // 学情生效时，后端会给出本轮提问难度（basic / core / advanced）。白名单外一律不显示。
+  const diffLabel = { basic: '基础', core: '常规', advanced: '进阶' };
+  const diff = s && s.difficulty ? diffLabel[s.difficulty] || '' : '';
+  const bars = has
+    ? '<div class="cs-bars">' +
+      '<div class="cs-bar" title="专注度 ' + att + (reason ? ' · ' + reason : '') + '">' +
+      '<span class="cs-bl">专注</span><div class="cs-bt"><i style="width:' + att + '%;background:' + stateColor(att) + '"></i></div>' +
+      '<b style="color:' + stateColor(att) + '">' + att + '</b></div>' +
+      '<div class="cs-bar" title="理解度 ' + comp + (reason ? ' · ' + reason : '') + '">' +
+      '<span class="cs-bl">理解</span><div class="cs-bt"><i style="width:' + comp + '%;background:' + stateColor(comp) + '"></i></div>' +
+      '<b style="color:' + stateColor(comp) + '">' + comp + '</b></div>' +
+      '</div>'
+    : '';
+  // 合法角色才可点。非法角色卡片没有 data-k，也就没有 role/tabindex，
+  // 键盘用户不会 tab 到一个点了没反应的元素上 —— 那是比不可点更差的可访问性。
+  const clickable = (key && o.clickable !== false)
+    ? ' role="button" tabindex="0" data-k="' + key + '" aria-label="' + escapeHtml(aria) + '"'
+    : '';
+  return '<div class="cs-card' + (s && s.speaking ? ' speaking' : '') + '"' + clickable + '>' +
+    (s && s.hand_raise ? '<span class="cs-raise">🙋</span>' : '') +
+    classAvatarHtml(key, m) +
+    '<div class="cs-nm">' + escapeHtml(name) + '</div>' +
+    (diff ? '<span class="difficulty-tag" title="本轮提问难度">' + escapeHtml(diff) + '</span>' : '') +
+    '<div class="cs-mood">' + escapeHtml((s && s.mood) || '😊') + '</div>' +
+    bars +
+    (reason ? '<div class="cs-why">' + reason + '</div>' : '') +
+    '</div>';
+}
+
 function renderClassStudents(states) {
   const list = (states && states.length) ? states : idleRoster();
   lastClassStates = list;
-  classStudentsBox.innerHTML = list.map((s) => {
-    // 非法角色（含 constructor / toString 这类原型链属性）不渲染成有效学生
-    const key = hasClassKey(s && s.key) ? s.key : '';
-    const m = key ? CLASS_META[key] : CLASS_META.naughty;
-    // 先规整成 number|null：空白串 / 数组不再被当成 0 分渲染成红色告警条
-    const att = scoreOf(s && s.attention);
-    const comp = scoreOf(s && s.comprehension);
-    const has = att !== null && comp !== null;
-    const reason = s && s.state_reason ? escapeHtml(s.state_reason) : '';
-    // 学情生效时，后端会给出本轮提问难度（basic / core / advanced）。白名单外一律不显示。
-    const diffLabel = { basic: '基础', core: '常规', advanced: '进阶' };
-    const diff = s && s.difficulty ? diffLabel[s.difficulty] || '' : '';
-    const bars = has
-      ? '<div class="cs-bars">' +
-        '<div class="cs-bar" title="专注度 ' + att + (reason ? ' · ' + reason : '') + '">' +
-        '<span class="cs-bl">专注</span><div class="cs-bt"><i style="width:' + att + '%;background:' + stateColor(att) + '"></i></div>' +
-        '<b style="color:' + stateColor(att) + '">' + att + '</b></div>' +
-        '<div class="cs-bar" title="理解度 ' + comp + (reason ? ' · ' + reason : '') + '">' +
-        '<span class="cs-bl">理解</span><div class="cs-bt"><i style="width:' + comp + '%;background:' + stateColor(comp) + '"></i></div>' +
-        '<b style="color:' + stateColor(comp) + '">' + comp + '</b></div>' +
-        '</div>'
-      : '';
-    // 合法角色才可点（点名）。非法角色卡片没有 data-k，也就没有 role/tabindex，
-    // 键盘用户不会 tab 到一个点了没反应的元素上 —— 那是比不可点更差的可访问性。
-    const clickable = key
-      ? ' role="button" tabindex="0" data-k="' + key + '" aria-label="点名 ' + m.name + ' 回答"'
-      : '';
-    return '<div class="cs-card' + (s && s.speaking ? ' speaking' : '') + '"' + clickable + '>' +
-      (s && s.hand_raise ? '<span class="cs-raise">🙋</span>' : '') +
-      classAvatarHtml(key, m) +
-      '<div class="cs-nm">' + m.name + '</div>' +
-      (diff ? '<span class="difficulty-tag" title="本轮提问难度">' + escapeHtml(diff) + '</span>' : '') +
-      '<div class="cs-mood">' + ((s && s.mood) || '😊') + '</div>' +
-      bars +
-      (reason ? '<div class="cs-why">' + reason + '</div>' : '') +
-      '</div>';
-  }).join('');
+  classStudentsBox.innerHTML = list.map((s) => studentCardHtml(s)).join('');
   drawClassScene();
 }
 
@@ -1883,8 +1936,8 @@ function drawClassStudent(ctx, cx, baseY, s, maxW, maxH) {
   const c = CLASS_SCENE_COLOR[key] || CLASS_SCENE_COLOR.naughty;
 
   // 立绘状态：举手 → raise；发言 → default（张嘴）；其余 → closed（闭嘴）。
-  // 三种状态共用同一裁切矩形，所以切换时人物不会跳动，只有手臂和嘴巴在动。
-  const artState = (s && s.hand_raise) ? 'raise' : (s && s.speaking) ? 'default' : 'closed';
+  // 判定只在 classroom-roster.js 的 portraitStateOf 里有一份，卡片与画布不会各说一套。
+  const artState = portraitStateOf(s);
 
   // 立绘：用户提供的三张 SVG（透明背景、矢量、随 dpr 清晰）。
   // 加载成功用立绘；失败则退回下面的简笔小人，课堂场景不会因素材缺失而空掉。
@@ -2447,17 +2500,187 @@ if (classMicBtn) {
   });
 }
 
+/* ==================================================================
+   🎯 单人拆台：也是「课堂」，只是台上只有一名学生
+   ------------------------------------------------------------------
+   要求（用户 2026-10-30）：单个学生也要按多人课堂的学生模型来。
+   于是单人模式不再只是「一个聊天头像」，而是复用台上那整套东西：
+
+     · 同一个学生对象  → classroom-roster.js 的 makeStudent()
+     · 同一张立绘      → students-art.js（default / closed / raise 三态）
+     · 同一套状态机    → portraitStateOf()：举手 > 发言 > 闭嘴
+     · 同一张学生卡    → studentCardHtml()
+     · 同一块教室场景  → 同一份 backdrop/desks 矢量层 + 同一套取景参数
+
+   唯一的区别是取景：1 人时 sceneLayout() 把人摆在正中（roster 里早有这支分支）。
+   数值口径也照旧：单人接口没有专注/理解数据，学生卡就不画这两根条，
+   绝不填 0 —— 缺失不能伪装成结论。
+   ================================================================== */
+let soloCtx = null;
+let soloReady = false;
+let soloSlots = [];
+let soloStudent = null;
+let soloRaiseTimer = 0;
+
+function setupSoloScene() {
+  if (soloReady || !soloSceneCanvas) return;
+  soloCtx = soloSceneCanvas.getContext('2d');
+  if (!soloCtx) return;
+  soloReady = true;
+  // 画布在隐藏模式 / 隐藏 Tab 里尺寸为 0，显示后需要重绘
+  if ('ResizeObserver' in window) {
+    new ResizeObserver(drawSoloScene).observe(soloSceneCanvas);
+  } else {
+    window.addEventListener('resize', drawSoloScene);
+  }
+}
+
+/** 单人模式的学生：换人设 / 自定义人设时重建；只是改状态时用 setSoloState */
+function resetSoloStudent() {
+  const custom = $('customPersona') ? $('customPersona').value.trim() : '';
+  soloStudent = makeStudent(currentPersona, custom
+    ? { name: '定制学生', state_reason: '自定义人设：' + truncateStr(custom, 26) }
+    : {});
+  renderSoloStudent();
+}
+
+/** 只改状态字段（举手 / 发言 / 难度），不换人 */
+function setSoloState(patch) {
+  const custom = $('customPersona') ? $('customPersona').value.trim() : '';
+  const merged = Object.assign({}, soloStudent || {}, patch || {});
+  if (custom) {
+    merged.name = '定制学生';
+    if (!merged.state_reason) merged.state_reason = '自定义人设：' + truncateStr(custom, 26);
+  }
+  soloStudent = makeStudent(currentPersona, merged);
+  renderSoloStudent();
+  return soloStudent;
+}
+
+function renderSoloStudent() {
+  if (soloStudentsBox) {
+    const s = soloStudent || makeStudent(currentPersona);
+    soloStudentsBox.innerHTML = studentCardHtml(s, { aria: '让 ' + s.name + ' 提问' });
+  }
+  drawSoloScene();
+}
+
+function drawSoloScene() {
+  if (!soloReady) setupSoloScene();
+  if (!soloCtx || !soloSceneCanvas || (soloMode && soloMode.hidden)) return;
+
+  const rect = soloSceneCanvas.getBoundingClientRect();
+  if (!rect.width || !rect.height) return;
+
+  const dpr = Math.min(window.devicePixelRatio || 1, 2);
+  const w = Math.round(rect.width * dpr);
+  const h = Math.round(rect.height * dpr);
+  if (soloSceneCanvas.width !== w || soloSceneCanvas.height !== h) {
+    soloSceneCanvas.width = w;
+    soloSceneCanvas.height = h;
+  }
+
+  const ctx = soloCtx;
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  ctx.clearRect(0, 0, rect.width, rect.height);
+
+  const W = rect.width, H = rect.height;
+
+  // 与三学生课堂同一块教室背景（矢量层缺失时同一份代码兜底）
+  if (!drawClassroomLayer(ctx, W, H, 'backdrop')) {
+    ctx.fillStyle = getCssVar('--bg', '#F4F9FF');
+    ctx.fillRect(0, 0, W, H);
+    const boardX = W * 0.17, boardY = H * 0.035, boardW = W * 0.66, boardH = H * 0.185;
+    ctx.fillStyle = '#244C42';
+    roundRect(ctx, boardX, boardY, boardW, boardH, 10);
+    ctx.fill();
+  }
+
+  // 黑板上的课题文字是动态的，留在画布上（同多人课堂）
+  const topic = (lastSubject || '').trim();
+  ctx.fillStyle = '#F1F5F2';
+  ctx.textAlign = 'center';
+  ctx.font = '600 ' + Math.round(H * 0.058) + 'px sans-serif';
+  ctx.fillText(topic ? ('课题：' + truncateStr(topic, 18)) : '课堂目标板', W * 0.5, H * 0.035 + H * 0.185 * 0.46);
+  ctx.font = Math.round(H * 0.042) + 'px sans-serif';
+  ctx.fillStyle = '#D6E7DF';
+  ctx.fillText('单人拆台 · 模拟状态', W * 0.5, H * 0.035 + H * 0.185 * 0.82);
+
+  const s = soloStudent || makeStudent(currentPersona);
+  const ratioOf = (k) => (window.jtqStudentArt ? window.jtqStudentArt.ratioOf(k) : 0.78);
+  // 取景参数与多人课堂完全一致（maxH 0.62 / maxW 0.27），
+  // 这样「同一个学生」在两处的大小、站位手感一致，命中盒也不必另算一套。
+  const slots = sceneLayout([s], W, H, ratioOf);
+  soloSlots = slots;
+  const baseY = H * 0.845;
+  const maxH = H * 0.62;
+  const maxW = W * 0.27;
+  const cx = slots[0] ? slots[0].cx : W * 0.5;
+
+  drawClassStudent(ctx, cx, baseY, s, maxW, maxH);
+  if (!drawClassroomLayer(ctx, W, H, 'desks')) drawDeskFallback(ctx, W, H);
+  drawClassOverlay(ctx, cx, baseY, s, maxW, maxH);
+
+  ctx.fillStyle = 'rgba(58,46,30,.42)';
+  ctx.textAlign = 'left';
+  ctx.font = Math.round(H * 0.038) + 'px sans-serif';
+  ctx.fillText('教师视角', W * 0.05, H * 0.965);
+}
+
+/* 单人场景：点学生 = 让他开口（与课堂「点谁谁答」同一个动线） */
+if (soloSceneCanvas) {
+  soloSceneCanvas.addEventListener('click', (e) => {
+    const rect = soloSceneCanvas.getBoundingClientRect();
+    const hit = sceneHitTest(soloSlots, e.clientX - rect.left, e.clientY - rect.top, 8);
+    if (!hit) return;
+    if (askBtn && askBtn.disabled) return;
+    callStudent();
+  });
+}
+
+/* 单人学生卡：点击 / 回车也能让他开口 */
+if (soloStudentsBox) {
+  const trigger = () => {
+    if (askBtn && askBtn.disabled) return;
+    callStudent();
+  };
+  soloStudentsBox.addEventListener('click', trigger);
+  soloStudentsBox.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      trigger();
+    }
+  });
+}
+
 /* ---------- AI 学生对话（单人模式） ---------- */
 function resetChat() {
   messages = [];
   chatLog.innerHTML = '<div class="msg sys">选好性格，点下面的按钮，AI 学生就会基于你的讲稿向你发难。</div>';
+  // 重新开一轮 = 学生回到「还没开口」：闭嘴、不举手。
+  // 走的是同一套学生模型，不是单独往 DOM 里塞个表情。
+  clearTimeout(soloRaiseTimer);
+  if (soloStudentsBox) setSoloState({ hand_raise: false, speaking: false, mood: '😊' });
+}
+
+/* 气泡头像与课堂学生卡用的是同一张立绘（同一个学生只能有一张脸）。
+ * 立绘取不到时退回原来的「学」字，不会留破图标。 */
+function soloAvatarHtml() {
+  const key = hasClassKey(currentPersona) ? currentPersona : 'naughty';
+  const src = (window.jtqStudentArt && window.jtqStudentArt.srcOf)
+    ? window.jtqStudentArt.srcOf(key, portraitStateOf(soloStudent))
+    : '';
+  if (!src) return '<span class="av">学</span>';
+  return '<span class="av av-stu">学' +
+    '<img src="' + src + '" alt="" decoding="async" onerror="this.remove()">' +
+    '</span>';
 }
 
 function addBubble(role, text, label) {
   const wrap = document.createElement('div');
   wrap.className = 'msg' + (role === 'teacher' ? ' out' : '');
   wrap.innerHTML =
-    '<span class="av">' + (role === 'teacher' ? '师' : '学') + '</span>' +
+    (role === 'teacher' ? '<span class="av">师</span>' : soloAvatarHtml()) +
     '<div class="bub">' +
     (label ? '<small>' + escapeHtml(label) + '</small>' : '') +
     escapeHtml(text) +
@@ -2471,7 +2694,7 @@ function addTyping() {
   const wrap = document.createElement('div');
   wrap.className = 'msg';
   wrap.innerHTML =
-    '<span class="av">学</span><div class="bub"><span class="typing"><i></i><i></i><i></i></span></div>';
+    soloAvatarHtml() + '<div class="bub"><span class="typing"><i></i><i></i><i></i></span></div>';
   chatLog.appendChild(wrap);
   chatLog.scrollTop = chatLog.scrollHeight;
   return wrap;
@@ -2480,6 +2703,11 @@ function addTyping() {
 async function callStudent() {
   setErr('');
   askBtn.disabled = true;
+  // 与多人课堂同一套状态机：先举手（立绘换 raise），再开口（speaking → 张嘴）。
+  // 550ms 是人「举手—开口」的自然间隔，太快看起来像抽搐。
+  clearTimeout(soloRaiseTimer);
+  setSoloState({ hand_raise: true, speaking: false });
+  soloRaiseTimer = setTimeout(() => setSoloState({ hand_raise: false, speaking: true }), 550);
   const typing = addTyping();
   try {
     const data = await post('/api/student/chat', {
@@ -2506,8 +2734,13 @@ async function callStudent() {
       (cp ? '定制学生' : (data.label || 'AI 学生')) +
         (data.engine === 'llm' ? '' : ' · 本地' + degradedSuffix(data.fallback_reason))
     );
+    // 难度标签沿用课堂学生卡的口径（basic / core / advanced，白名单外不显示）
+    clearTimeout(soloRaiseTimer);
+    setSoloState({ hand_raise: false, speaking: false, difficulty: data.difficulty || '' });
   } catch (e) {
     if (typing.parentNode) typing.parentNode.removeChild(typing);
+    clearTimeout(soloRaiseTimer);
+    setSoloState({ hand_raise: false, speaking: false });
     setErr(e.message || '学生提问失败');
   } finally {
     askBtn.disabled = false;
@@ -2677,6 +2910,19 @@ if (blackboardBtn && blackboardFile) {
 const HISTORY_KEY = 'jtq_local_history';
 
 /**
+ * 固定演示页的成长轨迹（只读，不落盘）。
+ * 演示模式刻意不写 localStorage（见 saveToHistory），
+ * 于是成长档案会退回「至少完成 2 次复盘」的空态——路演最后一步变成空白页。
+ * 这里给一份内置轨迹，让「练一次 → 看得见进步」这条叙事在演示里成立。
+ */
+const DEMO_GROWTH_HISTORY = [
+  { at: '2026-10-12T09:20:00', subject: '勾股定理 · 初中八年级', score: 52, filler: 9, questions: 3, rate: 168, engine: 'llm' },
+  { at: '2026-10-16T19:05:00', subject: '勾股定理 · 初中八年级', score: 63, filler: 6, questions: 4, rate: 182, engine: 'llm' },
+  { at: '2026-10-22T10:40:00', subject: '勾股定理 · 初中八年级', score: 71, filler: 4, questions: 5, rate: 195, engine: 'llm' },
+  { at: '2026-10-28T20:15:00', subject: '勾股定理 · 初中八年级', score: 78, filler: 2, questions: 6, rate: 206, engine: 'llm' }
+];
+
+/**
  * 从报告对象里取一个「可缺省」的计数。
  * 为什么不能写 `(obj || {}).field || 0`：
  *   后端缺字段时它会静默变成 0，把「没有这个数据」显示成「这个值是 0」，
@@ -2746,7 +2992,12 @@ function renderGrowth() {
   const listBox = $('growthList');
   if (!curveBox) return;
   let hist = [];
-  try { hist = JSON.parse(localStorage.getItem(HISTORY_KEY) || '[]'); } catch (e) { hist = []; }
+  if (JTQ_DEMO_PAGE) {
+    // 演示页不读本机历史（会串到真人档案），用内置轨迹撑住这条叙事
+    hist = DEMO_GROWTH_HISTORY.slice();
+  } else {
+    try { hist = JSON.parse(localStorage.getItem(HISTORY_KEY) || '[]'); } catch (e) { hist = []; }
+  }
 
   // 合并云端记录（登录后才有）
   const cloudRecords = (window.JTQCloud && window.JTQCloud.getRecords) ? window.JTQCloud.getRecords() : [];
@@ -4661,6 +4912,7 @@ function renderCurriculum(data) {
 analyzeBtn.addEventListener('click', runAnalyze);
 renderBadges();
 renderClassStudents();
+resetSoloStudent(); // 单人台上先摆好这名学生（与课堂同一套模型）
 resetClass();
 
 /* ==================================================================
@@ -5185,8 +5437,16 @@ personaBar.addEventListener('click', (e) => {
   personaBar.querySelectorAll('.persona').forEach((b) => b.classList.remove('active'));
   btn.classList.add('active');
   currentPersona = btn.getAttribute('data-p') || 'naughty';
+  resetSoloStudent(); // 台上换成这个学生（立绘 / 名字 / 卡片一起换）
   resetChat(); // 换了学生，重新开始
 });
+
+/* 自定义人设改了 → 卡片上的名字与状态原因跟着变（学生模型里的字段，不是另写的文案） */
+const customPersonaInput = $('customPersona');
+if (customPersonaInput) {
+  customPersonaInput.addEventListener('change', resetSoloStudent);
+  customPersonaInput.addEventListener('blur', resetSoloStudent);
+}
 
 askBtn.addEventListener('click', callStudent);
 
@@ -5199,6 +5459,8 @@ chatForm.addEventListener('submit', async (e) => {
   chatInput.value = '';
   messages.push({ role: 'teacher', content: text });
   addBubble('teacher', text, '你（老师）');
+  // 老师说话时学生在听：闭嘴、放下手（状态同样来自学生模型）
+  setSoloState({ hand_raise: false, speaking: false });
   await callStudent(); // 老师回答后，学生继续追问
 });
 
@@ -5284,22 +5546,34 @@ async function runRoadshowStep(i) {
       if (scriptInput) scriptInput.value = SAMPLE;
       if (charHint) charHint.textContent = String(SAMPLE).replace(/\s/g, '').length + ' 字';
       await runAnalyze();
+      // 分析完先把镜头拉回报告顶部：录屏里观众要从「总分」开始看
+      switchTab('report');
+      await demoScrollTo($('pane-report'), 900);
       say('完成：报告已生成');
     } else if (st.action === 'heatmap') {
       say('执行中：定位到提问等待热力图…');
       switchTab('report');
+      await demoWait(400);
       const box = $('heatmapBox');
-      if (box) box.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      if (box) await demoScrollTo(box, 900);
       say('完成：热力图 + 时间分配可见');
     } else if (st.action === 'students') {
       say('执行中：AI 学生开始拆台…');
       switchTab('chat');
+      // 录屏必须进「三学生课堂」才是高光：单人问答在镜头里信息量太小
+      const classBtn = document.querySelector('#chatModeBar .msw[data-mode="class"]');
+      if (classBtn) classBtn.click();
+      await demoWait(600);
       await classNextRound();
+      await demoScrollTo($('classStudents') || $('pane-chat'), 900);
       say('完成：三位学生已发难，压力条更新');
     } else if (st.action === 'crisis') {
       say('执行中：制造一次课堂事故…');
       switchTab('crisis');
+      await demoWait(400);
       await startCrisis();
+      await demoWait(1200);
+      await demoScrollTo($('pane-crisis'), 900);
       say('完成：事件卡已展开，等你回应');
     } else if (st.action === 'hollow') {
       say('执行中：打开成长档案（树洞 / 榜单 / 海报）…');
@@ -5307,6 +5581,7 @@ async function runRoadshowStep(i) {
       renderGrowth();
       loadLeaderboard(lbCurrent);
       await loadHollow();
+      await demoScrollTo($('pane-growth'), 900);
       say('完成：树洞与榜单已就绪');
     } else {
       say('开场无需操作，直接讲这一段');
@@ -5374,9 +5649,12 @@ function closeRoadshow() {
   rsStop();
 }
 
-/* 录制整场（A）：自动跑完 6 步 + 屏幕录制，结束自动下载 webm */
+/* 录制整场（A）：自动跑完 6 步 + 屏幕录制，结束自动下载 webm
+ * 节奏说明：快剪档原来是 [6,14,12,12,12,14]（合计 70 秒），
+ * 分镜里的分数、热力图、压力条还没看明白就切走了。
+ * 现在快剪档拉到 2 分钟档，镜头也跟着内容慢滚（见 runRoadshowStep）。 */
 const RS_HOLD_STD = [18, 32, 30, 32, 30, 38];  // 合计 180 秒
-const RS_HOLD_FAST = [6, 14, 12, 12, 12, 14];  // 合计 70 秒
+const RS_HOLD_FAST = [10, 24, 20, 20, 20, 22];  // 合计 116 秒
 
 let rsRecording = false;
 
@@ -5417,7 +5695,7 @@ async function recordRoadshow() {
     rec.onstop = () => {
       const blob = new Blob(chunks, { type: 'video/webm' });
       const url = URL.createObjectURL(blob);
-      const name = '讲台求生-路演-' + (fast ? '60s' : '3min') + '-' + Date.now() + '.webm';
+      const name = '讲台求生-路演-' + (fast ? '2min' : '3min') + '-' + Date.now() + '.webm';
       const a = document.createElement('a');
       a.href = url;
       a.download = name;
@@ -5654,9 +5932,328 @@ if (themeBtn) {
   });
 }
 
-/* ---------- 一键自动演示（现场 Plan B，无需录屏） ---------- */
+/* ---------- 一键自动演示（现场 Plan B，无需录屏） ----------
+ * 为什么重写节奏：旧版每步只停 0.5–2.6 秒，分数还没看完画面就切走了，
+ * 评委视角下等于「闪了一下」，看不出产品到底做了什么。
+ *
+ * 现在的四条约定（改动前请先读）：
+ *   1. 一步只讲一件事，单步停留 7–9 秒；想加速按底部「下一步 ⏭」即可，不用改代码。
+ *   2. 每步配一条底部字幕：第几步 / 这一步该看哪里（评委不用猜）。
+ *   3. 七个 Tab 全走到：报告 → 改进 → 单人拆台 → 三学生课堂 → 专项练习
+ *      → 崩塌模拟 → 六视角 → 成长档案（共 8 步，功能一个不落）。
+ *   4. 切 Tab 后用自定义缓动滚动把目标区域送进视线（原生 smooth 太快、没节奏感）；
+ *      单步失败只提示、不中止——现场不允许一个接口挂了就断演。
+ */
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 let autoRunning = false;
+
+/* 演示控制器：暂停 / 跳过 / 退出，全部由底部字幕条驱动 */
+const demoCtl = { paused: false, skip: false, aborted: false };
+
+const PREFERS_REDUCE = (() => {
+  try {
+    return window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  } catch (e) {
+    return false;
+  }
+})();
+
+function demoHudEls() {
+  return {
+    hud: $('demoHud'),
+    step: $('dhStep'),
+    title: $('dhTitle'),
+    tip: $('dhTip'),
+    bar: $('dhBar'),
+    pause: $('dhPause')
+  };
+}
+
+function demoHudShow(show) {
+  const { hud } = demoHudEls();
+  if (hud) hud.hidden = !show;
+  // 字幕条是固定定位，会压住页面底部内容；演示期间给 body 留出同等高度
+  if (document.body) {
+    document.body.classList.toggle('is-demo-running', !!show);
+  }
+}
+
+function demoHudProgress(ratio) {
+  const { bar } = demoHudEls();
+  if (!bar) return;
+  const pct = Math.round(Math.max(0, Math.min(1, ratio)) * 100);
+  bar.style.width = pct + '%';
+}
+
+function demoHudSet(index, total, title, tip) {
+  const e = demoHudEls();
+  if (e.step) e.step.textContent = (index + 1) + ' / ' + total;
+  if (e.title) e.title.textContent = title;
+  if (e.tip) e.tip.textContent = tip;
+  demoHudProgress(0);
+}
+
+(function bindDemoHud() {
+  const e = demoHudEls();
+  if (e.pause) {
+    e.pause.addEventListener('click', () => {
+      demoCtl.paused = !demoCtl.paused;
+      e.pause.textContent = demoCtl.paused ? '▶ 继续' : '⏸ 暂停';
+      const { hud } = demoHudEls();
+      if (hud) hud.classList.toggle('is-paused', demoCtl.paused);
+    });
+  }
+  const skip = $('dhSkip');
+  if (skip) {
+    skip.addEventListener('click', () => {
+      // 跳过只作用于「当前这一步」的停留，不影响后面的节奏
+      demoCtl.skip = true;
+      demoCtl.paused = false;
+      if (e.pause) e.pause.textContent = '⏸ 暂停';
+      const { hud } = demoHudEls();
+      if (hud) hud.classList.remove('is-paused');
+    });
+  }
+  const exit = $('dhExit');
+  if (exit) {
+    exit.addEventListener('click', () => {
+      demoCtl.aborted = true;
+      demoCtl.paused = false;
+      demoCtl.skip = true;
+    });
+  }
+})();
+
+/**
+ * 演示专用等待：可暂停、可跳过。
+ * 不能用裸 setTimeout —— 暂停键按下去计时还在走，就不叫暂停了。
+ */
+function demoWait(ms) {
+  const total = Math.max(200, Number(ms) || 0);
+  return new Promise((resolve) => {
+    let left = total;
+    const tick = 50;
+    const id = setInterval(() => {
+      if (demoCtl.aborted || demoCtl.skip) {
+        clearInterval(id);
+        demoCtl.skip = false;
+        demoHudProgress(1);
+        resolve();
+        return;
+      }
+      // 暂停时既不推进进度，也不结束——画面就停在评委正在看的地方
+      if (demoCtl.paused) return;
+      left -= tick;
+      demoHudProgress(1 - left / total);
+      if (left <= 0) {
+        clearInterval(id);
+        resolve();
+      }
+    }, tick);
+  });
+}
+
+/** 轮询等待某个条件成立（等接口返回后渲染出来的东西），超时不抛错。 */
+async function demoWaitFor(check, timeout) {
+  const limit = Number(timeout) || 10000;
+  const start = Date.now();
+  while (Date.now() - start < limit) {
+    let ok = false;
+    try {
+      ok = !!check();
+    } catch (e) {
+      ok = false;
+    }
+    if (ok) return true;
+    await sleep(120);
+  }
+  return false;
+}
+
+/**
+ * 演示专用滚动：easeInOutCubic，默认 800ms。
+ * window.scrollTo({behavior:'smooth'}) 在不同浏览器速度不一致（Chrome 约 300ms），
+ * 放在讲稿页上就是「唰」一下，评委根本跟不上视线。
+ */
+function demoScrollTo(el, duration) {
+  const ms = duration == null ? 800 : duration;
+  if (!el || !el.getBoundingClientRect) return Promise.resolve();
+
+  const rect = el.getBoundingClientRect();
+  const to = Math.max(0, window.scrollY + rect.top - 96);
+  const from = window.scrollY;
+
+  if (PREFERS_REDUCE || ms <= 0 || Math.abs(to - from) < 8) {
+    window.scrollTo(0, to);
+    return Promise.resolve();
+  }
+
+  return new Promise((resolve) => {
+    const t0 = performance.now();
+    const ease = (t) => (t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2);
+    const frame = (now) => {
+      if (demoCtl.aborted) {
+        resolve();
+        return;
+      }
+      const k = Math.min(1, (now - t0) / ms);
+      window.scrollTo(0, from + (to - from) * ease(k));
+      if (k < 1) requestAnimationFrame(frame);
+      else resolve();
+    };
+    requestAnimationFrame(frame);
+  });
+}
+
+/* 专项练习的演示文本：必须 >30 字，否则 drillSubmit() 会判「内容太短」直接拦下 */
+const DEMO_DRILL_TEXT =
+  '同学们先别急着看答案。谁能用自己的话说说，刚才我们为什么要在斜边上画这个正方形？' +
+  '想一想，如果换成直角边，面积关系还成立吗？请第三排这位同学先说说你的思路，' +
+  '其他同学听完再补充——不着急，我们给他十秒钟。';
+
+/* 演示分镜：顺序即页面顺序，hold＝这一步停留多久（毫秒）。
+ * 停留值的依据：一屏指标卡 / 一段逐字稿扫读 + 评委反应时间，低于 6 秒看不清。 */
+const DEMO_STEPS = [
+  {
+    key: 'report',
+    title: '复盘报告：一眼看见哪句话会翻车',
+    tip: '总分、危险瞬间、口头禅、提问等待都在这一屏。红色方块＝提问后不到 1 秒的追问，属于「假互动」。',
+    hold: 7000,
+    run: async () => {
+      await runAnalyze();
+      if (!lastAnalysis || lastAnalysis.engine !== 'offline-demo') {
+        throw new Error('示例报告未能生成，请检查内置演示数据。');
+      }
+      // 镜头要对准「总分环」：pane-report 的顶部已是指标卡，从那里开场会漏掉总分
+      await demoScrollTo($('scoreRing') || $('pane-report'), 900);
+    }
+  },
+  {
+    key: 'improve',
+    title: '改进建议：把讲稿改成能照着念的版本',
+    tip: '左边是逐句改写后的逐字稿，右边标出每一处为什么要改；照着念一遍就知道顺不顺。',
+    hold: 7000,
+    run: async () => {
+      switchTab('improve');
+      await demoWait(500);
+      await runImprove();
+      await demoScrollTo($('pane-improve'), 900);
+    }
+  },
+  {
+    key: 'chat-solo',
+    title: 'AI 学生拆台：先让一个学生发难',
+    tip: '调皮型学生基于你刚才的讲稿提问；下方输入框可以当场作答，它会继续追问。',
+    hold: 7500,
+    run: async () => {
+      switchTab('chat');
+      await demoWait(400);
+      // 与手动操作走同一条路径：点模式按钮，不另开旁路
+      const soloBtn = document.querySelector('#chatModeBar .msw[data-mode="solo"]');
+      if (soloBtn) soloBtn.click();
+      await demoWait(400);
+      await callStudent();
+      await demoScrollTo($('chatLog'), 800);
+    }
+  },
+  {
+    key: 'chat-class',
+    title: '三学生课堂：路演高光，压力条会涨',
+    tip: '三个学生同时在线：一个抬杠、一个追问原理、一个走神。看压力条与「节奏 / 张力 / 参与度」三个仪表。',
+    hold: 8500,
+    run: async () => {
+      switchTab('chat');
+      await demoWait(300);
+      const classBtn = document.querySelector('#chatModeBar .msw[data-mode="class"]');
+      if (classBtn) classBtn.click();
+      await demoWait(800);
+      await classNextRound();
+      await demoScrollTo($('classStudents') || $('pane-chat'), 800);
+    }
+  },
+  {
+    key: 'drill',
+    title: '3 分钟专项练习：只练一个动作，当场打分',
+    tip: '挑手感最差的一项技能单独练；提交后给出这一项的分数和一条能立刻照着做的改进动作。',
+    hold: 9000,
+    run: async () => {
+      switchTab('drill');
+      await demoWait(500);
+      const card = document.querySelector('#drillSkillCards .drill-skill-card');
+      if (card) card.click();
+      await demoWait(700);
+
+      const ta = $('drillTranscript');
+      if (ta) {
+        ta.value = DEMO_DRILL_TEXT;
+        const hint = $('drillCharHint');
+        if (hint) {
+          hint.textContent = '已输入 ' + ta.value.replace(/\s/g, '').length + ' 字';
+        }
+      }
+      await demoWait(900);
+
+      const submit = $('drillSubmitBtn');
+      if (submit) submit.click();
+      await demoWaitFor(() => {
+        const box = $('drillResult');
+        return box && !box.hidden;
+      }, 12000);
+      await demoScrollTo($('drillResult'), 900);
+    }
+  },
+  {
+    key: 'crisis',
+    title: '课堂崩塌模拟：事故来了怎么接',
+    tip: '随机触发一次真实课堂事故，你当场回应；控场分太低会走向「社死结局」，这是学生最愿意反复练的环节。',
+    hold: 9000,
+    run: async () => {
+      switchTab('crisis');
+      await demoWait(400);
+      await startCrisis();
+      // 先让评委把事件卡读完，再替老师作答
+      await demoWait(3200);
+      if (crisisCurrent) {
+        crisisInput.value =
+          '大家先别急着抬头，我们把黑板上这一步走完。第三排的同学，你来说说刚才我们推到哪一步了？' +
+          '其他同学跟着他的思路一起看，我们接着往下推。';
+        await demoWait(1200);
+        await respondCrisis();
+      }
+      await demoScrollTo($('pane-crisis'), 800);
+    }
+  },
+  {
+    key: 'pano',
+    title: '六视角透视：一节课的互动矩阵',
+    tip: '自研 iFIAS 把整节课编码成 12×12 矩阵：稳态格、内容十字区、师生话语比一眼可见。',
+    hold: 7500,
+    run: async () => {
+      switchTab('pano');
+      await demoWait(400);
+      await runPanorama();
+      await demoScrollTo($('pane-pano'), 800);
+    }
+  },
+  {
+    key: 'growth',
+    title: '成长档案：练过的每一次都算数',
+    tip: '得分曲线、校内榜 / 战队榜、匿名树洞都在这里——把「练一次」变成「想再练一次」。',
+    hold: 7500,
+    run: async () => {
+      switchTab('growth');
+      await demoWait(400);
+      renderGrowth();
+      try {
+        loadLeaderboard(lbCurrent);
+      } catch (e) { /* 榜单失败不影响演示 */ }
+      try {
+        await loadHollow();
+      } catch (e) { /* 树洞失败不影响演示 */ }
+      await demoScrollTo($('pane-growth'), 800);
+    }
+  }
+];
 
 async function autoDemo() {
   if (!JTQ_DEMO_PAGE) {
@@ -5675,6 +6272,9 @@ async function autoDemo() {
   if (autoRunning) return;
 
   autoRunning = true;
+  demoCtl.paused = false;
+  demoCtl.skip = false;
+  demoCtl.aborted = false;
 
   const advanced = $('trainingAdvanced');
   if (advanced) advanced.open = true;
@@ -5685,8 +6285,16 @@ async function autoDemo() {
 
   if (autoDemoBtn) {
     autoDemoBtn.disabled = true;
-    autoDemoBtn.textContent = '● 示例播放中…';
+    autoDemoBtn.textContent = '● 演示中…';
   }
+
+  demoHudShow(true);
+  demoHudSet(
+    0,
+    DEMO_STEPS.length,
+    '准备：填入示例讲稿',
+    '固定示例「勾股定理 · 初中八年级」，全程用内置数据，断网也能跑；随时可以暂停或跳到下一步。'
+  );
 
   try {
     setErr('');
@@ -5709,54 +6317,64 @@ async function autoDemo() {
     charHint.textContent =
       scriptInput.value.replace(/\s/g, '').length + ' 字';
 
-    await sleep(600);
-    await runAnalyze();
+    // 开演前留一拍：先让评委看清「贴进去的是什么讲稿」，再开始分析
+    window.scrollTo(0, 0);
+    await demoWait(1800);
 
-    if (
-      !lastAnalysis ||
-      lastAnalysis.engine !== 'offline-demo' ||
-      resultBody.hidden
-    ) {
-      throw new Error('示例报告未能生成，请检查内置演示数据。');
+    for (let i = 0; i < DEMO_STEPS.length; i++) {
+      if (demoCtl.aborted) break;
+
+      const step = DEMO_STEPS[i];
+      demoHudSet(i, DEMO_STEPS.length, step.title, step.tip);
+
+      try {
+        await step.run();
+      } catch (e) {
+        // 单步失败不断演：现场还有一张嘴可以解释，比整场黑屏强
+        console.warn('[demo] 步骤失败：' + step.title, e);
+        const tipEl = $('dhTip');
+        if (tipEl) {
+          tipEl.textContent =
+            '这一步没跑通（' +
+            (e && e.message ? e.message : '网络') +
+            '），已跳过，继续下一步。';
+        }
+        await demoWait(1600);
+      }
+
+      if (demoCtl.aborted) break;
+      await demoWait(step.hold);
     }
 
-    await sleep(1400);
-    switchTab('improve');
-    await sleep(500);
-    await runImprove();
-
-    await sleep(1600);
-    switchTab('chat');
-    await sleep(500);
-    await callStudent();
-
-    await sleep(2200);
-    switchTab('crisis');
-    await sleep(400);
-    await startCrisis();
-
-    await sleep(1800);
-
-    if (crisisCurrent) {
-      crisisInput.value =
-        '大家先别着急，我们用黑板继续。谁记得刚才推到哪一步了？' +
-        '请一位同学说说，我们一起接着推。';
-
-      await sleep(1200);
-      await respondCrisis();
+    if (demoCtl.aborted) {
+      setErr('演示已退出，可以继续手动操作。');
+      demoHudShow(false);
+    } else {
+      demoHudSet(
+        DEMO_STEPS.length - 1,
+        DEMO_STEPS.length,
+        '✓ 演示完成：' + DEMO_STEPS.length + ' 步、七个功能区全部走完',
+        '要重播点右上角「▷ 自动演示」；也可以直接上手操作任意功能。'
+      );
+      demoHudProgress(1);
+      await demoWait(4500);
+      demoHudShow(false);
     }
-
-    await sleep(2600);
-    switchTab('pano');
-    await sleep(400);
-    await runPanorama();
   } catch (error) {
     setErr(
       '示例播放中断：' +
       (error && error.message ? error.message : '请稍后重试')
     );
+    demoHudShow(false);
   } finally {
     autoRunning = false;
+    demoCtl.paused = false;
+    demoCtl.skip = false;
+
+    const pauseBtn = $('dhPause');
+    if (pauseBtn) pauseBtn.textContent = '⏸ 暂停';
+    const hud = $('demoHud');
+    if (hud) hud.classList.remove('is-paused');
 
     if (autoDemoBtn) {
       autoDemoBtn.disabled = false;

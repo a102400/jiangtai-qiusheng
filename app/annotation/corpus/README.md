@@ -1,9 +1,21 @@
 # 语料投放处
 
-把试讲转写稿放进本目录（支持 `.txt` `.md` `.srt` `.vtt` `.json`），然后：
+## 有录音（推荐）
 
 ```bash
-node scripts/build-annotation-set.js --input annotation/corpus --n 200
+npm run corpus:transcribe -- --dir "D:/录音/试讲"     # 本地 whisper 离线转写，不出网
+npm run corpus:transcribe -- --check                # 只看环境，不转写
+```
+
+转写结果自动落到本目录（每段一个 `.txt`），元信息记进 `manifest.json`。
+**不要**把录音转出来的文本再手工清洗一遍。
+
+## 已有文字稿
+
+直接放进来（支持 `.txt` `.md` `.srt` `.vtt` `.json`），然后：
+
+```bash
+npm run corpus:sample     # = node scripts/build-annotation-set.js --input annotation/corpus --n 200
 ```
 
 ## 要求
@@ -11,8 +23,12 @@ node scripts/build-annotation-set.js --input annotation/corpus --n 200
 - 单份 1500 字以上，或 3–5 份拼接；低于 1000 字抽不满 200 句
 - **保留口语原样，不要清洗**。「嗯」「那个」「好」是反馈类编码的证据，删掉就是篡改数据
 - 有学生发言就保留 `生：` 标记
+- **先冻结代码再抽样**：判据一改，分层抽样结果就变，已标注的数据全部作废（见 `docs/iFIAS标注手册.md` 9.3）
 
 ## 当前状态
 
-**空。** 项目里目前没有任何真实试讲转写稿，所以标注还没有语料可标。
-这就是「试点记录为零」在数据层面的具体表现——不是没做工具，是没做采集。
+**空。** 转写工具已就绪并用真实音频验证过（3 秒静音样本被正确识别为「无语音」而非失败），
+但项目里目前没有任何真实试讲录音或转写稿，所以标注还没有语料可标。
+
+这就是「试点记录为零」在数据层面的具体表现——**不是没做工具，是没做采集**。
+下一步只需要有人按下录音键。

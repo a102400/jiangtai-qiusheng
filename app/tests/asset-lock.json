@@ -1,11 +1,11 @@
 {
   "_note": "静态资源版本指纹锁，由 scripts/asset-fingerprint.js --update 生成，请勿手改。",
-  "generatedAt": "2026-10-30T07:51:09.547Z",
+  "generatedAt": "2026-10-30T08:02:01.243Z",
   "assets": {
     "app.js": {
-      "version": "20261030-hero4",
-      "sha256": "7967dec1b3ea088525c4ebab1c615bb55b75b29e30d3ac52c5a7b0bf98da4749",
-      "bytes": 281754
+      "version": "20261030-solo1",
+      "sha256": "80e309245974b3282023ef343eee01973d020e37717c2274db1b9e5f4ffba225",
+      "bytes": 306336
     },
     "blurtext.js": {
       "version": "20261030-m5",
@@ -18,9 +18,9 @@
       "bytes": 3382
     },
     "classroom-roster.js": {
-      "version": "20261030-callon1",
-      "sha256": "0f8a815603aebda8441263af446ac7392b1eb9aa5b924bed52333a2cf3396a47",
-      "bytes": 6686
+      "version": "20261030-solo1",
+      "sha256": "1432bfb61e65af9d7fcb992010b0a76e4ec619ebc7d2f9a0db63941f853aadfb",
+      "bytes": 9236
     },
     "cloud.js": {
       "version": "20261022-integrity1",
@@ -113,9 +113,9 @@
       "bytes": 10061
     },
     "styles.css": {
-      "version": "20261030-hero2",
-      "sha256": "cc55dad0fd43f4b43c1fdd76dc2b8fb2538671038612ec7768bacc352c393843",
-      "bytes": 90702
+      "version": "20261030-solo1",
+      "sha256": "8c85b0ed3b320d77417d3db0db5a59d1483c944a5303f773fde74638b563e608",
+      "bytes": 95155
     },
     "ui.css": {
       "version": "20261030-m5",

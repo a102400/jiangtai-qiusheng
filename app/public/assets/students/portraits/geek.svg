@@ -142,6 +142,12 @@
 <path d="M238 253C251 243 268 243 282 250M335 249C350 239 368 237 381 244" stroke="#514438" stroke-width="1.7" stroke-linecap="round"/>
 <path d="M242 260C255 265 270 262 279 257M340 255C353 260 369 255 378 250" stroke="#a87a62" stroke-opacity=".6" stroke-width="1" stroke-linecap="round"/>
 </g>
+<!-- 眯眼：低头走神态用。眼皮压成一条弧，瞳孔不画。 -->
+<g id="eyes-down">
+<path d="M240 252C250 261 268 261 280 251M337 248C348 256 367 254 379 244" stroke="#514438" stroke-width="1.9" stroke-linecap="round" fill="none"/>
+<path d="M244 258C254 265 268 265 277 257M341 253C351 260 366 258 376 250" stroke="#a87a62" stroke-opacity=".45" stroke-width="1" stroke-linecap="round" fill="none"/>
+<path d="M238 253C249 244 268 243 282 250M335 249C350 239 368 237 381 244" stroke="#514438" stroke-opacity=".5" stroke-width="1.4" stroke-linecap="round" fill="none"/>
+</g>
 <path d="M298 267C299 281 294 296 290 302C296 310 310 312 320 306" stroke="#8f604b" stroke-opacity=".35" stroke-width="2" stroke-linecap="round" filter="url(#m-soft)"/>
 <path d="M307 265C304 280 304 289 308 298" stroke="#ebc6a5" stroke-opacity=".35" stroke-width="3" stroke-linecap="round" filter="url(#m-soft)"/>
 <path d="M291 304C295 301 300 303 302 306M315 306C319 302 323 303 325 305" stroke="#855444" stroke-opacity=".45" stroke-width="1.3" stroke-linecap="round"/>
@@ -180,10 +186,20 @@
 <!-- Foreground arm and photograph-inspired peace gesture -->
 <path d="M28 800C39 759 62 705 82 662C100 623 119 583 131 549L181 561C175 610 155 664 134 711L95 800Z" fill="url(#m-arm)"/>
 <path d="M61 772C81 717 105 666 124 616" stroke="#e3c49b" stroke-opacity=".16" stroke-width="13" stroke-linecap="round" filter="url(#m-wash)"/>
+<!-- 袖口：衬衫袖的收口。原来手臂直接怼到手掌上，中间没有结构。 -->
+<path d="M129 545C146 553 166 556 183 558" stroke="#9aab8e" stroke-opacity=".55" stroke-width="2.6" stroke-linecap="round"/>
+<path d="M132 553C149 561 166 564 181 565" stroke="#5f6f57" stroke-opacity=".32" stroke-width="1.5" stroke-linecap="round"/>
+<!-- 腕骨：手背受光的一小片 + 腕关节暗面 -->
+<path d="M150 545C162 540 175 542 182 549C170 546 159 547 150 545Z" fill="#eec6a4" opacity=".22"/>
+<path d="M134 554C145 565 160 572 176 571C164 579 145 572 134 554Z" fill="#9a6a52" opacity=".26" filter="url(#m-soft)"/>
 <path d="M130 559C128 537 132 515 141 495C149 478 152 458 155 439L164 361C165 344 168 331 174 329C181 326 187 332 187 345L181 432C181 442 185 445 189 438L222 380C230 367 238 359 245 362C252 365 250 375 244 386L213 448C209 457 207 466 211 476C218 484 217 495 212 506C207 518 195 527 190 539L181 572C164 581 143 578 130 559Z" fill="url(#m-hand)"/>
 <path d="M145 486C138 475 138 459 144 449C150 441 158 445 163 453L179 477C185 486 183 495 176 499C167 502 157 493 152 485" fill="url(#m-hand)" stroke="#a17958" stroke-opacity=".7" stroke-width="1"/>
 <path d="M164 472C158 461 158 448 165 442C172 435 180 441 185 451L198 477C202 487 199 495 192 496C183 497 174 486 170 478" fill="url(#m-hand)" stroke="#a47b59" stroke-opacity=".7" stroke-width="1"/>
 <path d="M139 515C143 498 154 491 168 493L197 501C207 504 210 513 205 519C201 526 192 526 183 522L166 517C169 532 163 545 154 550" fill="url(#m-hand)"/>
+<!-- 指节折痕：两根竖起的手指各加一道关节线 -->
+<path d="M166 397C170 394 175 394 179 397M225 416C229 413 234 413 238 416" stroke="#a17958" stroke-opacity=".45" stroke-width="1" stroke-linecap="round"/>
+<!-- 握拳处的柔和暗面 -->
+<path d="M146 486C158 494 176 498 192 494C186 506 162 508 150 497Z" fill="#9a6a52" opacity=".2" filter="url(#m-soft)"/>
 <path d="M164 517C173 518 184 526 193 523M156 542C164 537 166 528 165 521M163 427L174 431M207 420L217 426" stroke="#9b7555" stroke-opacity=".55" stroke-width="1" stroke-linecap="round"/>
 <path d="M170 352C171 342 172 336 176 336C180 337 180 342 179 352L178 362L169 361ZM230 383C235 372 239 368 243 369C247 373 241 381 237 388Z" fill="#e0bea1" stroke="#b49474" stroke-width=".6"/>
 <path d="M135 558C146 565 164 569 178 563" stroke="#aa8661" stroke-opacity=".4" stroke-width="1"/>

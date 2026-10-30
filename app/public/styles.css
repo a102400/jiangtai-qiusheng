@@ -1971,6 +1971,54 @@ html .class-scene-note {
   }
 }
 
+/* ---------- 单人拆台场景（与学生课堂同一块画布的规格，只是台上一个人）----------
+ * 为什么单人也要有画布：用户 2026-10-30 的要求是「单个学生也按多人课堂的
+ * 学生模型来」。模型包含立绘与举手/张嘴状态，光靠聊天气泡表达不出来。 */
+html #soloSceneCanvas {
+  display: block;
+  width: 100%;
+  height: clamp(200px, 26vw, 290px);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--bg);
+  /* 画布上可以直接点学生，让他开口 */
+  cursor: pointer;
+  touch-action: manipulation;
+}
+
+/* 单人只有一张卡：给它固定宽度靠左站，别用 flex:1 铺满整行 */
+html #soloStudents {
+  margin: 10px 0 14px;
+}
+html #soloStudents .cs-card {
+  flex: 0 0 132px;
+}
+
+/* 聊天气泡头像 = 课堂学生卡头像：同一个学生只有一张脸。
+ * 「学」字留在底层，立绘加载失败时 onerror 移除 img，露出文字兜底。 */
+html .av-stu {
+  position: relative;
+  overflow: hidden;
+  background: var(--brand-soft);
+  color: var(--brand-dark);
+  font-size: 12px;
+}
+html .av-stu img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: 50% 8%;
+  object-view-box: inset(5% 27% 60% 27%);
+}
+
+@media (max-width: 560px) {
+  html #soloSceneCanvas {
+    height: 220px;
+  }
+}
+
 
 /* ==========================================================================
    首屏重做（2026-10-30，依据 docs/设计评审-2026-10-30-tasteskill.md）
@@ -2542,4 +2590,144 @@ html .howto,
 html .cfg-panel p,
 html .cfg-body p {
   max-width: 60ch;
+}
+
+/* ===== 一键自动演示 · 底部字幕条 =====
+   为什么固定在底部：顶部是 sticky 顶栏，字幕条放上面会把它挤走；
+   放底部既不遮内容，又始终在评委视线下方，像视频播放器的字幕。
+   配色一律走变量，深色主题自动反色，不另写 [data-theme=dark] 覆盖。 */
+.demo-hud {
+  position: fixed;
+  left: 50%;
+  bottom: 20px;
+  transform: translateX(-50%);
+  z-index: 120;
+  width: min(940px, calc(100% - 32px));
+  padding: 12px 14px 10px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: var(--card);
+  color: var(--text);
+  box-shadow: 0 14px 40px rgba(15, 23, 42, .22);
+  animation: demoHudIn .32s cubic-bezier(.2, .7, .3, 1) both;
+}
+
+@keyframes demoHudIn {
+  from { opacity: 0; transform: translate(-50%, 14px); }
+  to   { opacity: 1; transform: translate(-50%, 0); }
+}
+
+/* 暂停状态用琥珀色描边：一眼看出「画面是停住的，不是卡住了」 */
+.demo-hud.is-paused {
+  border-color: #D97706;
+  box-shadow: 0 14px 40px rgba(217, 119, 6, .26);
+}
+
+.dh-top {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.dh-step {
+  flex: none;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: var(--brand);
+  color: #fff;
+  font-size: 13px;
+  font-weight: 800;
+  line-height: 1.5;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+.dh-text {
+  flex: 1;
+  min-width: 0;
+}
+
+.dh-text b {
+  display: block;
+  margin-bottom: 3px;
+  font-size: 15.5px;
+  line-height: 1.35;
+}
+
+.dh-text span {
+  display: block;
+  font-size: 13.5px;
+  line-height: 1.55;
+  color: var(--text-3);
+}
+
+.dh-actions {
+  flex: none;
+  display: flex;
+  gap: 6px;
+}
+
+.dh-btn {
+  padding: 5px 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: transparent;
+  color: inherit;
+  font-family: inherit;
+  font-size: 13px;
+  line-height: 1.5;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: border-color .16s, background .16s;
+}
+
+.dh-btn:hover {
+  border-color: var(--brand);
+  background: var(--brand-soft);
+}
+
+.dh-exit {
+  padding: 5px 9px;
+}
+
+.dh-bar {
+  height: 3px;
+  margin-top: 9px;
+  border-radius: 2px;
+  background: var(--line);
+  overflow: hidden;
+}
+
+.dh-bar i {
+  display: block;
+  width: 0;
+  height: 100%;
+  background: linear-gradient(90deg, var(--brand), var(--accent));
+  transition: width .1s linear;
+}
+
+.demo-hud.is-paused .dh-bar i {
+  background: #D97706;
+}
+
+/* 演示期间给页面留出字幕条的高度：否则滚到底部时（成长档案、压力条）
+   内容会被字幕条压住一半——这正是「评委看不清」的来源。 */
+body.is-demo-running {
+  padding-bottom: 136px;
+}
+
+/* 小屏：只留标题与操作，说明文字隐去（否则字幕条会盖住半屏内容） */
+@media (max-width: 640px) {
+  .demo-hud {
+    bottom: 10px;
+    padding: 10px 11px 8px;
+  }
+  .dh-text b { font-size: 13px; }
+  .dh-text span { display: none; }
+  .dh-btn { padding: 5px 8px; font-size: 12px; }
+  body.is-demo-running { padding-bottom: 104px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .demo-hud { animation: none; }
 }

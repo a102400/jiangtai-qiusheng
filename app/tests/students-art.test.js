@@ -93,7 +93,7 @@ function fireLoad(env) {
   });
 }
 
-const ALL_STATES = ['default', 'closed', 'raise'];
+const ALL_STATES = ['default', 'closed', 'raise', 'speak-raise', 'idle-down'];
 
 test('默认三个角色都注册了立绘路径', () => {
   const env = boot();
@@ -102,12 +102,12 @@ test('默认三个角色都注册了立绘路径', () => {
   assert.deepStrictEqual(Array.from(art.keys()).sort(), ['drift', 'geek', 'naughty']);
 });
 
-test('每个角色注册了三种状态', () => {
+test('每个角色注册了五种状态', () => {
   const env = boot();
   const art = env.win.jtqStudentArt;
   assert.deepStrictEqual(Array.from(art.states()).sort(), ALL_STATES.slice().sort());
-  // 9 张图都会发起加载
-  assert.strictEqual(env.imgs.length, 9, '应加载 3 角色 × 3 状态 = 9 张');
+  // 15 张图都会发起加载
+  assert.strictEqual(env.imgs.length, 15, '应加载 3 角色 × 5 状态 = 15 张');
 });
 
 test('加载中 get() 返回 null（调用方据此退回简笔小人）', () => {
@@ -234,7 +234,7 @@ test('unknown key 不炸：ratioOf 有默认值，cropOf 返回整图', () => {
 test('JTQ_STUDENT_SRC 能覆盖路径（离线版 data URI 走这条路）', () => {
   const dataUri = 'data:image/svg+xml;base64,PHN2Zy8+';
   const env = boot({ src: { naughty: dataUri, geek: dataUri, drift: dataUri } });
-  assert.strictEqual(env.imgs.length, 9);
+  assert.strictEqual(env.imgs.length, 15);
   env.imgs.forEach((img) => assert.strictEqual(img.src, dataUri));
 });
 
@@ -305,8 +305,16 @@ test('app.js 保留简笔兜底（art 为 null 时不能画空白）', () => {
 
 test('app.js 按状态取立绘，且不再用 ✋ 符号假装举手', () => {
   const app = fs.readFileSync(path.join(ROOT, 'public', 'app.js'), 'utf8');
+  // 状态判定 2026-10-30 抽到 classroom-roster.js 的 portraitStateOf()：
+  // 单人拆台与三学生课堂共用同一条规则，绘制处不再内联三元表达式。
+  // 这里守的仍然是同一件事 —— 举手必须切到 raise 状态。
   assert.ok(
-    app.indexOf("hand_raise) ? 'raise'") !== -1,
+    app.indexOf('const artState = portraitStateOf(s);') !== -1,
+    '绘制必须从学生模型取状态（举手 → raise）'
+  );
+  const roster = fs.readFileSync(path.join(ROOT, 'public', 'classroom-roster.js'), 'utf8');
+  assert.ok(
+    /if \(s\.hand_raise === true\) return 'raise';/.test(roster),
     '举手时必须切到 raise 状态立绘'
   );
   assert.ok(
@@ -342,7 +350,7 @@ test('构建脚本把 SVG 转成 data URI 并拒绝残留文件路径', () => {
     '缺少「素材路径不得残留」的自检');
 });
 
-test('九张状态 SVG 文件真实存在且是合法 SVG', () => {
+test('十五张状态 SVG 文件真实存在且是合法 SVG', () => {
   ['naughty', 'geek', 'drift'].forEach((key) => {
     ALL_STATES.forEach((st) => {
       const p = path.join(ASSET_DIR, 'svg', key + '-' + st + '.svg');
@@ -356,8 +364,8 @@ test('九张状态 SVG 文件真实存在且是合法 SVG', () => {
         !/<svg[^>]*\swidth="\d+"[^>]*\sheight="\d+"/.test(svg),
         key + '-' + st + ' 不应写死 width/height'
       );
-      // 必须含全部八个功能分组
-      ['desk', 'body', 'head', 'eyes', 'mouth-open', 'mouth-closed', 'arm-down', 'arm-raise']
+      // 必须含全部九个功能分组
+      ['desk', 'body', 'head', 'eyes', 'eyes-down', 'mouth-open', 'mouth-closed', 'arm-down', 'arm-raise']
         .forEach((gid) => {
           assert.ok(
             svg.indexOf('id="' + gid + '"') !== -1,
@@ -397,6 +405,46 @@ test('状态显隐正确：闭嘴时只显示 mouth-closed，举手时只显示 
       groupTag(raise, 'arm-raise').indexOf('display:none') === -1,
       key + '-raise 的 arm-raise 应显示'
     );
+  });
+});
+
+test('speak-raise：举手 + 张嘴（举手发言）', () => {
+  function groupTag(svg, id) {
+    const m = svg.match(new RegExp('<g[^>]*id="' + id + '"[^>]*>'));
+    return m ? m[0] : '';
+  }
+  ['naughty', 'geek', 'drift'].forEach((key) => {
+    const svg = fs.readFileSync(path.join(ASSET_DIR, 'svg', key + '-speak-raise.svg'), 'utf8');
+    assert.ok(groupTag(svg, 'arm-raise').indexOf('display:none') === -1, key + ' 的 arm-raise 应显示');
+    assert.ok(groupTag(svg, 'arm-down').indexOf('display:none') !== -1, key + ' 的 arm-down 应隐藏');
+    assert.ok(groupTag(svg, 'mouth-open').indexOf('display:none') === -1, key + ' 的 mouth-open 应显示');
+    assert.ok(groupTag(svg, 'mouth-closed').indexOf('display:none') !== -1, key + ' 的 mouth-closed 应隐藏');
+  });
+});
+
+test('idle-down：眯眼 + 头下倾（走神），且不显示普通眼睛', () => {
+  function groupTag(svg, id) {
+    const m = svg.match(new RegExp('<g[^>]*id="' + id + '"[^>]*>'));
+    return m ? m[0] : '';
+  }
+  ['naughty', 'geek', 'drift'].forEach((key) => {
+    const svg = fs.readFileSync(path.join(ASSET_DIR, 'svg', key + '-idle-down.svg'), 'utf8');
+    assert.ok(groupTag(svg, 'eyes-down').indexOf('display:none') === -1, key + ' 的 eyes-down 应显示');
+    assert.ok(groupTag(svg, 'eyes').indexOf('display:none') !== -1, key + ' 的 eyes 应隐藏');
+    assert.ok(groupTag(svg, 'mouth-closed').indexOf('display:none') === -1, key + ' 的 mouth-closed 应显示');
+    assert.ok(groupTag(svg, 'arm-down').indexOf('display:none') === -1, key + ' 的 arm-down 应显示');
+    // 头下倾：head 分组必须带 transform（绕颈部旋转 + 下移）
+    const head = groupTag(svg, 'head');
+    assert.ok(/transform="rotate\([-\d.]+ [\d.]+ [\d.]+\) translate\(0 \d+\)"/.test(head),
+      key + ' 的 head 应带下倾 transform，实际：' + head);
+    // 其他状态不能带这个 transform（否则全都低头了）
+    ['default', 'closed', 'raise'].forEach((st) => {
+      const other = fs.readFileSync(path.join(ASSET_DIR, 'svg', key + '-' + st + '.svg'), 'utf8');
+      assert.strictEqual(
+        /id="head"[^>]*transform/.test(other), false,
+        key + '-' + st + ' 的 head 不应带 transform'
+      );
+    });
   });
 });
 

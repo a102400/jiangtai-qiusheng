@@ -18,27 +18,40 @@
   'use strict';
 
   // 状态名 → 中文，供 UI 提示用
-  var STATES = ['default', 'closed', 'raise'];
+  var STATES = ['default', 'closed', 'raise', 'speak-raise', 'idle-down'];
 
   /*
    * 角色 → 状态 → SVG 路径。
    * 默认走相对路径；离线版构建时会先注入 JTQ_STUDENT_SRC（data URI）覆盖。
+   *
+   * 状态语义（嘴 / 手臂 / 头）：
+   *   default     张嘴 · 手臂放下 · 头正常
+   *   closed      闭嘴 · 手臂放下 · 头正常
+   *   raise       闭嘴 · 举起手   · 头正常
+   *   speak-raise 张嘴 · 举起手  · 头正常
+   *   idle-down   闭嘴 · 手臂放下 · 头下倾 + 眯眼
    */
   var SRC = {
     naughty: {
       default: 'assets/students/svg/naughty-default.svg',
       closed: 'assets/students/svg/naughty-closed.svg',
       raise: 'assets/students/svg/naughty-raise.svg',
+      'speak-raise': 'assets/students/svg/naughty-speak-raise.svg',
+      'idle-down': 'assets/students/svg/naughty-idle-down.svg',
     },
     geek: {
       default: 'assets/students/svg/geek-default.svg',
       closed: 'assets/students/svg/geek-closed.svg',
       raise: 'assets/students/svg/geek-raise.svg',
+      'speak-raise': 'assets/students/svg/geek-speak-raise.svg',
+      'idle-down': 'assets/students/svg/geek-idle-down.svg',
     },
     drift: {
       default: 'assets/students/svg/drift-default.svg',
       closed: 'assets/students/svg/drift-closed.svg',
       raise: 'assets/students/svg/drift-raise.svg',
+      'speak-raise': 'assets/students/svg/drift-speak-raise.svg',
+      'idle-down': 'assets/students/svg/drift-idle-down.svg',
     },
   };
 
