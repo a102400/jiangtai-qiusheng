@@ -1,11 +1,11 @@
 {
   "_note": "静态资源版本指纹锁，由 scripts/asset-fingerprint.js --update 生成，请勿手改。",
-  "generatedAt": "2026-10-30T08:09:30.160Z",
+  "generatedAt": "2026-10-30T08:15:23.604Z",
   "assets": {
     "app.js": {
-      "version": "20261030-solo2",
-      "sha256": "dae5a3a7dd6973215193acd91b91d3dfabe5d5f0c822d2b7f145e8331d05a5e4",
-      "bytes": 307153
+      "version": "20261030-solo3",
+      "sha256": "d05bbbdf2e53dc13e60ed63d6c4a3f1ecf99d66f37f390432e743bdf18c5d033",
+      "bytes": 307811
     },
     "blurtext.js": {
       "version": "20261030-m5",
@@ -113,7 +113,7 @@
       "bytes": 10806
     },
     "styles.css": {
-      "version": "20261030-solo1",
+      "version": "20261030-solo2",
       "sha256": "76857a4d2004cd655e03362296a87684574e8356ba00a1e14a6e164d209d50ff",
       "bytes": 95591
     },

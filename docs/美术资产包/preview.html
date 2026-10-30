@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>讲台求生 · 美术资产包</title>
+<style>
+  :root { --ink:#3d3327; --paper:#f6f2e8; --line:#ddd6c6; }
+  body { margin:0; background:var(--paper); color:var(--ink);
+         font:14px/1.7 "Microsoft YaHei", system-ui, sans-serif; }
+  header { padding:26px 32px 10px; border-bottom:1px solid var(--line); }
+  h1 { margin:0 0 6px; font-size:20px; }
+  .meta { color:#7a6e5c; font-size:13px; }
+  section { padding:18px 32px 6px; }
+  h2 { font-size:15px; margin:0 0 10px; font-weight:600; }
+  .row { display:flex; gap:14px; flex-wrap:wrap; }
+  figure { margin:0; width:220px; background:#fbf9f3; border:1px solid var(--line);
+           border-radius:10px; padding:8px; text-align:center; }
+  figure img { width:100%; height:200px; object-fit:contain; display:block; }
+  figcaption { font-size:12px; color:#6b6152; margin-top:6px; }
+  .wide img { height:auto; width:100%; }
+  footer { padding:20px 32px 40px; color:#7a6e5c; font-size:12.5px; }
+  code { background:#efe9dc; padding:1px 5px; border-radius:4px; }
+</style>
+</head>
+<body>
+<header>
+  <h1>讲台求生 · 美术资产包</h1>
+  <div class="meta">三学生立绘（哑光纸感） + 2D 教室图层 · 可直接在 Figma / Inkscape 中继续迭代</div>
+</header>
+
+    <section><h2>小霸（geek）· 五种状态</h2>
+      <figure><img src="preview/states/geek-default.png" alt="小霸 张嘴"><figcaption>小霸 · 张嘴</figcaption></figure>
+      <figure><img src="preview/states/geek-closed.png" alt="小霸 闭嘴"><figcaption>小霸 · 闭嘴</figcaption></figure>
+      <figure><img src="preview/states/geek-raise.png" alt="小霸 举手"><figcaption>小霸 · 举手</figcaption></figure>
+      <figure><img src="preview/states/geek-speak-raise.png" alt="小霸 举手发言"><figcaption>小霸 · 举手发言</figcaption></figure>
+      <figure><img src="preview/states/geek-idle-down.png" alt="小霸 低头走神"><figcaption>小霸 · 低头走神</figcaption></figure></section>
+    <section><h2>小皮（naughty）· 五种状态</h2>
+      <figure><img src="preview/states/naughty-default.png" alt="小皮 张嘴"><figcaption>小皮 · 张嘴</figcaption></figure>
+      <figure><img src="preview/states/naughty-closed.png" alt="小皮 闭嘴"><figcaption>小皮 · 闭嘴</figcaption></figure>
+      <figure><img src="preview/states/naughty-raise.png" alt="小皮 举手"><figcaption>小皮 · 举手</figcaption></figure>
+      <figure><img src="preview/states/naughty-speak-raise.png" alt="小皮 举手发言"><figcaption>小皮 · 举手发言</figcaption></figure>
+      <figure><img src="preview/states/naughty-idle-down.png" alt="小皮 低头走神"><figcaption>小皮 · 低头走神</figcaption></figure></section>
+    <section><h2>小走（drift）· 五种状态</h2>
+      <figure><img src="preview/states/drift-default.png" alt="小走 张嘴"><figcaption>小走 · 张嘴</figcaption></figure>
+      <figure><img src="preview/states/drift-closed.png" alt="小走 闭嘴"><figcaption>小走 · 闭嘴</figcaption></figure>
+      <figure><img src="preview/states/drift-raise.png" alt="小走 举手"><figcaption>小走 · 举手</figcaption></figure>
+      <figure><img src="preview/states/drift-speak-raise.png" alt="小走 举手发言"><figcaption>小走 · 举手发言</figcaption></figure>
+      <figure><img src="preview/states/drift-idle-down.png" alt="小走 低头走神"><figcaption>小走 · 低头走神</figcaption></figure></section>
+
+    <section>
+      <h2>教室背景层（backdrop）· 视图框 2400×800</h2>
+      <div class="wide"><img src="preview/classroom/backdrop.png" alt="教室背景层"></div>
+    </section>
+
+    <section>
+      <h2>课桌层（desks）· 视图框 2400×800</h2>
+      <div class="wide"><img src="preview/classroom/desks.png" alt="课桌层"></div>
+    </section>
+
+<footer>
+  母版在 <code>masters/</code>，状态图在 <code>states/</code>（由 <code>npm run assets:students</code> 生成，<b>不要手改</b>）。<br>
+  详细约定（尺寸、分组含义、五种状态、Figma 导入与回导流程）见同目录 <code>README.md</code>。
+</footer>
+</body>
+</html>

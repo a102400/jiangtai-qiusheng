@@ -5908,15 +5908,29 @@ function stopSpeak() {
   } catch (e) { /* 忽略 */ }
 })();
 
-/* ---------- 外部入口：?demo=1 自动跑演示（主页 CTA 用） ---------- */
+/* ---------- 外部入口：?demo=1 自动跑演示（主页 CTA 用） ----------
+ * 旧行为：?demo=1 会点按钮 → autoDemo() 发现不是演示页 → 再开一个新标签。
+ * 结果评委先看到一个空白标签，还要在新标签里再点一次「自动演示」。
+ * 现在：?demo=1 直接在本标签换成演示页地址，并带 autoplay=1 自动开演。 */
 (function autoDemoFromQuery() {
   try {
     const q = new URLSearchParams(location.search);
-    if (q.get('demo') !== '1') return;
-    const btn = $('autoDemoBtn');
-    if (!btn) return;
-    // 等首屏与模型探测完成，避免抢跑
-    setTimeout(() => { if (!autoRunning) btn.click(); }, 1200);
+
+    if (q.get('demo') === '1') {
+      const url = new URL(location.href);
+      url.searchParams.delete('demo');
+      url.searchParams.set('jtq-demo', '1');
+      url.searchParams.set('autoplay', '1');
+      location.replace(url.href);
+      return;
+    }
+
+    if (q.get('jtq-demo') === '1' && q.get('autoplay') === '1') {
+      const btn = $('autoDemoBtn');
+      if (!btn) return;
+      // 等首屏、模型探测与三学生立绘都就位，再开演
+      setTimeout(() => { if (!autoRunning) btn.click(); }, 1400);
+    }
   } catch (e) { /* 老浏览器忽略 */ }
 })();
 
@@ -6269,6 +6283,8 @@ async function autoDemo() {
   if (!JTQ_DEMO_PAGE) {
     const demoUrl = new URL(window.location.href);
     demoUrl.searchParams.set('jtq-demo', '1');
+    // 带上 autoplay：新标签打开就直接开演，不用评委再点一次
+    demoUrl.searchParams.set('autoplay', '1');
 
     // 保留原站点的 sharecode 等参数。
     window.open(demoUrl.href, '_blank', 'noopener,noreferrer');

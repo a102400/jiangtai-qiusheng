@@ -1,0 +1,238 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 740" fill="none" role="img" aria-labelledby="y-title y-desc">
+<title id="y-title">黄色校服角色 · 保色哑光版</title>
+<desc id="y-desc">保持原黄色皮肤和绿色眼睛的圆润角色，穿低饱和白橙校服。服装带柔和水粉笔触与细微纸感。背景透明。</desc>
+<defs>
+<!-- Original yellow palette retained. -->
+<radialGradient id="y-skin" cx="32%" cy="17%" r="88%">
+<stop stop-color="#fff3a0"/><stop offset=".27" stop-color="#ffe16a"/><stop offset=".58" stop-color="#eebe36"/><stop offset=".82" stop-color="#c48e23"/><stop offset="1" stop-color="#89601d"/>
+</radialGradient>
+<radialGradient id="y-head" cx="34%" cy="19%" r="87%">
+<stop stop-color="#fff6ab"/><stop offset=".29" stop-color="#ffe674"/><stop offset=".63" stop-color="#edc13e"/><stop offset=".86" stop-color="#d19b28"/><stop offset="1" stop-color="#a6741f"/>
+</radialGradient>
+<radialGradient id="y-armL" cx="28%" cy="20%" r="90%">
+<stop stop-color="#ffe989"/><stop offset=".42" stop-color="#f4cb43"/><stop offset=".77" stop-color="#d0a02a"/><stop offset="1" stop-color="#946b20"/>
+</radialGradient>
+<radialGradient id="y-armR" cx="33%" cy="18%" r="91%">
+<stop stop-color="#ffe078"/><stop offset=".44" stop-color="#e9bc37"/><stop offset=".8" stop-color="#bd8c24"/><stop offset="1" stop-color="#805b1c"/>
+</radialGradient>
+<radialGradient id="y-legL" cx="31%" cy="20%" r="88%">
+<stop stop-color="#ffe782"/><stop offset=".43" stop-color="#edc33f"/><stop offset=".8" stop-color="#c39127"/><stop offset="1" stop-color="#886421"/>
+</radialGradient>
+<radialGradient id="y-legR" cx="32%" cy="20%" r="88%">
+<stop stop-color="#fbd66b"/><stop offset=".44" stop-color="#dfb030"/><stop offset=".8" stop-color="#b48321"/><stop offset="1" stop-color="#79591e"/>
+</radialGradient>
+<radialGradient id="y-sole" cx="35%" cy="25%" r="85%">
+<stop stop-color="#b59a61"/><stop offset=".58" stop-color="#947a47"/><stop offset="1" stop-color="#62502f"/>
+</radialGradient>
+<linearGradient id="y-toe" x1="20%" y1="0%" x2="70%" y2="100%">
+<stop stop-color="#8b917b"/><stop offset=".45" stop-color="#5d6953"/><stop offset="1" stop-color="#303d30"/>
+</linearGradient>
+<radialGradient id="y-cloth" cx="39%" cy="27%" r="82%">
+<stop stop-color="#e9e6d9"/><stop offset=".36" stop-color="#dde0d1"/><stop offset=".72" stop-color="#bfcbb6"/><stop offset="1" stop-color="#92a58a"/>
+</radialGradient>
+<linearGradient id="y-orangeL" x1="0%" y1="10%" x2="100%" y2="90%">
+<stop stop-color="#d6b38a"/><stop offset=".35" stop-color="#c59b71"/><stop offset=".72" stop-color="#b4865e"/><stop offset="1" stop-color="#92704e"/>
+</linearGradient>
+<linearGradient id="y-orangeR" x1="10%" y1="0%" x2="90%" y2="100%">
+<stop stop-color="#cfaa7f"/><stop offset=".4" stop-color="#b98f64"/><stop offset="1" stop-color="#8e704f"/>
+</linearGradient>
+<linearGradient id="y-sleeveL" x1="0%" y1="10%" x2="100%" y2="90%">
+<stop stop-color="#cdd6c0"/><stop offset=".35" stop-color="#e8e8d8"/><stop offset=".7" stop-color="#cdd8c0"/><stop offset="1" stop-color="#9caf90"/>
+</linearGradient>
+<linearGradient id="y-sleeveR" x1="0%" y1="10%" x2="100%" y2="90%">
+<stop stop-color="#a2b497"/><stop offset=".4" stop-color="#dce1cb"/><stop offset="1" stop-color="#9caf90"/>
+</linearGradient>
+<linearGradient id="y-collar" x1="20%" y1="0%" x2="80%" y2="100%">
+<stop stop-color="#eee9d9"/><stop offset=".45" stop-color="#dce1cb"/><stop offset="1" stop-color="#a9bba0"/>
+</linearGradient>
+<radialGradient id="y-iris" cx="30%" cy="22%" r="87%">
+<stop stop-color="#d1e38d"/><stop offset=".3" stop-color="#a8cd64"/><stop offset=".65" stop-color="#79a442"/><stop offset="1" stop-color="#3f662d"/>
+</radialGradient>
+<radialGradient id="y-pupil" cx="30%" cy="18%" r="88%">
+<stop stop-color="#2a3928"/><stop offset=".45" stop-color="#122015"/><stop offset="1" stop-color="#030c06"/>
+</radialGradient>
+    <!-- 手：原来这两个渐变一路拉到深绿（#344535），手掌在白校服上变成
+         一块灰绿色的异物，看着像手套而不是手。改成同色系的金黄，
+         只保留明暗层次。 -->
+    <linearGradient id="y-handL" x1="183" y1="487" x2="222" y2="547" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#ffe27f"/><stop offset=".42" stop-color="#eec23f"/><stop offset="1" stop-color="#a97a1e"/>
+    </linearGradient>
+    <linearGradient id="y-handR" x1="418" y1="487" x2="378" y2="548" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#f8d566"/><stop offset=".45" stop-color="#dfae32"/><stop offset="1" stop-color="#94671b"/>
+    </linearGradient>
+<filter id="y-soft" x="-40%" y="-40%" width="180%" height="180%"><feGaussianBlur stdDeviation="3"/></filter>
+<filter id="y-wash" x="-50%" y="-70%" width="200%" height="240%"><feGaussianBlur stdDeviation="7"/></filter>
+<filter id="y-paper" x="-3%" y="-3%" width="106%" height="106%" color-interpolation-filters="sRGB">
+<feTurbulence type="fractalNoise" baseFrequency=".7" numOctaves="3" seed="26" result="noise"/>
+<feColorMatrix in="noise" type="saturate" values="0" result="gray"/>
+<feComponentTransfer in="gray" result="grain"><feFuncA type="linear" slope=".12"/></feComponentTransfer>
+<feComposite in="grain" in2="SourceGraphic" operator="in" result="masked"/>
+<feBlend in="SourceGraphic" in2="masked" mode="soft-light"/>
+</filter>
+<filter id="y-dry" x="-15%" y="-20%" width="130%" height="140%">
+<feTurbulence type="fractalNoise" baseFrequency=".12 .7" numOctaves="2" seed="14" result="brush"/>
+<feColorMatrix in="brush" type="luminanceToAlpha" result="alpha"/>
+<feComposite in="SourceGraphic" in2="alpha" operator="in"/>
+</filter>
+<clipPath id="y-shirtClip">
+<path d="M240 277C217 286 196 302 181 325C161 355 150 393 147 438C143 486 157 526 187 550C211 569 253 579 300 579C347 579 389 569 413 550C443 526 457 486 453 438C450 393 439 355 419 325C404 302 383 286 360 277C344 293 323 301 300 301C277 301 256 293 240 277Z"/>
+</clipPath>
+</defs>
+
+<!-- desk 层：结构保留但默认关闭（理由同 geek.svg）。 -->
+<g id="desk" style="display:none">
+<path d="M20 588H580L600 620H0Z" fill="#b9b8a6"/>
+<path d="M0 620H600V642H0Z" fill="#919b87"/>
+<path d="M25 588H575" stroke="#e5dfc8" stroke-opacity=".65" stroke-width="3"/>
+</g>
+
+<g id="body">
+<ellipse cx="300" cy="638" rx="148" ry="10" fill="#46513a" opacity=".12" filter="url(#y-wash)"/>
+
+<!-- Original skin colours; no desaturation filter. -->
+<path d="M182 454C158 502 166 563 201 600C224 623 262 631 301 630C343 630 380 620 406 595C440 561 449 506 428 455Z" fill="url(#y-skin)"/>
+<path d="M187 500C163 502 147 521 142 547C138 572 143 598 158 617C172 634 192 638 209 625C227 612 238 590 238 566C238 540 223 510 201 502C196 500 191 500 187 500Z" fill="url(#y-legL)"/>
+<path d="M413 500C437 502 453 521 458 547C463 572 457 598 442 617C428 634 408 638 391 625C373 612 362 590 362 566C362 540 377 510 399 502C404 500 409 500 413 500Z" fill="url(#y-legR)"/>
+<path d="M149 565C140 562 133 555 134 549C136 542 142 544 147 550L155 563ZM162 555C152 550 149 541 152 535C156 530 162 536 166 546L170 556ZM179 555C170 550 167 542 171 536C175 532 181 539 183 548L186 557Z" fill="url(#y-toe)"/>
+<path d="M451 565C460 562 467 555 466 549C464 542 458 544 453 550L445 563ZM438 555C448 550 451 541 448 535C444 530 438 536 434 546L430 556ZM421 555C430 550 433 542 429 536C425 532 419 539 417 548L414 557Z" fill="url(#y-toe)"/>
+<path d="M151 559C163 549 181 554 195 568C208 581 217 598 217 612C217 627 207 637 192 637C177 637 163 628 152 612C141 596 139 571 151 559Z" fill="#c7a03f"/>
+<path d="M155 566C165 558 178 562 190 574C202 587 210 601 210 613C210 624 202 631 191 631C178 630 167 623 158 609C149 595 146 576 155 566Z" fill="url(#y-sole)"/>
+<path d="M449 559C437 549 419 554 405 568C392 581 383 598 383 612C383 627 393 637 408 637C423 637 437 628 448 612C459 596 461 571 449 559Z" fill="#b38b30"/>
+<path d="M445 566C435 558 422 562 410 574C398 587 390 601 390 613C390 624 398 631 409 631C422 630 433 623 442 609C451 595 454 576 445 566Z" fill="url(#y-sole)"/>
+
+<!-- Gouache-like clothing with a restrained printed surface. -->
+<g filter="url(#y-paper)">
+<path d="M240 277C217 286 196 302 181 325C161 355 150 393 147 438C143 486 157 526 187 550C211 569 253 579 300 579C347 579 389 569 413 550C443 526 457 486 453 438C450 393 439 355 419 325C404 302 383 286 360 277C344 293 323 301 300 301C277 301 256 293 240 277Z" fill="url(#y-cloth)"/>
+<g clip-path="url(#y-shirtClip)">
+<path d="M165 350C178 393 180 436 180 473C180 508 187 532 199 549M436 350C423 390 419 436 421 474C422 508 413 534 401 551" stroke="#6c8760" stroke-opacity=".19" stroke-width="15" filter="url(#y-wash)"/>
+<path d="M179 381C194 388 208 391 220 391M421 382C408 390 395 393 384 393M188 501C204 513 218 519 235 520M410 503C395 515 382 520 366 521" stroke="#7e956e" stroke-opacity=".25" stroke-width="5" stroke-linecap="round" filter="url(#y-soft)"/>
+<path d="M180 376C195 383 208 386 221 386M420 377C407 384 395 388 383 388M189 496C205 508 219 513 233 514M407 498C394 509 381 514 368 515" stroke="#e9e7cf" stroke-opacity=".45" stroke-width="4" stroke-linecap="round" filter="url(#y-dry)"/>
+<path d="M216 428C251 416 277 418 291 420M317 420C341 416 365 419 386 426" stroke="#eee9d2" stroke-opacity=".16" stroke-width="14" stroke-linecap="round" filter="url(#y-dry)"/>
+<path d="M200 558C257 576 343 577 401 557" stroke="#8fa27b" stroke-opacity=".55" stroke-width="1.5"/>
+<path d="M201 553C258 571 342 572 400 552" stroke="#e7e5cc" stroke-opacity=".6" stroke-width="2.3" filter="url(#y-dry)"/>
+<path d="M208 556C261 571 342 571 394 555" stroke="#9eb18a" stroke-opacity=".7" stroke-width=".8" stroke-dasharray="2 3"/>
+<path d="M203 326C194 373 190 425 193 476M398 326C406 375 410 427 407 476" stroke="#a7b997" stroke-opacity=".6" stroke-width=".9"/>
+</g>
+<path d="M241 279C217 287 195 302 180 326L167 354L192 367C207 332 224 314 252 304Z" fill="url(#y-orangeL)"/>
+<path d="M359 279C383 287 405 302 420 326L433 354L408 367C393 332 376 314 348 304Z" fill="url(#y-orangeR)"/>
+<path d="M239 286C213 296 192 316 178 347M361 286C387 296 408 316 422 347" stroke="#e4cba4" stroke-opacity=".55" stroke-width="2" filter="url(#y-dry)"/>
+<path d="M182 326C163 334 148 353 138 376L128 402C140 415 156 422 177 420L193 386C202 365 207 347 199 336C195 330 188 326 182 326Z" fill="url(#y-sleeveL)"/>
+<path d="M180 327C161 337 148 354 138 376L131 394L145 404C154 378 168 353 187 340Z" fill="url(#y-orangeL)"/>
+<path d="M418 326C437 334 452 353 462 376L472 402C460 415 444 422 423 420L407 386C398 365 393 347 401 336C405 330 412 326 418 326Z" fill="url(#y-sleeveR)"/>
+<path d="M420 327C439 337 452 354 462 376L469 394L455 404C446 378 432 353 413 340Z" fill="url(#y-orangeR)"/>
+<path d="M129 400C142 412 157 417 177 416M471 400C458 412 443 417 423 416" stroke="#99ad88" stroke-width="1.5"/>
+<path d="M135 400C147 409 159 413 174 412M465 400C453 409 441 413 426 412" stroke="#a4b791" stroke-width=".8" stroke-dasharray="2 3"/>
+</g>
+
+<path d="M248 248L241 285C255 307 278 318 300 318C323 318 346 307 359 285L352 248Z" fill="url(#y-skin)"/>
+
+<g filter="url(#y-paper)">
+<path d="M243 282C260 302 281 315 300 320L275 350L226 301M357 282C340 302 319 315 300 320L325 350L374 301" fill="#657e53" opacity=".2" transform="translate(0 5)" filter="url(#y-soft)"/>
+<path d="M290 317H308L311 401Q301 405 291 402Z" fill="url(#y-collar)"/>
+<path d="M244 278C259 296 278 309 300 318L275 346L227 298ZM356 278C341 296 322 309 300 318L325 346L373 298Z" fill="url(#y-collar)"/>
+<path d="M229 298L275 346L280 340L235 293Z" fill="url(#y-orangeL)"/>
+<path d="M371 298L325 346L320 340L365 293Z" fill="url(#y-orangeR)"/>
+<path d="M241 294L273 331M359 294L327 331" stroke="#ede9d2" stroke-opacity=".6" stroke-width="2" filter="url(#y-dry)"/>
+<path d="M292 326L293 396M307 327L309 396" stroke="#a2b78d" stroke-width=".7" stroke-dasharray="2 3"/>
+<g fill="#cad5b6" stroke="#93aa7b" stroke-width=".7">
+<circle cx="300" cy="337" r="3"/><circle cx="301" cy="363" r="3"/><circle cx="302" cy="389" r="3"/>
+</g>
+
+<g transform="translate(345 355) rotate(5)">
+<rect x="-1" y="2" width="49" height="23" rx="2" fill="#748966" opacity=".18" filter="url(#y-soft)"/>
+<rect width="48" height="22" rx="2" fill="#dde3ce" stroke="#acbd98" stroke-width=".7"/>
+<rect x="3" y="3" width="11" height="16" rx="1" fill="#9eb8b4"/>
+<ellipse cx="8.5" cy="8" rx="3" ry="3.5" fill="#efd35b"/>
+<path d="M4.5 18V14C4.5 11 12.5 11 12.5 14V18" fill="#dbe0c8"/>
+<path d="M19 7H40M19 12H37M19 17H41" stroke="#a7b493" stroke-width=".9" stroke-dasharray="1 2"/>
+</g>
+<g transform="translate(369 404) rotate(4)">
+<circle r="17.5" fill="#c4bf83" stroke="#dcd6ab" stroke-width="1"/>
+<circle r="14.5" fill="#5f7651"/>
+<path d="M0 10V-5M0 4C-6-3-10-2-10 2C-10 6-4 7 0 4ZM0 1C6-5 10-4 10-1C10 3 5 4 0 1Z" stroke="#d0d0a2" stroke-width="1.5" stroke-linejoin="round"/>
+<circle cy="-8.5" r="2.3" fill="#dcdab9"/>
+</g>
+</g>
+
+</g>
+
+<!-- Arms and hands keep their original colours. -->
+<g id="arm-down">
+<path d="M135 407C126 425 124 444 131 461C140 481 159 499 183 513C193 520 205 517 211 507C216 498 212 489 202 483C186 473 177 460 177 447C177 438 181 429 184 419C164 423 148 418 135 407Z" fill="url(#y-armL)"/>
+<path d="M465 407C474 425 476 444 469 461C460 481 441 499 417 513C407 520 395 517 389 507C384 498 388 489 398 483C414 473 423 460 423 447C423 438 419 429 416 419C436 423 452 418 465 407Z" fill="url(#y-armR)"/>
+<ellipse cx="207" cy="535" rx="28" ry="9" fill="#596a42" opacity=".15" filter="url(#y-soft)"/>
+<ellipse cx="393" cy="535" rx="28" ry="9" fill="#596a42" opacity=".17" filter="url(#y-soft)"/>
+<path d="M184 496C190 488 200 488 210 495L225 507C232 513 235 521 231 526C228 530 223 527 218 524C229 534 231 540 226 543C221 546 215 539 210 536C219 544 220 550 214 552C207 554 198 545 193 543C182 540 176 532 178 523C179 513 180 503 184 496Z" fill="url(#y-handL)"/>
+<path d="M416 496C410 488 400 488 390 495L375 507C368 513 365 521 369 526C372 530 377 527 382 524C371 534 369 540 374 543C379 546 385 539 390 536C381 544 380 550 386 552C393 554 402 545 407 543C418 540 424 532 422 523C421 513 420 503 416 496Z" fill="url(#y-handR)"/>
+<path d="M196 519C201 525 207 530 215 534M194 530C199 536 204 540 209 543M404 519C399 525 393 530 385 534M406 530C401 536 396 540 391 543" stroke="#8a5f1f" stroke-opacity=".42" stroke-width="1.2" stroke-linecap="round"/>
+</g>
+
+<g id="arm-raise">
+<path d="M135 407C126 425 124 444 131 461C140 481 159 499 183 513C193 520 205 517 211 507C216 498 212 489 202 483C186 473 177 460 177 447C177 438 181 429 184 419C164 423 148 418 135 407Z" fill="url(#y-armL)"/>
+<path d="M184 496C190 488 200 488 210 495L225 507C232 513 235 521 231 526C228 530 223 527 218 524C229 534 231 540 226 543C221 546 215 539 210 536C219 544 220 550 214 552C207 554 198 545 193 543C182 540 176 532 178 523C179 513 180 503 184 496Z" fill="url(#y-handL)"/>
+<g transform="rotate(135 465 407)">
+<path d="M465 407C474 425 476 444 469 461C460 481 441 499 417 513C407 520 395 517 389 507C384 498 388 489 398 483C414 473 423 460 423 447C423 438 419 429 416 419C436 423 452 418 465 407Z" fill="url(#y-armR)"/>
+<!-- 爪子放大 1.3 倍：原来只有头宽的 38%，看起来像手套而不是手 -->
+<g transform="translate(416 496) scale(1.3) translate(-416 -496)">
+<path d="M416 496C410 488 400 488 390 495L375 507C368 513 365 521 369 526C372 530 377 527 382 524C371 534 369 540 374 543C379 546 385 539 390 536C381 544 380 550 386 552C393 554 402 545 407 543C418 540 424 532 422 523C421 513 420 503 416 496Z" fill="url(#y-armR)"/>
+<!-- 指缝：浅色短折线，让四指分开读得出来 -->
+<g stroke="#a5761f" stroke-opacity=".42" stroke-width="1.3" stroke-linecap="round" fill="none">
+<path d="M378 516C381 519 383 523 384 527"/>
+<path d="M386 507C389 511 391 515 391 519"/>
+<path d="M395 501C398 505 400 509 400 513"/>
+</g>
+</g>
+</g>
+</g>
+
+<g id="head">
+<!-- Head: original yellow gradient with softer, smaller eye reflections. -->
+<path d="M300 153C267 153 249 173 242 201C237 220 235 241 240 256C247 279 270 296 300 297C330 296 353 279 360 256C365 241 363 220 358 201C351 173 333 153 300 153Z" fill="url(#y-head)"/>
+<ellipse cx="279" cy="172" rx="26" ry="9" fill="#fffbd2" opacity=".13" filter="url(#y-wash)"/>
+<ellipse cx="302" cy="278" rx="31" ry="11" fill="#a7751f" opacity=".09" filter="url(#y-wash)"/>
+<ellipse cx="256" cy="216" rx="18" ry="21" fill="#977a25" opacity=".22" filter="url(#y-soft)"/>
+<ellipse cx="345" cy="216" rx="18" ry="21" fill="#846c21" opacity=".26" filter="url(#y-soft)"/>
+<g id="eyes">
+<g transform="rotate(8 255 212)">
+<ellipse cx="255" cy="212" rx="16.6" ry="21.2" fill="#c8d583"/>
+<ellipse cx="255.7" cy="212.8" rx="15.1" ry="19.5" fill="url(#y-iris)"/>
+<ellipse cx="256.5" cy="215" rx="10.3" ry="13.2" fill="url(#y-pupil)"/>
+<ellipse cx="253" cy="208.5" rx="1.8" ry="2.3" fill="#edf1ce" opacity=".55"/>
+<path d="M244 226C250 234 260 234 267 226" stroke="#4b702d" stroke-opacity=".3" stroke-width="1" stroke-linecap="round"/>
+</g>
+<g transform="rotate(-7 345 212)">
+<ellipse cx="345" cy="212" rx="16.6" ry="21.2" fill="#becf7b"/>
+<ellipse cx="345.5" cy="212.8" rx="15.1" ry="19.5" fill="url(#y-iris)"/>
+<ellipse cx="345" cy="215" rx="10.3" ry="13.2" fill="url(#y-pupil)"/>
+<ellipse cx="341.8" cy="208.5" rx="1.8" ry="2.3" fill="#edf1ce" opacity=".5"/>
+<path d="M334 226C340 234 350 234 357 226" stroke="#466a2b" stroke-opacity=".32" stroke-width="1" stroke-linecap="round"/>
+</g>
+</g>
+<!-- 半垂眼：低头走神态用。上眼皮压下来、虹膜只露一条窄缝，
+     比「闭眼」更像走神犯困，而不是睡着。 -->
+<g id="eyes-down">
+<g transform="rotate(8 255 212)">
+<ellipse cx="255" cy="214" rx="13" ry="8" fill="#c8d583"/>
+<ellipse cx="255" cy="215" rx="9" ry="5" fill="url(#y-iris)"/>
+<ellipse cx="255" cy="216" rx="5.6" ry="2.8" fill="url(#y-pupil)"/>
+<path d="M241 210C248 204 262 204 269 210" stroke="#4b702d" stroke-width="2.3" stroke-linecap="round" fill="none"/>
+</g>
+<g transform="rotate(-7 345 212)">
+<ellipse cx="345" cy="214" rx="13" ry="8" fill="#becf7b"/>
+<ellipse cx="345" cy="215" rx="9" ry="5" fill="url(#y-iris)"/>
+<ellipse cx="345" cy="216" rx="5.6" ry="2.8" fill="url(#y-pupil)"/>
+<path d="M331 210C338 204 352 204 359 210" stroke="#466a2b" stroke-width="2.3" stroke-linecap="round" fill="none"/>
+</g>
+</g>
+<g id="mouth-open">
+<path d="M270 246C285 240 316 240 331 245C326 267 278 269 270 246Z" fill="#544025"/>
+<path d="M278 247C292 244 313 244 324 247L320 252H282Z" fill="#fff0b0" opacity=".75"/>
+<path d="M283 260C295 255 311 256 319 261C308 268 293 268 283 260Z" fill="#b88535"/>
+</g>
+<g id="mouth-closed">
+<path d="M271 249C284 255 314 255 330 248C320 260 285 262 271 249Z" fill="#a47628" opacity=".14" filter="url(#y-soft)"/>
+<path d="M270 247C284 253 313 254 331 246C325 253 312 256 300 256C288 256 277 252 270 247Z" fill="#544025"/>
+<path d="M280 256C291 259 310 259 321 255" stroke="#ffe287" stroke-opacity=".35" stroke-width="1.3" stroke-linecap="round"/>
+</g>
+</g>
+</svg>

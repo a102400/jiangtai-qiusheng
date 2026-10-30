@@ -1,5 +1,5 @@
-// 临时验证脚本：跑一遍「一键自动演示」，记录每步的字幕文本、停留时长与截图。
-// 用法：node scripts/_verify-demo.js <url> <outDir>
+// 演示节奏自检：点「一键自动演示」，逐步记录字幕、停留时长、关键区域状态并截图。
+// 用法：node scripts/verify-demo.js <url> <outDir> [light|dark]
 const { spawn } = require('child_process');
 const fs = require('fs');
 const path = require('path');
@@ -97,7 +97,9 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
     await sleep(4000);
   }
 
+  const href = await evalJs('location.href');
   const mode = await evalJs('window.JTQ_DEMO_PAGE === true ? "demo" : "normal"');
+  console.log('落地地址：' + href);
   console.log('页面模式：' + mode + ' / 主题：' + (theme || '跟随系统'));
 
   const started = Date.now();
