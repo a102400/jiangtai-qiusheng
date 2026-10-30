@@ -8,8 +8,11 @@
     "start": "node server.js",
     "dev": "node --watch server.js",
     "test": "node --test tests/*.test.js",
-    "assets:students": "node scripts/build-student-assets.js && node scripts/optimize-student-assets.js",
-    "assets:students:optimize": "node scripts/optimize-student-assets.js"
+    "assets:students": "node scripts/build-student-assets.js && node scripts/optimize-svg-assets.js",
+    "assets:optimize": "node scripts/optimize-svg-assets.js",
+    "corpus:transcribe": "node scripts/ingest-audio.js",
+    "corpus:sample": "node scripts/build-annotation-set.js --input annotation/corpus --n 200",
+    "corpus:kappa": "node scripts/cohen-kappa.js"
   },
   "engines": {
     "node": ">=18"

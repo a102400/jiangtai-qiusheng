@@ -1,22 +1,25 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!--
   讲台求生 · 2D 教室课桌层（desks）
-  ------------------------------------------------------------------
+  =================================
   这一层画在「人物之后」，所以课桌前沿会遮住立绘最下面一截 ——
   立绘是半身裁切，原本的平底会显得像被切断，桌子一挡就自然变成
   「学生坐在桌后」。
 
-  坐标系与 backdrop.svg 完全一致（viewBox 0 0 1600 900）：
-    桌面可见条  y = 716 ~ 742   (学生身后 → 桌沿，斜向看过去只剩一条)
-    桌沿前板    y = 742 ~ 900
-    学生脚底     y = 760.5       (0.845 * 900，与立绘 baseY 对齐)
-  因为桌子在前，学生脚底以上 44 个单位（≈ 立绘高度的 7%）被桌沿遮住，
+  本文件是**手绘源文件**：直接改这里，不要用 SVGO 覆盖
+        （Inkscape / Figma 可以直接打开本文件继续迭代）。
+
+  坐标系与 backdrop.svg 完全一致（viewBox 0 0 2400 800）：
+    桌面可见条  y = 636 ~ 662   (学生身后 → 桌沿)
+    桌沿前板    y = 662 ~ 800
+    学生脚底     y = 676         (0.845 * 800，与立绘 baseY 对齐)
+  桌子在前，学生脚底以上 40 个单位（≈ 立绘高度的 6%）被桌沿遮住，
   比例刚好是「半身立绘坐在课桌后」的观感。
 
   桌面上的两件小道具（课本 / 笔筒）放在左右两端，
   避开 0.25 / 0.5 / 0.75 三个站位，不与人物打架。
 -->
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 900" width="1600" height="900"
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 2400 800" width="2400" height="800"
      preserveAspectRatio="none" fill="none" role="img" aria-labelledby="cd-title cd-desc">
   <title id="cd-title">课桌前沿层</title>
   <desc id="cd-desc">一排浅木色课桌，桌面上放着两本课本和一个笔筒，桌前板有竖向接缝。</desc>
@@ -52,51 +55,51 @@
   <g>
     <!-- 左端：两本叠起的课本 -->
     <g>
-      <rect x="70" y="712" width="112" height="32" rx="4" fill="#a8705e"/>
-      <rect x="70" y="712" width="112" height="7" rx="3" fill="#bd8a76"/>
-      <rect x="74" y="716" width="104" height="24" rx="2" fill="#efe6d3" opacity=".9"/>
-      <rect x="78" y="686" width="96" height="28" rx="4" fill="#6f7e72"/>
-      <rect x="78" y="686" width="96" height="6" rx="3" fill="#84957f"/>
-      <rect x="82" y="690" width="88" height="20" rx="2" fill="#efe6d3" opacity=".85"/>
+      <rect x="105" y="632" width="168" height="48" rx="6" fill="#a8705e"/>
+      <rect x="105" y="632" width="168" height="11" rx="5" fill="#bd8a76"/>
+      <rect x="111" y="638" width="156" height="36" rx="3" fill="#efe6d3" opacity=".9"/>
+      <rect x="117" y="592" width="144" height="42" rx="6" fill="#6f7e72"/>
+      <rect x="117" y="592" width="144" height="9" rx="4" fill="#84957f"/>
+      <rect x="123" y="598" width="132" height="30" rx="3" fill="#efe6d3" opacity=".85"/>
     </g>
 
     <!-- 右端：笔筒 -->
     <g>
-      <path d="M1424 744L1432 700H1476L1484 744Z" fill="#8d7a62"/>
-      <path d="M1424 744L1432 700H1442L1436 744Z" fill="#a08c70" opacity=".75"/>
-      <rect x="1444" y="666" width="7" height="42" rx="3" fill="#c9a978" transform="rotate(6 1448 690)"/>
-      <rect x="1456" y="658" width="7" height="50" rx="3" fill="#8fa39a" transform="rotate(-4 1460 684)"/>
-      <rect x="1466" y="670" width="7" height="38" rx="3" fill="#c08d7e" transform="rotate(9 1470 690)"/>
+      <path d="M2136 662L2146 596H2210L2220 662Z" fill="#8d7a62"/>
+      <path d="M2136 662L2146 596H2160L2152 662Z" fill="#a08c70" opacity=".75"/>
+      <rect x="2166" y="548" width="10" height="62" rx="4" fill="#c9a978" transform="rotate(6 2171 582)"/>
+      <rect x="2184" y="536" width="10" height="74" rx="4" fill="#8fa39a" transform="rotate(-4 2189 574)"/>
+      <rect x="2199" y="552" width="10" height="58" rx="4" fill="#c08d7e" transform="rotate(9 2204 582)"/>
     </g>
   </g>
 
   <!-- 桌面（可见的一条） -->
-  <rect y="716" width="1600" height="26" fill="url(#cd-top)"/>
-  <rect y="716" width="1600" height="3" fill="#e9d8ba" opacity=".85"/>
-  <rect y="739" width="1600" height="3" fill="#8e7351" opacity=".5"/>
+  <rect y="636" width="2400" height="26" fill="url(#cd-top)"/>
+  <rect y="636" width="2400" height="3" fill="#e9d8ba" opacity=".85"/>
+  <rect y="659" width="2400" height="3" fill="#8e7351" opacity=".5"/>
 
   <!-- 前挡板 -->
-  <rect y="742" width="1600" height="158" fill="url(#cd-front)"/>
+  <rect y="662" width="2400" height="138" fill="url(#cd-front)"/>
   <!-- 桌与桌之间的竖向接缝 -->
   <g stroke="#876d4c" stroke-opacity=".42" stroke-width="2">
-    <path d="M400 742v158"/>
-    <path d="M800 742v158"/>
-    <path d="M1200 742v158"/>
+    <path d="M600 662v138"/>
+    <path d="M1200 662v138"/>
+    <path d="M1800 662v138"/>
   </g>
   <g stroke="#d6bd97" stroke-opacity=".3" stroke-width="1.4">
-    <path d="M404 742v158"/>
-    <path d="M804 742v158"/>
-    <path d="M1204 742v158"/>
+    <path d="M605 662v138"/>
+    <path d="M1205 662v138"/>
+    <path d="M1805 662v138"/>
   </g>
   <!-- 木纹 -->
   <g stroke="#7f6746" stroke-opacity=".12" stroke-width="2" stroke-linecap="round">
-    <path d="M40 792c120-8 240 8 360 0s240-10 360-2 240 12 360 4 240-12 440-4"/>
-    <path d="M0 838c160-10 320 6 480 0s320-8 480 2 320 10 480 2"/>
+    <path d="M60 702c180-10 360 10 540 0s360-12 540-4 360 14 540 6 360-14 660-6"/>
+    <path d="M0 754c240-12 480 8 720 0s480-10 720 2 480 12 720 4"/>
   </g>
-  <rect x="60" y="742" width="220" height="158" fill="url(#cd-grain)"/>
-  <rect x="580" y="742" width="200" height="158" fill="url(#cd-grain)"/>
-  <rect x="1080" y="742" width="210" height="158" fill="url(#cd-grain)"/>
+  <rect x="90" y="662" width="330" height="138" fill="url(#cd-grain)"/>
+  <rect x="870" y="662" width="300" height="138" fill="url(#cd-grain)"/>
+  <rect x="1620" y="662" width="315" height="138" fill="url(#cd-grain)"/>
 
   <!-- 桌前板下缘的落影 -->
-  <rect y="884" width="1600" height="16" fill="#6d5a3f" opacity=".18" filter="url(#cd-soft)"/>
+  <rect y="784" width="2400" height="16" fill="#6d5a3f" opacity=".18" filter="url(#cd-soft)"/>
 </svg>

@@ -2022,8 +2022,8 @@ function drawClassroomLayer(ctx, W, H, name) {
 
 /** 矢量课桌层缺失时的兜底：一条木色桌沿 + 前挡板，位置与 desks.svg 对齐。 */
 function drawDeskFallback(ctx, W, H) {
-  const topY = H * 0.7956;
-  const edgeY = H * 0.8244;
+  const topY = H * 0.795;
+  const edgeY = H * 0.8275;
   ctx.fillStyle = '#cbb189';
   ctx.fillRect(0, topY, W, edgeY - topY);
   ctx.fillStyle = '#e9d8ba';
@@ -2055,7 +2055,7 @@ function drawClassScene() {
 
   const W = rect.width, H = rect.height;
 
-  // 教室背景：优先用矢量图层（assets/classroom/backdrop.svg）。
+  // 教室背景：优先用矢量图层（教室美术层里的 backdrop）。
   // 这张图是可编辑资产 —— Inkscape / Figma 改完直接替换文件即可，
   // 不用动这里。加载失败才退回代码画的扁平背景。
   const hasBackdrop = drawClassroomLayer(ctx, W, H, 'backdrop');

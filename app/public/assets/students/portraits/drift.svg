@@ -51,12 +51,15 @@
 <radialGradient id="y-pupil" cx="30%" cy="18%" r="88%">
 <stop stop-color="#2a3928"/><stop offset=".45" stop-color="#122015"/><stop offset="1" stop-color="#030c06"/>
 </radialGradient>
-<linearGradient id="y-handL" x1="183" y1="487" x2="222" y2="547" gradientUnits="userSpaceOnUse">
-<stop stop-color="#e0bd48"/><stop offset=".27" stop-color="#b4ae6b"/><stop offset=".62" stop-color="#78866c"/><stop offset="1" stop-color="#344535"/>
-</linearGradient>
-<linearGradient id="y-handR" x1="418" y1="487" x2="378" y2="548" gradientUnits="userSpaceOnUse">
-<stop stop-color="#c3a43c"/><stop offset=".28" stop-color="#9e9f60"/><stop offset=".64" stop-color="#617458"/><stop offset="1" stop-color="#2b3b2d"/>
-</linearGradient>
+    <!-- 手：原来这两个渐变一路拉到深绿（#344535），手掌在白校服上变成
+         一块灰绿色的异物，看着像手套而不是手。改成同色系的金黄，
+         只保留明暗层次。 -->
+    <linearGradient id="y-handL" x1="183" y1="487" x2="222" y2="547" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#ffe27f"/><stop offset=".42" stop-color="#eec23f"/><stop offset="1" stop-color="#a97a1e"/>
+    </linearGradient>
+    <linearGradient id="y-handR" x1="418" y1="487" x2="378" y2="548" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#f8d566"/><stop offset=".45" stop-color="#dfae32"/><stop offset="1" stop-color="#94671b"/>
+    </linearGradient>
 <filter id="y-soft" x="-40%" y="-40%" width="180%" height="180%"><feGaussianBlur stdDeviation="3"/></filter>
 <filter id="y-wash" x="-50%" y="-70%" width="200%" height="240%"><feGaussianBlur stdDeviation="7"/></filter>
 <filter id="y-paper" x="-3%" y="-3%" width="106%" height="106%" color-interpolation-filters="sRGB">
@@ -161,7 +164,7 @@
 <ellipse cx="393" cy="535" rx="28" ry="9" fill="#596a42" opacity=".17" filter="url(#y-soft)"/>
 <path d="M184 496C190 488 200 488 210 495L225 507C232 513 235 521 231 526C228 530 223 527 218 524C229 534 231 540 226 543C221 546 215 539 210 536C219 544 220 550 214 552C207 554 198 545 193 543C182 540 176 532 178 523C179 513 180 503 184 496Z" fill="url(#y-handL)"/>
 <path d="M416 496C410 488 400 488 390 495L375 507C368 513 365 521 369 526C372 530 377 527 382 524C371 534 369 540 374 543C379 546 385 539 390 536C381 544 380 550 386 552C393 554 402 545 407 543C418 540 424 532 422 523C421 513 420 503 416 496Z" fill="url(#y-handR)"/>
-<path d="M196 519C201 525 207 530 215 534M194 530C199 536 204 540 209 543M404 519C399 525 393 530 385 534M406 530C401 536 396 540 391 543" stroke="#2d432f" stroke-opacity=".32" stroke-width="1.2" stroke-linecap="round"/>
+<path d="M196 519C201 525 207 530 215 534M194 530C199 536 204 540 209 543M404 519C399 525 393 530 385 534M406 530C401 536 396 540 391 543" stroke="#8a5f1f" stroke-opacity=".42" stroke-width="1.2" stroke-linecap="round"/>
 </g>
 
 <g id="arm-raise">
@@ -169,7 +172,16 @@
 <path d="M184 496C190 488 200 488 210 495L225 507C232 513 235 521 231 526C228 530 223 527 218 524C229 534 231 540 226 543C221 546 215 539 210 536C219 544 220 550 214 552C207 554 198 545 193 543C182 540 176 532 178 523C179 513 180 503 184 496Z" fill="url(#y-handL)"/>
 <g transform="rotate(135 465 407)">
 <path d="M465 407C474 425 476 444 469 461C460 481 441 499 417 513C407 520 395 517 389 507C384 498 388 489 398 483C414 473 423 460 423 447C423 438 419 429 416 419C436 423 452 418 465 407Z" fill="url(#y-armR)"/>
+<!-- 爪子放大 1.3 倍：原来只有头宽的 38%，看起来像手套而不是手 -->
+<g transform="translate(416 496) scale(1.3) translate(-416 -496)">
 <path d="M416 496C410 488 400 488 390 495L375 507C368 513 365 521 369 526C372 530 377 527 382 524C371 534 369 540 374 543C379 546 385 539 390 536C381 544 380 550 386 552C393 554 402 545 407 543C418 540 424 532 422 523C421 513 420 503 416 496Z" fill="url(#y-armR)"/>
+<!-- 指缝：浅色短折线，让四指分开读得出来 -->
+<g stroke="#a5761f" stroke-opacity=".42" stroke-width="1.3" stroke-linecap="round" fill="none">
+<path d="M378 516C381 519 383 523 384 527"/>
+<path d="M386 507C389 511 391 515 391 519"/>
+<path d="M395 501C398 505 400 509 400 513"/>
+</g>
+</g>
 </g>
 </g>
 

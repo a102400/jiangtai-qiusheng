@@ -13,10 +13,15 @@ annotation/
 └── selftest/                   自检数据 —— 不是研究数据，见该目录 README
 ```
 
-## 三步
+## 三步（有录音的话，前面再加一步 ⓪）
 
 ```bash
+# ⓪ 录音 → 语料：批量转写（本地 offline whisper，不出网、不花钱）
+npm run corpus:transcribe -- --dir "D:/录音/试讲"        # 或直接给文件路径
+npm run corpus:transcribe -- --check                    # 只检测环境，不转写
+
 # ① 抽样：从语料里抽 200 句，按规则编码分层
+npm run corpus:sample                                  # = 下面这条
 node scripts/build-annotation-set.js --input annotation/corpus --n 200
 
 # ② 两人各自打开 set-200-label.html 标注（互不交流），导出 annotator-A.csv / annotator-B.csv
@@ -29,6 +34,12 @@ node scripts/cohen-kappa.js --a annotation/annotator-A.csv --b annotation/annota
 node scripts/cohen-kappa.js --a annotation/annotator-A.csv --b annotation/annotator-B.csv \
     --out annotation/kappa-final.md                     # 正式
 ```
+
+### 关于 ⓪ 的三条约定
+
+- `.txt` 里**只有纯转写**，元信息全部写进 `corpus/manifest.json`。切句器不认表头，混进去就是数据污染。
+- 同名 `.txt` 默认**拒绝覆盖**，要重跑加 `--force`。真实录音的转写成本高，误覆盖等于丢数据。
+- 空转写（静音段、纯环境音）**不落盘也不报错**，只记进 manifest 的 `empty` 数组。真实课堂里静音是正常现象，把它当失败会让人误判工具坏了。
 
 ## 三条不能省的事
 

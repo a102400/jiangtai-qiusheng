@@ -1,23 +1,30 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!--
   讲台求生 · 2D 教室背景层（backdrop）
-  ------------------------------------------------------------------
+  ==================================
   风格：与三张学生立绘同一套「哑光纸感 / 克制低饱和」语言，
         不是扁平 UI 色块，而是有材质、有光影的教室前墙。
 
   用法：作为 <img> 载入后用 drawImage(img, 0, 0, W, H) 铺满画布。
-        根元素 preserveAspectRatio="none" 是有意为之 —— 画布是超宽比例
-        （约 3:1），拉伸后地板线仍然落在 0.845H，与立绘脚底严格对齐。
-        横向拉伸会让圆形略变椭圆，所以这里的圆形元素都尽量少用。
+        根元素 preserveAspectRatio="none" 是有意为之 ——
+        画布宽度不固定（窄屏约 2.7:1，宽屏约 4.5:1），
+        固定比例画布 + 拉伸，地板线才能始终落在 0.845H，
+        与立绘脚底严格对齐。视图框按 3:1 接近实际画布，
+        横向纵向的拉伸差很小，木框和粉笔不会被压扁。
 
-  坐标系：viewBox 0 0 1600 900
-        地板线  y = 760  (= 0.8444 * 900，与立绘 baseY = 0.845H 对齐)
-        黑板    y = 22 ~ 210
+  本文件是**手绘源文件**：请直接改这里，不要用 SVGO 覆盖它
+        （学生立绘有 portraits → svg 的生成链路，教室图层没有，
+          压完就没有可读的注释和分组了）。
+        Inkscape / Figma 可以直接打开本文件继续迭代。
+
+  坐标系：viewBox 0 0 2400 800
+        地板线  y = 676  (= 0.845 * 800，与立绘 baseY = 0.845H 对齐)
+        黑板    内框 y = 28 ~ 176，粉笔槽 y = 190 ~ 209
 -->
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 900" width="1600" height="900"
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 2400 800" width="2400" height="800"
      preserveAspectRatio="none" fill="none" role="img" aria-labelledby="cb-title cb-desc">
   <title id="cb-title">教室前墙 · 黑板与地板</title>
-  <desc id="cb-desc">暖白纸感墙面，深绿哑光黑板带木框与粉笔槽，浅色橡木地板，顶部有一道柔和天光。</desc>
+  <desc id="cb-desc">暖白纸感墙面，深绿哑光黑板带木框与粉笔槽，浅色木地板，顶部有一道柔和天光。</desc>
 
   <defs>
     <!-- 墙面：上暖下沉的纸色 -->
@@ -101,67 +108,67 @@
   </defs>
 
   <!-- 墙 -->
-  <rect width="1600" height="762" fill="url(#cb-wall)"/>
-  <rect width="1600" height="762" filter="url(#cb-grain)" opacity=".5"/>
+  <rect width="2400" height="678" fill="url(#cb-wall)"/>
+  <rect width="2400" height="678" filter="url(#cb-grain)" opacity=".5"/>
 
   <!-- 天光：从左上斜切进教室 -->
-  <path d="M0 0H520L760 762H120Z" fill="url(#cb-shaft)"/>
-  <path d="M0 0H520L760 762H120Z" fill="#fffdf6" opacity=".05" filter="url(#cb-softer)"/>
+  <path d="M0 0H780L1140 676H180Z" fill="url(#cb-shaft)"/>
+  <path d="M0 0H780L1140 676H180Z" fill="#fffdf6" opacity=".05" filter="url(#cb-softer)"/>
 
   <!-- 墙裙线（给墙面一点层次，不抢主体） -->
-  <rect y="596" width="1600" height="4" fill="#d6cbb5" opacity=".85"/>
-  <rect y="600" width="1600" height="2" fill="#c8bca4" opacity=".55"/>
+  <rect y="470" width="2400" height="5" fill="#d6cbb5" opacity=".85"/>
+  <rect y="475" width="2400" height="3" fill="#c8bca4" opacity=".55"/>
 
   <!-- 黑板 -->
   <g>
     <!-- 板在墙上的落影 -->
-    <rect x="266" y="30" width="1072" height="186" rx="12" fill="#6b5b42" opacity=".2" filter="url(#cb-soft)"/>
+    <rect x="404" y="26" width="1600" height="172" rx="14" fill="#6b5b42" opacity=".2" filter="url(#cb-soft)"/>
     <!-- 木框 -->
-    <rect x="262" y="22" width="1076" height="188" rx="12" fill="url(#cb-frame)"/>
-    <rect x="266" y="26" width="1068" height="180" rx="10" stroke="#8c7053" stroke-opacity=".5" stroke-width="1.6"/>
+    <rect x="398" y="18" width="1612" height="172" rx="14" fill="url(#cb-frame)"/>
+    <rect x="404" y="24" width="1600" height="160" rx="12" stroke="#8c7053" stroke-opacity=".5" stroke-width="2"/>
     <!-- 板面 -->
-    <rect x="272" y="32" width="1056" height="166" rx="6" fill="url(#cb-board)"/>
+    <rect x="408" y="28" width="1592" height="148" rx="7" fill="url(#cb-board)"/>
     <!-- 擦不干净的粉笔灰 -->
-    <ellipse cx="520" cy="96" rx="150" ry="44" fill="#e9f2ec" opacity=".05" filter="url(#cb-soft)"/>
-    <ellipse cx="1120" cy="140" rx="118" ry="38" fill="#e9f2ec" opacity=".045" filter="url(#cb-soft)"/>
-    <ellipse cx="820" cy="60" rx="90" ry="26" fill="#e9f2ec" opacity=".04" filter="url(#cb-soft)"/>
+    <ellipse cx="780" cy="82" rx="200" ry="38" fill="#e9f2ec" opacity=".05" filter="url(#cb-soft)"/>
+    <ellipse cx="1700" cy="120" rx="160" ry="32" fill="#e9f2ec" opacity=".045" filter="url(#cb-soft)"/>
+    <ellipse cx="1240" cy="56" rx="130" ry="24" fill="#e9f2ec" opacity=".04" filter="url(#cb-soft)"/>
     <!-- 上沿压暗 -->
-    <rect x="272" y="32" width="1056" height="18" rx="6" fill="url(#cb-board-top)"/>
+    <rect x="408" y="28" width="1592" height="18" rx="7" fill="url(#cb-board-top)"/>
     <!-- 残留板书：淡到几乎看不见，只提供「写过字」的质感 -->
     <g opacity=".14" stroke="#f2f6f1" stroke-width="3" stroke-linecap="round" filter="url(#cb-chalk)">
-      <path d="M356 96h150M356 118h96M356 140h124"/>
-      <path d="M604 92h118M604 114h72"/>
-      <path d="M1044 100h138M1044 122h84"/>
+      <path d="M520 78h210M520 100h138M520 122h176"/>
+      <path d="M880 74h170M880 96h104"/>
+      <path d="M1580 82h200M1580 104h124"/>
     </g>
-    <g opacity=".1" stroke="#e8f0ea" stroke-width="2.2" stroke-linecap="round">
-      <path d="M356 164c40 10 84 10 126 0"/>
-      <path d="M1044 156c46 12 92 12 138 0"/>
+    <g opacity=".1" stroke="#e8f0ea" stroke-width="2.4" stroke-linecap="round">
+      <path d="M520 146c56 12 118 12 174 0"/>
+      <path d="M1580 138c64 14 130 14 196 0"/>
     </g>
     <!-- 粉笔槽 -->
-    <rect x="262" y="210" width="1076" height="17" rx="5" fill="url(#cb-tray)"/>
-    <rect x="262" y="210" width="1076" height="3" rx="1.5" fill="#dcc7a4" opacity=".8"/>
-    <rect x="262" y="225" width="1076" height="2" rx="1" fill="#8e7452" opacity=".45"/>
+    <rect x="398" y="190" width="1612" height="19" rx="6" fill="url(#cb-tray)"/>
+    <rect x="398" y="190" width="1612" height="4" rx="2" fill="#dcc7a4" opacity=".8"/>
+    <rect x="398" y="206" width="1612" height="3" rx="1.5" fill="#8e7452" opacity=".45"/>
     <!-- 粉笔 -->
-    <rect x="432" y="214" width="28" height="8" rx="4" fill="#f6f2e7"/>
-    <rect x="466" y="215" width="21" height="7" rx="3.5" fill="#e9c9c4"/>
-    <rect x="492" y="214" width="15" height="8" rx="4" fill="#c9d7dc"/>
-    <rect x="1174" y="214" width="31" height="8" rx="4" fill="#f2eee2"/>
+    <rect x="648" y="194" width="34" height="9" rx="4.5" fill="#f6f2e7"/>
+    <rect x="690" y="195" width="26" height="8" rx="4" fill="#e9c9c4"/>
+    <rect x="722" y="194" width="19" height="9" rx="4.5" fill="#c9d7dc"/>
+    <rect x="1760" y="194" width="38" height="9" rx="4.5" fill="#f2eee2"/>
     <!-- 黑板擦 -->
-    <rect x="1232" y="211" width="44" height="12" rx="3" fill="#9b8870"/>
-    <rect x="1232" y="211" width="44" height="5" rx="2.5" fill="#6f6252" opacity=".8"/>
+    <rect x="1836" y="191" width="54" height="14" rx="4" fill="#9b8870"/>
+    <rect x="1836" y="191" width="54" height="6" rx="3" fill="#6f6252" opacity=".8"/>
   </g>
 
   <!-- 地板 -->
-  <rect y="760" width="1600" height="140" fill="url(#cb-floor)"/>
-  <rect y="760" width="1600" height="22" fill="url(#cb-floorshadow)"/>
+  <rect y="676" width="2400" height="124" fill="url(#cb-floor)"/>
+  <rect y="676" width="2400" height="24" fill="url(#cb-floorshadow)"/>
   <!-- 地板缝 -->
-  <g stroke="#bcaf92" stroke-opacity=".5" stroke-width="1.6">
-    <path d="M0 806h1600"/>
-    <path d="M0 856h1600"/>
+  <g stroke="#bcaf92" stroke-opacity=".5" stroke-width="2">
+    <path d="M0 716h2400"/>
+    <path d="M0 762h2400"/>
   </g>
   <!-- 地面柔光 -->
-  <ellipse cx="760" cy="872" rx="720" ry="46" fill="#f2e9d6" opacity=".26" filter="url(#cb-softer)"/>
+  <ellipse cx="1140" cy="784" rx="1080" ry="40" fill="#f2e9d6" opacity=".26" filter="url(#cb-softer)"/>
 
   <!-- 暗角 -->
-  <rect width="1600" height="900" fill="url(#cb-vignette)"/>
+  <rect width="2400" height="800" fill="url(#cb-vignette)"/>
 </svg>

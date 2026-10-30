@@ -1,0 +1,17 @@
+{
+  "note": "录音转写记录。每成功一篇追加一条 entries。",
+  "entries": [],
+  "failures": [],
+  "empty": [
+    {
+      "audio": "scripts\\test_audio.wav",
+      "seconds": 3,
+      "chars": 0,
+      "language": "zh",
+      "model": "D:/Tools/whisper-models/Systran/faster-whisper-small",
+      "channel": "local-whisper-offline",
+      "elapsedSec": 4,
+      "at": "2026-10-30T07:49:39.376Z"
+    }
+  ]
+}
